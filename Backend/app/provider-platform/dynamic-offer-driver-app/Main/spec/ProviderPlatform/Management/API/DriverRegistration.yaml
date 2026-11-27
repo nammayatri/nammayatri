@@ -40,6 +40,7 @@ apis:
         type: DocumentsListResponse
   - GET: # GetDocumentAPI
       endpoint: /getDocument/{entityId}
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         entityId: Text
@@ -320,38 +321,39 @@ types:
    - mandatoryDocumentRemoved : Bool
    - recordType: NewType
   UpdateDocumentResp:
-   - result: Text
+   - result: "!Text"
    - personId: Maybe (Id Driver)
    - enabled: Bool
   DLDetails:
-    - driverName: Maybe Text
-    - driverLicenseNumber: Text
-    - operatingCity: Text
+    - driverName: "Maybe !Text"
+    - driverLicenseNumber: "!Text"
+    - operatingCity: "!Text"
     - driverDateOfBirth: Maybe UTCTime
-    - classOfVehicles: [Text]
-    - vehicleCategory: Maybe Text
-    - imageId1: Text
-    - imageId2: Maybe (Text)
+    - classOfVehicles: "[!Text]"
+    - vehicleCategory: "Maybe !Text"
+    - imageId1: "!Text"
+    - imageId2: "Maybe (!Text)"
     - dateOfIssue: Maybe UTCTime
     - createdAt: UTCTime
   RCDetails:
-    - vehicleRegistrationCertNumber: Text
-    - imageId: Text
-    - imageId2: Maybe (Text)
-    - operatingCity: Text
+    - vehicleRegistrationCertNumber: "!Text"
+    - imageId: "!Text"
+    - imageId2: "Maybe (!Text)"
+    - operatingCity: "!Text"
     - dateOfRegistration: Maybe UTCTime
-    - vehicleCategory: Maybe Text
+    - vehicleCategory: "Maybe !Text"
     - airConditioned: Maybe Bool
-    - vehicleManufacturer: Maybe Text
-    - vehicleModel: Maybe Text
-    - vehicleColor: Maybe Text
+    - vehicleManufacturer: "Maybe !Text"
+    - vehicleModel: "Maybe !Text"
+    - vehicleColor: "Maybe !Text"
     - vehicleDoors: Maybe Int
     - vehicleSeatBelts: Maybe Int
     - vehicleModelYear: Maybe Int
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - createdAt: UTCTime
-    - failedRules: [Text]
+    # failedRules are stored rule codes; they are translated where the driver reads them, not on this screen yet
+    - failedRules: "[!Text]"
     - verificationStatus: Maybe VerificationStatus
     - permitExpiry: Maybe UTCTime
   StatusRes:
@@ -361,7 +363,8 @@ types:
     - verified: Bool
     - approved: Maybe Bool
     - blocked: Bool
-    - blockedReason: Maybe Text
+    # blockedReason is the stored block reason, shown as stored
+    - blockedReason: "Maybe !Text"
     - onboardingAs: Maybe OnboardingAs
     - disabledReasonFlag: Maybe DisabledReasonFlag
     - recentFleetInfo: Maybe DriverAssociationInfo
@@ -370,82 +373,83 @@ types:
     - vehicleRegistrationCertificateDetails: "Maybe [RCDetails]"
   DocumentStatusItem:
     - documentType: DocumentType
-    - documentId: Maybe Text
+    - documentId: "Maybe !Text"
     - verificationStatus: VerificationStatus
-    - verificationMessage: Maybe Text
-    - s3Path: Maybe Text
+    # verificationMessage is translatable text, read by key into a hand-written status type; not yet typed here
+    - verificationMessage: "Maybe !Text"
+    - s3Path: "Maybe !Text"
     - expiryDate: Maybe UTCTime
-    - commonDocumentData: Maybe Text
+    - commonDocumentData: "Maybe !Text"
   VehicleDocumentItem:
-    - registrationNo: Text
+    - registrationNo: "!Text"
     - userSelectedVehicleCategory: VehicleCategory
     - verifiedVehicleCategory: Maybe VehicleCategory
     - isVerified: Bool
     - isActive: Bool
     - isApproved: Bool
     - isApprovedV2: Maybe Bool
-    - vehicleModel: Maybe Text
+    - vehicleModel: "Maybe !Text"
     - documents: "[DocumentStatusItem]"
     - dateOfUpload: UTCTime
-    - s3Path: Maybe Text
+    - s3Path: "Maybe !Text"
     - expiryDate: Maybe UTCTime
   DocumentsListResponse:
-    - driverLicense: "[[Text]]"
-    - vehicleRegistrationCertificate: [Text]
+    - driverLicense: "[[!Text]]"
+    - vehicleRegistrationCertificate: "[!Text]"
     - driverLicenseDetails: [DLDetails]
     - vehicleRegistrationCertificateDetails: [RCDetails]
-    - vehicleInsurance: [Text]
-    - uploadProfile: [Text]
-    - ssn: Maybe Text
-    - vehicleFitnessCertificate: [Text]
-    - profilePhoto: [Text]
-    - vehicleInspectionForm: [Text]
-    - vehiclePermit: [Text]
-    - vehiclePUC: [Text]
-    - vehicleFront: [Text]
-    - vehicleBack: [Text]
-    - vehicleRight: [Text]
-    - vehicleLeft: [Text]
-    - vehicleFrontInterior: [Text]
-    - vehicleBackInterior: [Text]
-    - pan: [Text]
-    - vehicleNOC: [Text]
-    - driverVehicleNOC: [Text]
-    - businessLicense: [Text]
-    - odometer: [Text]
-    - aadhaar: [Text]
-    - gstCertificate: [Text]
-    - localResidenceProof: [Text]
-    - policeVerificationCertificate: [Text]
-    - drivingSchoolCertificate: [Text]
-    - udyamCertificate: [Text]
-    - medicalCertificate: [Text]
+    - vehicleInsurance: "[!Text]"
+    - uploadProfile: "[!Text]"
+    - ssn: "Maybe !Text"
+    - vehicleFitnessCertificate: "[!Text]"
+    - profilePhoto: "[!Text]"
+    - vehicleInspectionForm: "[!Text]"
+    - vehiclePermit: "[!Text]"
+    - vehiclePUC: "[!Text]"
+    - vehicleFront: "[!Text]"
+    - vehicleBack: "[!Text]"
+    - vehicleRight: "[!Text]"
+    - vehicleLeft: "[!Text]"
+    - vehicleFrontInterior: "[!Text]"
+    - vehicleBackInterior: "[!Text]"
+    - pan: "[!Text]"
+    - vehicleNOC: "[!Text]"
+    - driverVehicleNOC: "[!Text]"
+    - businessLicense: "[!Text]"
+    - odometer: "[!Text]"
+    - aadhaar: "[!Text]"
+    - gstCertificate: "[!Text]"
+    - localResidenceProof: "[!Text]"
+    - policeVerificationCertificate: "[!Text]"
+    - drivingSchoolCertificate: "[!Text]"
+    - udyamCertificate: "[!Text]"
+    - medicalCertificate: "[!Text]"
     - commonDocuments: [CommonDocumentItem]
     - imageDetails: [ImageDetails]
   TempAppCodeRes:
-    - code: Text
+    - code: "!Text"
     - expiresAt: UTCTime
   OnboardingLinkRes:
-    - link: Text
+    - link: "!Text"
     - expiresAt: UTCTime
   AddDriversReq:
     - file: FilePath
     - derive: "'HideSecrets"
   ProcessedDriverInfo:
     - driverId: Id Driver
-    - phoneNo: Text
+    - phoneNo: "!Text"
   AddDriversResp:
     - processedDrivers: [ProcessedDriverInfo]
-    - unprocessedEntities: [Text]
+    - unprocessedEntities: "[!Text]"
   AddVehiclesReq:
     - file: FilePath
     - derive: "'HideSecrets"
   GetDocumentResponse:
-    - imageBase64: Maybe Text
+    - imageBase64: "Maybe !Text"
     - status: Maybe VerificationStatus
     - createdAt: Maybe UTCTime
-    - commonDocumentData: Maybe Text
-    - rejectReason: Maybe Text
+    - commonDocumentData: "Maybe !Text"
+    - rejectReason: Maybe TranslatedText
     - metadata: Maybe Value
   EntityType:
     enum: "ImageEntity,DocumentEntity"
@@ -480,7 +484,7 @@ types:
     - bankAccountNo : Text
     - bankIfscCode : Text
   PayoutRegistrationRes:
-    - orderId: Text
+    - orderId: "!Text"
     - orderResp: CreateOrderResp
   AadhaarCardReq:
     aadhaarFrontImageId: Maybe (Id Image)
@@ -553,31 +557,31 @@ types:
     - consent: Text
     - derive: "'HideSecrets"
   GenerateAadhaarOtpRes:
-    - message: Text
-    - transactionId: Maybe Text
+    - message: "!Text"
+    - transactionId: "Maybe !Text"
     - derive: "'HideSecrets"
   VerifyAadhaarOtpReq:
     - otp: Int
     - shareCode: Text
     - derive: "'HideSecrets"
   VerifyAadhaarOtpRes:
-    - message: Text
-    - code: Text
-    - name: Text
-    - gender: Text
-    - date_of_birth: Text
-    - share_code: Text
-    - image: Text
+    - message: "!Text"
+    - code: "!Text"
+    - name: "!Text"
+    - gender: "!Text"
+    - date_of_birth: "!Text"
+    - share_code: "!Text"
+    - image: "!Text"
     - derive: "'HideSecrets"
   UnderReviewDriversListResponse:
     - drivers: [UnderReviewDriver]
     - summary: Summary
   UnderReviewDriver:
     - driverId: Id Driver
-    - driverName: Text
-    - driverMobileNumber: Text
-    - driverMobileCountryCode: Text
-    - reviewedBy: Text
+    - driverName: "!Text"
+    - driverMobileNumber: "!Text"
+    - driverMobileCountryCode: "!Text"
+    - reviewedBy: "!Text"
   DocumentInfo:
     - recordType: NewType
     - documentNumber: Maybe Text
@@ -609,27 +613,28 @@ types:
   CommonDocumentItem:
     - documentId: Id CommonDriverOnboardingDocuments
     - documentType: DocumentType
-    - documentData: Text
+    - documentData: "!Text"
     - verificationStatus: VerificationStatus
-    - rejectReason: Maybe Text
-    - documentImageId: Maybe Text
+    - rejectReason: "Maybe !Text"
+    - documentImageId: "Maybe !Text"
     - createdAt: UTCTime
     - updatedAt: UTCTime
   ImageDetails:
-    - imageId: Text
-    - documentVersionId: Maybe Text
+    - imageId: "!Text"
+    - documentVersionId: "Maybe !Text"
     - verificationStatus: Maybe VerificationStatus
-    - failureReason: Maybe Text
+    # failureReason is the image check's stored failure text
+    - failureReason: "Maybe !Text"
     - createdAt: UTCTime
     - updatedAt: UTCTime
   CommonDocumentListItem:
     - documentId: Id CommonDriverOnboardingDocuments
-    - driverId: Maybe Text
+    - driverId: "Maybe !Text"
     - documentType: DocumentType
-    - documentData: Text
+    - documentData: "!Text"
     - verificationStatus: VerificationStatus
-    - rejectReason: Maybe Text
-    - documentImageId: Maybe Text
+    - rejectReason: "Maybe !Text"
+    - documentImageId: "Maybe !Text"
     - createdAt: UTCTime
     - updatedAt: UTCTime
   CommonDocumentsListRes:
@@ -643,7 +648,7 @@ types:
     - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   CommonDocumentCreateRes:
-    - result: Text
+    - result: "!Text"
     - documentId: Id CommonDriverOnboardingDocuments
   TriggerReminderReq:
     - documentType: DocumentType
@@ -723,10 +728,11 @@ types:
     - verificationStatuses: [VerificationStatusItem]
   VerificationStatusItem:
     - documentType: DocumentType
-    - status: Text
-    - verificationMessage: Maybe Text
+    - status: "!Text"
+    # verificationMessage is translatable text, read by key into a hand-written status type; not yet typed here
+    - verificationMessage: "Maybe !Text"
     - retryCount: Int
-    - requestId: Maybe Text
+    - requestId: "Maybe !Text"
     - createdAt: UTCTime
   CommonDocumentApproveDetails:
     - documentId: Id CommonDriverOnboardingDocuments

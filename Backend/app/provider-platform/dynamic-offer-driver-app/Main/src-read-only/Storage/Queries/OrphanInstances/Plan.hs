@@ -56,7 +56,7 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             validityInDays = validityInDays,
             vehicleCategory = vehicleCategory',
             vehicleVariant = vehicleVariant,
-            waivesSpecialRideCharges = Kernel.Prelude.fromMaybe False waivesSpecialRideCharges
+            waivesSpecialRideCharges = waivesSpecialRideCharges
           }
 
 instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
@@ -96,5 +96,5 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.validityInDays = validityInDays,
         Beam.vehicleCategory = Kernel.Prelude.Just vehicleCategory,
         Beam.vehicleVariant = vehicleVariant,
-        Beam.waivesSpecialRideCharges = Kernel.Prelude.Just waivesSpecialRideCharges
+        Beam.waivesSpecialRideCharges = waivesSpecialRideCharges
       }

@@ -24,6 +24,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as DRideDetails
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -320,8 +321,12 @@ postSosMarkRideAsSafe (mbPersonId, _merchantId, _) sosId API.Types.UI.Sos.MarkAs
   result <- SafetySos.markSosAsSafe sosId safetyPersonId isEndLiveTracking isRideEnded
   void $ callUpdateTicket person result.updatedSos $ Just "Mark Ride as Safe"
   when result.shouldNotifyContacts $
-    SPDEN.notifyEmergencyContactsWithKey person result.notificationKey Notification.SOS_RESOLVED [("userName", driverGetName person)] Nothing False contactsToNotify Nothing
+    SPDEN.notifyEmergencyContactsWithKey person (resolvedPushKey result.notificationKey) Notification.SOS_RESOLVED [("userName", driverGetName person)] Nothing False contactsToNotify Nothing
   pure Kernel.Types.APISuccess.Success
+  where
+    resolvedPushKey = \case
+      SafetySos.SosResolvedSafe -> DriverPush_Safety_SosResolvedSafe
+      SafetySos.LiveTrackingStopped -> DriverPush_Safety_LiveTrackingStopped
 
 uploadMedia :: Id SafetyDSos.Sos -> Id Person.Person -> SOSVideoUploadReq -> Environment.Flow AddSosVideoRes
 uploadMedia sosId personId SOSVideoUploadReq {..} = do

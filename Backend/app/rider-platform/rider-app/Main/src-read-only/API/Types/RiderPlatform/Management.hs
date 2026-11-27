@@ -24,6 +24,7 @@ import qualified API.Types.RiderPlatform.Management.RideFeedback
 import qualified API.Types.RiderPlatform.Management.SearchTry
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.RiderPlatform.Management.SosMedia
+import qualified API.Types.RiderPlatform.Management.Translation
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -53,6 +54,7 @@ data ManagementUserActionType
   | SEARCH_TRY API.Types.RiderPlatform.Management.SearchTry.SearchTryUserActionType
   | SOS API.Types.RiderPlatform.Management.Sos.SosUserActionType
   | SOS_MEDIA API.Types.RiderPlatform.Management.SosMedia.SosMediaUserActionType
+  | TRANSLATION API.Types.RiderPlatform.Management.Translation.TranslationUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -79,6 +81,7 @@ instance Text.Show.Show ManagementUserActionType where
     SEARCH_TRY e -> "SEARCH_TRY/" <> show e
     SOS e -> "SOS/" <> show e
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
+    TRANSLATION e -> "TRANSLATION/" <> show e
 
 instance Text.Read.Read ManagementUserActionType where
   readsPrec d' =
@@ -258,6 +261,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "SOS_MEDIA/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( TRANSLATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "TRANSLATION/" r,
                    ( v1,
                      r2
                      ) <-

@@ -10,7 +10,8 @@
 -- the domain handler for every endpoint marked @appServerHandler: custom@ in
 -- the spec, so this logic lives here and is never overwritten by the generator.
 module Domain.Action.DashboardAuth.Management.DriverRegistration
-  ( postDriverRegistrationDocumentUpload,
+  ( getDriverRegistrationGetDocument,
+    postDriverRegistrationDocumentUpload,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationDocumentRegister,
     postDriverRegistrationAddVehicles,
@@ -71,3 +72,7 @@ postDriverRegistrationUnlinkDocument a5 a4 a3 a2 a1 = do
 
 postDriverRegistrationTriggerReminder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.TriggerReminderReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverRegistrationTriggerReminder a5 a4 a3 a2 a1 = Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationTriggerReminder a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorIdForDriver a3 a2.getId) a1
+
+-- | A document with its reject reason in the dashboard user's language.
+getDriverRegistrationGetDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverRegistration.EntityType -> Environment.Flow API.Types.ProviderPlatform.Management.DriverRegistration.GetDocumentResponse)
+getDriverRegistrationGetDocument a6 a5 a4 a3 a2 a1 = Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationGetDocument a6 a5 a4.person.language a3 a2 a1

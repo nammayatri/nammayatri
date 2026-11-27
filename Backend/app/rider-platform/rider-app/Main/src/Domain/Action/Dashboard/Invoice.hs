@@ -183,7 +183,6 @@ getInvoiceFinanceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber 
         mbInvoiceType
         mbStatus
         Nothing
-        Nothing
         (Just DInvoice.RIDER)
         []
         (if isJust mbStatus then [] else [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid])

@@ -160,6 +160,7 @@ data AppCfg = AppCfg
     -- Dashboard routes this server now serves directly that are not part of the
     -- login tree: the internal-auth probe, the Exotel heartbeat, and the CAC shim.
     internalAuthAPIKey :: Text,
+    internalAuthAPIOldKeys :: [Text],
     exotelToken :: Text,
     -- Opt-in second connection to atlas_dashboard. Absent = this server never
     -- enters runInDashboardDb and behaves exactly as before.
@@ -182,6 +183,10 @@ data AppCfg = AppCfg
     longDurationRetryCfg :: RetryCfg,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
+    -- | Session token of the read-only issue lookup service operator (the
+    -- same one rider-app sends). Requests carrying it are restricted to the
+    -- endpoints in issue_config.allowed_lookup_endpoints for the city.
+    issueLookupToken :: Maybe Text,
     cloudSwitchPassword :: Maybe Text,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
@@ -206,6 +211,7 @@ data AppCfg = AppCfg
     eventStreamMap :: [EventStreamMap],
     kvConfigUpdateFrequency :: Int,
     locationTrackingServiceKey :: Text,
+    locationTrackingServiceOldKeys :: [Text],
     enforcingInternalAuth :: Bool,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
@@ -312,6 +318,7 @@ data AppEnv = AppEnv
     totpClockSkew :: Maybe Int,
     twoFaIssuerName :: Text,
     internalAuthAPIKey :: Text,
+    internalAuthAPIOldKeys :: [Text],
     exotelToken :: Text,
     -- Read from AUTH_MAP. Absent means "no CAC tokens configured" rather than a
     -- boot failure: provider-dashboard errors out without it, but refusing to
@@ -340,6 +347,10 @@ data AppEnv = AppEnv
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
+    -- | Session token of the read-only issue lookup service operator (the
+    -- same one rider-app sends). Requests carrying it are restricted to the
+    -- endpoints in issue_config.allowed_lookup_endpoints for the city.
+    issueLookupToken :: Maybe Text,
     cloudSwitchPassword :: Maybe Text,
     cacheConfig :: CacheConfig,
     s3Env :: S3Env Flow,
@@ -367,6 +378,7 @@ data AppEnv = AppEnv
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     locationTrackingServiceKey :: Text,
+    locationTrackingServiceOldKeys :: [Text],
     enforcingInternalAuth :: Bool,
     eventRequestCounter :: EventCounterMetric,
     schedulerSetName :: Text,

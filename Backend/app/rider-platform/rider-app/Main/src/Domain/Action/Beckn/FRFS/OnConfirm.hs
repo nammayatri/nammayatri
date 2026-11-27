@@ -373,7 +373,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
               QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
             mRiderNumber <- mapM ENC.decrypt person.mobileNumber
             buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
-            void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
+            void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode person.language fareParameters
             unless (isJust booking.parentBookingId) $
               void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
             void $ CQP.clearPSCache booking.riderId
@@ -457,7 +457,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
               throwM err
   SharedCab.confirmHook booking'
   where
-    sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
+    sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode mRiderLanguage fareParameters =
       whenJust booking'.partnerOrgId $ \pOrgId -> do
         fork "send ticket booked sms" $
           withLogTag ("SMS:FRFSBookingId:" <> booking'.id.getId) $ do
@@ -466,7 +466,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
                 countryCode = fromMaybe "+91" mRiderMobileCountryCode
                 phoneNumber = countryCode <> mobileNumber
             mbBuildSmsReq <-
-              MessageBuilder.buildFRFSTicketBookedMessage mocId pOrgId $
+              MessageBuilder.buildFRFSTicketBookedMessage mocId pOrgId mRiderLanguage $
                 MessageBuilder.BuildFRFSTicketBookedMessageReq
                   { countOfTickets = fareParameters.totalQuantity,
                     bookingId = booking'.id
@@ -475,7 +475,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
               (logError $ "SMS not sent, SMS template not found for partnerOrgId:" <> pOrgId.getId)
               ( \buildSmsReq -> do
                   let smsReq = buildSmsReq phoneNumber
-                  logDebug $ "SMS Message:" +|| smsReq.smsBody ||+ ""
+                  logDebug $ "SMS Message:" +|| Sms.smsBodyText smsReq.smsBody ||+ ""
                   Sms.sendSMS booking'.merchantId mocId smsReq >>= Sms.checkSmsResult
               )
               mbBuildSmsReq

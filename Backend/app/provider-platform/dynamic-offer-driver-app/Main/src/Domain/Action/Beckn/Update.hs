@@ -429,7 +429,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     let isEditingAdvanceRide r = r.status == DRide.NEW && r.isAdvanceBooking
     hasAdvancedRide <- maybe (pure False) (\r -> if isEditingAdvanceRide r then pure False else QDI.findById (cast r.driverId) <&> maybe False (.hasAdvanceBooking)) mbRide
     if hasAdvancedRide
-      then sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Driver has an upcoming ride near your drop location. "
+      then sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId Enums.DRIVER_HAS_UPCOMING_RIDE "Driver has an upcoming ride near your drop location. "
       else do
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
         now <- getCurrentTime
@@ -528,7 +528,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                             _ -> TollChargeDetails tollInfo.tollCharges tollInfo.tollNames tollInfo.tollIds
                        in if tollCharges > 0 && not (null tollNames) then Just tollCharges else Nothing
             when (not isTollAllowed) $ do
-              sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Vehicle not allowed for toll route."
+              sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId Enums.TOLL_NOT_ALLOWED "Vehicle not allowed for toll route."
               throwError $ InvalidRequest "Vehicle not allowed for toll route."
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
             let pricingTime = Just $ if booking.isScheduled then booking.startTime else booking.createdAt

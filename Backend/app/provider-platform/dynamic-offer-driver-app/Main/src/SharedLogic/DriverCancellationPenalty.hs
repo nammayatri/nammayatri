@@ -210,6 +210,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
                   issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
                   issuedToName = partyName,
                   issuedToAddress = partyAddress,
+                  issuedById = Nothing,
                   referenceId = Just booking.id.getId,
                   gstBreakdown = Nothing,
                   lineItems =

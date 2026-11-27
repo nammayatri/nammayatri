@@ -292,6 +292,7 @@ library
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.TdsDistribution
+      Domain.Action.Dashboard.Management.Translation
       Domain.Action.Dashboard.Management.Vehicle
       Domain.Action.Dashboard.Management.VehicleDetails
       Domain.Action.Dashboard.Management.VehicleInfo
@@ -313,6 +314,7 @@ library
       Domain.Action.Dashboard.RideEstimatedRoute
       Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.Dashboard.RideSnappedRoute
+      Domain.Action.DashboardAuth.AppManagement.DriverWallet
       Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction
       Domain.Action.DashboardAuth.Fleet.Driver
       Domain.Action.DashboardAuth.Fleet.LiveMap
@@ -328,6 +330,7 @@ library
       Domain.Action.DashboardAuth.Management.Notification
       Domain.Action.DashboardAuth.Management.Person
       Domain.Action.DashboardAuth.Management.RadarTickets
+      Domain.Action.DashboardAuth.Management.Ride
       Domain.Action.DashboardAuth.Operator.FleetManagement
       Domain.Action.DashboardAuth.Operator.Registration
       Domain.Action.DashboardAuth.RideBooking.Driver
@@ -588,6 +591,7 @@ library
       Domain.Types.Quote
       Domain.Types.RideRoute
       Domain.Types.TicketKapture
+      Domain.Types.TranslationKeys
       Domain.Types.UpgradedTier
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
@@ -766,6 +770,7 @@ library
       SharedLogic.Finance.LedgerAdjustment
       SharedLogic.Finance.LedgerAdjustmentCast
       SharedLogic.Finance.PostActions
+      SharedLogic.Finance.PostpaidFeeInvoice
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Rails
       SharedLogic.Finance.Reconciliation.EntitySync
@@ -1002,6 +1007,7 @@ library
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.SurgeConfig
       Storage.CachedQueries.SystemConfigs.LeanFlow
+      Storage.CachedQueries.Translations
       Storage.CachedQueries.UiDriverConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleDetails
@@ -1363,6 +1369,7 @@ library
       API.Action.DashboardAuth.Management.SosMedia
       API.Action.DashboardAuth.Management.SpecialZoneQueue
       API.Action.DashboardAuth.Management.TdsDistribution
+      API.Action.DashboardAuth.Management.Translation
       API.Action.DashboardAuth.Management.Vehicle
       API.Action.DashboardAuth.Management.VehicleDetails
       API.Action.DashboardAuth.Management.VehicleInfo
@@ -1546,6 +1553,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.Endpoints.TdsDistribution
+      API.Types.ProviderPlatform.Management.Endpoints.Translation
       API.Types.ProviderPlatform.Management.Endpoints.Vehicle
       API.Types.ProviderPlatform.Management.Endpoints.VehicleDetails
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
@@ -1578,6 +1586,7 @@ library
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.TdsDistribution
+      API.Types.ProviderPlatform.Management.Translation
       API.Types.ProviderPlatform.Management.Vehicle
       API.Types.ProviderPlatform.Management.VehicleDetails
       API.Types.ProviderPlatform.Management.VehicleInfo

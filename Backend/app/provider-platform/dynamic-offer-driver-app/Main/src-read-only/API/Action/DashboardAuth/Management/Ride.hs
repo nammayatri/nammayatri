@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Management.Ride
+import qualified Domain.Action.DashboardAuth.Management.Ride
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -126,7 +127,7 @@ getRideInfo a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
-        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Ride.getRideInfo a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.DashboardAuth.Management.Ride.getRideInfo a6 a5 a4 a3 a2 a1
     )
 
 getRideEvidence :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideEvidenceListRes)))

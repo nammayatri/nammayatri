@@ -150,6 +150,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
           person'.merchantId
           merchantOpCityId'
           transporterConfig'
+          person'.language
           countryCode
           mobileNum
           emailVal

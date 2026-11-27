@@ -41,6 +41,7 @@ import qualified "dynamic-offer-driver-app" Domain.Types.MerchantOperatingCity a
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RideRelatedNotificationConfig as DRN
+import "dynamic-offer-driver-app" Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as Fields
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
 import qualified "beckn-spec" Domain.Types.Trip as DTrip
@@ -50,7 +51,7 @@ import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Encryption as EncFlow
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Clickhouse.Config as CHConfig
@@ -94,6 +95,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Processor.RideEvents.InternalHelpers as IH
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified "dynamic-offer-driver-app" SharedLogic.DriverOnboarding as SDO
 import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetOperatorStats as SFleetOperatorStats
@@ -132,7 +134,7 @@ import qualified Tools.DynamicLogic as DL
 import "dynamic-offer-driver-app" Tools.Error
 import "dynamic-offer-driver-app" Tools.Event (BookingEventData (..), RideEventData (..))
 import qualified "dynamic-offer-driver-app" Tools.Event as Event
-import "dynamic-offer-driver-app" Tools.Notifications (notifyDriver)
+import "dynamic-offer-driver-app" Tools.Notifications (PushContent, buildMerchantPNContentWithFallback, notifyDriver)
 import qualified "dynamic-offer-driver-app" Tools.SMS as Sms
 
 ------------------------------------------------------------
@@ -469,25 +471,23 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
         QReg.updateMerchantOperatingCityId targetOpCityId.getId ride.driverId.getId booking.providerId.getId
         DReg.cleanCachedTokens ride.driverId
         targetOpCity <- CQMOC.findById targetOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist targetOpCityId.getId)
+        let cityName = show targetOpCity.city
+            driverLanguage = driverPerson.language
+        cityUpdatedContent <- buildMerchantPNContentWithFallback targetOpCityId driverLanguage DriverPush_City_Updated [("cityName", cityName)] ("Operating City Updated", "Your operating city has been updated to " <> cityName <> ".")
         notifyDriver
           targetOpCityId
           FCM.NEW_MESSAGE
-          "Operating City Updated"
-          ("Your operating city has been updated to " <> show targetOpCity.city <> ".")
+          cityUpdatedContent
           driverPerson
           driverPerson.deviceToken
 
         -- --- billing: tag only, never auto-switch (per-city pricing differs) ---
         mbDriverPlan <- QDPlan.findByPrimaryKey ride.driverId
-        let mbBillingTag =
-              mbDriverPlan >>= \p ->
-                if p.merchantOpCityId /= targetOpCityId
-                  then
-                    Just
-                      ( LYT.TagNameValue "SubscriptionMigrationPending",
-                        "Your operating city has changed. Please visit the plan page to select a plan for your current city."
-                      )
-                  else Nothing
+        mbBillingTag <- case mbDriverPlan of
+          Just p | p.merchantOpCityId /= targetOpCityId -> do
+            content <- buildMerchantPNContentWithFallback targetOpCityId driverLanguage DriverPush_City_PlanRequired [("cityName", cityName)] ("City Update", "Your operating city has changed. Please visit the plan page to select a plan for your current city.")
+            pure $ Just (LYT.TagNameValue "SubscriptionMigrationPending", content)
+          _ -> pure Nothing
 
         -- --- documents: diff required-vs-held, dedup-tag, notify. Uses the ForEnabling
         -- notion (fromMaybe isMandatory isMandatoryForEnabling), not plain isMandatory --
@@ -507,12 +507,10 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
                       c.vehicleCategory == vehicleCategory
                   ]
             missingDocTypes <- filterM (fmap not . isDocumentHeld ride.driverId booking.providerId) requiredDocTypes
-            pure
-              [ ( LYT.TagNameValue ("MissingDocumentForCity_" <> show docType <> "#" <> targetOpCityId.getId),
-                  "Please upload " <> show docType <> " to continue operating in your current city."
-                )
-                | docType <- missingDocTypes
-              ]
+            forM missingDocTypes $ \docType -> do
+              documentName <- SDO.translateDocumentType targetOpCityId (fromMaybe ENGLISH driverLanguage) docType
+              content <- buildMerchantPNContentWithFallback targetOpCityId driverLanguage DriverPush_City_DocumentRequired [("cityName", cityName), ("documentType", documentName)] ("City Update", "Please upload " <> show docType <> " to continue operating in your current city.")
+              pure (LYT.TagNameValue ("MissingDocumentForCity_" <> show docType <> "#" <> targetOpCityId.getId), content)
 
         applyNewTags driverPerson targetOpCityId (maybeToList mbBillingTag <> docTags)
 
@@ -550,7 +548,7 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
       ) =>
       DP.Person ->
       Id DMOC.MerchantOperatingCity ->
-      [(LYT.TagNameValue, Text)] ->
+      [(LYT.TagNameValue, PushContent)] ->
       m ()
     applyNewTags person targetOpCityId candidateTags = do
       now <- getCurrentTime
@@ -570,9 +568,9 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
       Id DMOC.MerchantOperatingCity ->
       UTCTime ->
       [LYT.TagNameValueExpiry] ->
-      (LYT.TagNameValue, Text) ->
+      (LYT.TagNameValue, PushContent) ->
       m [LYT.TagNameValueExpiry]
-    addTagIfAbsent person targetOpCityId now acc (tag, body) =
+    addTagIfAbsent person targetOpCityId now acc (tag, content) =
       if YTUtils.elemTagNameValue tag acc
         then pure acc
         else do
@@ -580,8 +578,7 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
           notifyDriver
             targetOpCityId
             FCM.NEW_MESSAGE
-            "City Update"
-            body
+            content
             person
             person.deviceToken
           pure $ YTUtils.replaceTagNameValue (Just acc) tagWithExpiry

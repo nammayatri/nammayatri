@@ -31,6 +31,13 @@ data IssueConfig = IssueConfig
     messageTransformationConfig :: Maybe MessageTransformationConfig,
     reopenCount :: Int,
     onIssueCloseMsgs :: [Id IssueMessage],
+    -- | Dashboard endpoint ids (as stored in capability_endpoint, e.g.
+    -- "RIDER_MANAGEMENT/RIDE/GET_RIDE_INFO") the in-house chat lookup engine
+    -- may call for this city. Enforced on the receiving side, where the router
+    -- has already resolved the request path to an endpoint id, so a lookup
+    -- reaching any endpoint not listed here is rejected. Nothing or empty
+    -- means no lookups are allowed in this city.
+    allowedLookupEndpoints :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

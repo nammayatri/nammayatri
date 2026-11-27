@@ -59,6 +59,7 @@ mkPersist
       fareSettlementType Domain.FareSettlementType Maybe
       boothSpecificFleet Text Maybe
       poolingMode Domain.PoolingMode Maybe
+      skipQueue Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary uuid

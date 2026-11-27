@@ -127,7 +127,7 @@ type API =
       :> "updateServiceTiers"
       :> ReqBody
            '[JSON]
-           API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers
+           API.Types.UI.DriverOnboardingV2.UpdateServiceTiersReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -407,7 +407,7 @@ postDriverUpdateServiceTiers ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
+    API.Types.UI.DriverOnboardingV2.UpdateServiceTiersReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverUpdateServiceTiers a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverUpdateServiceTiers (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

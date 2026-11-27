@@ -168,6 +168,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.pucExpiry pucExpiry,
       Se.Set Beam.rcVehicleType (Data.Text.pack . show <$> rcVehicleType),
       Se.Set Beam.rejectReason rejectReason,
+      Se.Set Beam.rejectReasonKey rejectReasonKey,
       Se.Set Beam.reviewRequired reviewRequired,
       Se.Set Beam.reviewedAt reviewedAt,
       Se.Set Beam.unencryptedCertificateNumber unencryptedCertificateNumber,

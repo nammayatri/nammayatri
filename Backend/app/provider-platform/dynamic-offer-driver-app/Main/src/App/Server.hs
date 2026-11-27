@@ -15,9 +15,12 @@
 module App.Server where
 
 import API
+import API.UI.Issue (castMOCityByMerchantShortIdAndCity)
 import App.CrossCloudProxy (crossCloudProxy)
 import Environment
 import EulerHS.Prelude
+import qualified IssueManagement.Common as IssueCommon
+import IssueManagement.Tools.LookupWhitelist (issueLookupGuard)
 import Kernel.Tools.Metrics.Init
 import qualified Kernel.Types.App as Fields
 import Kernel.Types.Flow
@@ -26,9 +29,11 @@ import Kernel.Utils.Monitoring.Prometheus.Servant ()
 import qualified Kernel.Utils.Servant.Server as BU
 import qualified Network.HTTP.Client as Http
 import Servant
+import Storage.Beam.IssueManagement ()
 import Tools.Auth
 import qualified "lib-dashboard" Tools.Auth.DashboardLoginFlow as DashboardLogin
 import Tools.Auth.DashboardUserAuth (verifyDashboardUserAction)
+import "lib-dashboard" Tools.Servant.HeaderAuth (guardVerification)
 
 run :: Http.Manager -> Env -> Application
 run proxyManager = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
@@ -44,8 +49,11 @@ run proxyManager = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
       verifyTokenAction @(FlowR AppEnv)
         :. validateAdminAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)
-        :. verifyDashboardUserAction @(FlowR AppEnv)
+        :. guardVerification issueLookupCheck (verifyDashboardUserAction @(FlowR AppEnv))
         -- Serves lib-dashboard's login tree: resolves the operator's session
         -- against the dashboard database rather than this server's own.
         :. DashboardLogin.dashboardLoginVerifyAction @(FlowR AppEnv)
         :. EmptyContext
+    -- Chat lookups (requests carrying the issue lookup token) may only reach
+    -- endpoints whitelisted in this app's issue_config for the city.
+    issueLookupCheck (_, endpointId) = issueLookupGuard castMOCityByMerchantShortIdAndCity IssueCommon.DRIVER endpointId

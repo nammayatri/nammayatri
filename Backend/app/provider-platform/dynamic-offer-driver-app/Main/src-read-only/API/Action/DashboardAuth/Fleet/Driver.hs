@@ -1142,5 +1142,5 @@ getDriverVehicleInfo a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
-        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Fleet.Driver.getDriverVehicleInfo a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Fleet.Driver.getDriverVehicleInfo a5 a4 a3 a2 a1
     )

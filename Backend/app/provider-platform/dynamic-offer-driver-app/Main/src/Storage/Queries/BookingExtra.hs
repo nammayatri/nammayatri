@@ -366,21 +366,21 @@ findAllOnlineByIdsAndBapId merchantId bookingIds bapId =
 -- RSF: a merchant's completed online (non-cash) bookings created in [from, to).
 findAllCompletedOnlineByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> m [Booking]
 findAllCompletedOnlineByProviderAndCreatedAtRange merchantId from to =
-  findAllWithKV [Se.And (completedOnlineInRange merchantId from to Nothing [])]
+  findAllWithKV [Se.And (completedOnlineInRange merchantId from to Nothing Nothing [])]
 
 -- RSF missed orders: one page of the merchant's completed online bookings created in [from, to), newest first,
--- leaving out the given (already claimed) ids, optionally one BAP's. The query applies the limit and offset.
-findCompletedOnlinePageByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> [Id Booking] -> Int -> Int -> m [Booking]
-findCompletedOnlinePageByProviderAndCreatedAtRange merchantId from to mbBapId excluded limit offset =
+-- leaving out the given (already claimed) ids, optionally one BAP's or one booking (a ride id search). The query applies the limit and offset.
+findCompletedOnlinePageByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> Maybe (Id Booking) -> [Id Booking] -> Int -> Int -> m [Booking]
+findCompletedOnlinePageByProviderAndCreatedAtRange merchantId from to mbBapId mbBookingId excluded limit offset =
   findAllWithOptionsKV
-    [Se.And (completedOnlineInRange merchantId from to mbBapId excluded)]
+    [Se.And (completedOnlineInRange merchantId from to mbBapId mbBookingId excluded)]
     (Se.Desc BeamB.createdAt)
     (Just limit)
     (Just offset)
 
 -- The same filter as the page above, counted in the database (KV has no count).
-countCompletedOnlineByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> [Id Booking] -> m Int
-countCompletedOnlineByProviderAndCreatedAtRange merchantId from to mbBapId excluded = do
+countCompletedOnlineByProviderAndCreatedAtRange :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> Maybe (Id Booking) -> [Id Booking] -> m Int
+countCompletedOnlineByProviderAndCreatedAtRange merchantId from to mbBapId mbBookingId excluded = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -396,6 +396,7 @@ countCompletedOnlineByProviderAndCreatedAtRange merchantId from to mbBapId exclu
                     B.&&?. B.sqlBool_ (BeamB.createdAt booking B.>=. B.val_ from)
                     B.&&?. B.sqlBool_ (BeamB.createdAt booking B.<. B.val_ to)
                     B.&&?. maybe (B.sqlBool_ (B.val_ True)) (\bapId -> B.sqlBool_ (BeamB.bapId booking B.==. B.val_ bapId)) mbBapId
+                    B.&&?. maybe (B.sqlBool_ (B.val_ True)) (\bookingId -> B.sqlBool_ (BeamB.id booking B.==. B.val_ bookingId.getId)) mbBookingId
                     B.&&?. (if null excluded then B.sqlBool_ (B.val_ True) else B.sqlBool_ (B.not_ (BeamB.id booking `B.in_` map (B.val_ . getId) excluded)))
               )
               $ B.all_ (BeamCommon.booking BeamCommon.atlasDB)
@@ -404,8 +405,8 @@ countCompletedOnlineByProviderAndCreatedAtRange merchantId from to mbBapId exclu
     Left err -> throwError $ InternalError ("RSF missed-orders count failed: " <> show err)
     Right rows -> pure $ fromMaybe 0 (listToMaybe rows)
 
-completedOnlineInRange :: Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> [Id Booking] -> [Se.Clause Postgres BeamB.BookingT]
-completedOnlineInRange merchantId from to mbBapId excluded =
+completedOnlineInRange :: Id Merchant -> UTCTime -> UTCTime -> Maybe Text -> Maybe (Id Booking) -> [Id Booking] -> [Se.Clause Postgres BeamB.BookingT]
+completedOnlineInRange merchantId from to mbBapId mbBookingId excluded =
   [ Se.Is BeamB.providerId $ Se.Eq merchantId.getId,
     Se.Is BeamB.status $ Se.Eq COMPLETED,
     Se.Is BeamB.paymentInstrument $ Se.Not (Se.Eq Nothing),
@@ -414,6 +415,7 @@ completedOnlineInRange merchantId from to mbBapId excluded =
     Se.Is BeamB.createdAt $ Se.LessThan to
   ]
     <> [Se.Is BeamB.bapId $ Se.Eq bapId | Just bapId <- [mbBapId]]
+    <> [Se.Is BeamB.id $ Se.Eq bookingId.getId | Just bookingId <- [mbBookingId]]
     <> [Se.Is BeamB.id $ Se.Not (Se.In (map getId excluded)) | not (null excluded)]
 
 findLastCancelledByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id RiderDetails -> m (Maybe Booking)

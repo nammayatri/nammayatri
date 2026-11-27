@@ -69,6 +69,8 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.StopInformation as DSI
+import Domain.Types.TranslationKey (textAsReceived)
+import Domain.Types.TranslationKeys (TranslationKey (..))
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Environment
@@ -78,6 +80,7 @@ import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
 import qualified Kernel.External.Maps.Types as KEMT
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
@@ -117,6 +120,7 @@ import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetadata
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -616,7 +620,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
   case (mbShortId, mbPhoneNumber) of
     (Just shortId, _) -> do
       ride <- QRide.findRideByRideShortId shortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
-      rideDetail <- rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing []
+      rideDetail <- rideInfo merchant.id merchantOpCityId Nothing (cast ride.id) Nothing []
       let ticketRideDetail = makeRequiredRideDetail ride.driverId (ride, rideDetail)
       return Common.TicketRideListRes {rides = [ticketRideDetail]}
     (Nothing, Just number) -> do
@@ -625,7 +629,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
       person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole code no merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound number)
       ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing [] Nothing Nothing
       let lastNRides = map fst ridesAndBooking
-      ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing []) lastNRides
+      ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId Nothing (cast ride.id) Nothing []) lastNRides
       let rdList = zipWith (curry (makeRequiredRideDetail person.id)) lastNRides ridesDetail
       return Common.TicketRideListRes {rides = rdList}
     (Nothing, Nothing) -> throwError $ InvalidRequest "Ride Short Id or Phone Number Not Received"
@@ -716,11 +720,12 @@ rideInfo ::
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe Language ->
   Id Common.Ride ->
   Maybe Bool ->
   [Common.RideDetailGroup] ->
   m Common.RideInfoRes
-rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
+rideInfo merchantId merchantOpCityId mbLanguage reqRideId mbFinanceData detailGroups = do
   let hasGroup = (`elem` detailGroups)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -880,6 +885,12 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
 
   feedbacks <- runInReplica $ QFeedback.findFeedbackFromRatings [ride.id]
   let mbFeedback = listToMaybe feedbacks
+  -- With no reader's language (the issue flow, the ticket ride list) the stored texts are shown as
+  -- stored; a badge without a key is the text the rider platform sent.
+  translatedTierName <- DRideCommon.translatedTierName mbLanguage booking
+  translatedBadges <- forM feedbacks $ \feedback -> case (,) <$> mbLanguage <*> feedback.badgeKey of
+    Just (language, badgeKey) -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (FeedbackBadge_Name badgeKey) feedback.badge
+    Nothing -> pure (textAsReceived feedback.badge)
   mbBapName <- if hasGroup Common.BUYER_APP then getBapName booking.bapId else pure Nothing
   mbPaymentCollectedBy <- if hasGroup Common.PAYMENT then getPaymentCollectedBy booking else pure Nothing
   (mbFleetOwnerName, mbFleetName, mbFleetOwnerPhoneNo) <- if hasGroup Common.FLEET_INFO then getFleetOwnerContact ride.fleetOwnerId else pure (Nothing, Nothing, Nothing)
@@ -952,7 +963,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
         vehicleVariant = rideDetails.vehicleVariant,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
-        vehicleServiceTierName = booking.vehicleServiceTierName,
+        vehicleServiceTierName = translatedTierName,
         endOtp = ride.endOtp,
         mbDefaultServiceTierName = rideDetails.defaultServiceTierName,
         rideCity = Just $ show city.city,
@@ -988,7 +999,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
         paymentReferenceInternal,
         walletTransactions,
         invoiceIds,
-        badge = map (.badge) feedbacks,
+        badge = translatedBadges,
         rating = mbFeedback >>= (.rating),
         estimatedTollInfo = mkTollInfoEntities ride.estimatedTollIds ride.estimatedTollNames,
         actualTollInfo = mkTollInfoEntities ride.tollIds ride.tollNames,

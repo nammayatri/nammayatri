@@ -645,6 +645,7 @@ in  { esqDBCfg
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , locationTrackingServiceOldKeys = [] : List Text
     , enforcingInternalAuth = False
     , zendeskWebhookToken = sec.zendeskWebhookToken
     , nearByDriverAPIRateLimitOptions

@@ -104,7 +104,7 @@ driverDevicePingService driverId fcmNofificationSendCount = do
                     (driver.merchantOperatingCityId.getId)
                     (fromIntegral count)
                     (show driverInformation.mode)
-              notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE "You were inactive" "Please check the app" driver (Just token)
+              notifyDevice driver.merchantOperatingCityId FCM.TRIGGER_SERVICE driver (Just token)
             Just _ -> log INFO $ "Driver went offline " <> show driver.id
             Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
 

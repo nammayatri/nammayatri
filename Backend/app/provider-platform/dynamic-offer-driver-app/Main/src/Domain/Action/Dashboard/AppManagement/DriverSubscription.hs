@@ -98,14 +98,14 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
     case channel of
       SMS -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : SMS") messageKey --whenJust messageKey $ \mkey -> do
-        (mbSender, message, templateId, messageType) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey mbVehicleCategory MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message, templateId, messageType) <- MessageBuilder.buildGenericMessage merchantOpCityId driver.language mkey mbVehicleCategory MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : WHATSAPP") messageKey -- whenJust messageKey $ \mkey -> do
         merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey mbVehicleCategory Nothing
+          QMM.findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory merchantOpCityId mkey driver.language mbVehicleCategory Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         let jsonData = merchantMessage.jsonData
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [jsonData.var1, jsonData.var2, jsonData.var3] Nothing (Just merchantMessage.containsUrlButton) merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup

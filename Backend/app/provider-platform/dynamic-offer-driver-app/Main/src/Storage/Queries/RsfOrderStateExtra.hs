@@ -74,8 +74,8 @@ createMissing merchantId bapId now orderCities = do
     ]
 
 -- Dashboard paging: orders whose latest claim falls in the range, oldest first, one DB page.
-findPageByMerchantAndLastClaimedAtRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> Int -> Int -> m [Domain.RsfOrderState]
-findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset =
+findPageByMerchantAndLastClaimedAtRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> Maybe Text -> Int -> Int -> m [Domain.RsfOrderState]
+findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId mbOrderId limit offset =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId.getId,
@@ -83,6 +83,7 @@ findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset 
           Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
           <> [Se.Is Beam.bapId $ Se.Eq (Just b) | Just b <- [mbBapId]]
+          <> [Se.Is Beam.orderId $ Se.Eq o | Just o <- [mbOrderId]]
     ]
     (Se.Asc Beam.lastClaimedAt)
     (Just limit)
@@ -90,8 +91,8 @@ findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset 
 
 -- Every order whose latest claim falls in the range (the day summary folds the whole day), optionally one
 -- collector's: with a bapId the bap_id secondary key serves the rows from KV, so fresh claims show before they drain.
-findAllByMerchantAndLastClaimedAtRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> m [Domain.RsfOrderState]
-findAllByMerchantAndLastClaimedAtRange merchantId from to mbBapId =
+findAllByMerchantAndLastClaimedAtRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> UTCTime -> UTCTime -> Maybe Text -> Maybe Text -> m [Domain.RsfOrderState]
+findAllByMerchantAndLastClaimedAtRange merchantId from to mbBapId mbOrderId =
   findAllWithKV
     [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId.getId,
@@ -99,6 +100,7 @@ findAllByMerchantAndLastClaimedAtRange merchantId from to mbBapId =
           Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
           <> [Se.Is Beam.bapId $ Se.Eq (Just b) | Just b <- [mbBapId]]
+          <> [Se.Is Beam.orderId $ Se.Eq o | Just o <- [mbOrderId]]
     ]
 
 -- Phase 4 (Mapping C): stamped once per send, only after the collector ACKs.

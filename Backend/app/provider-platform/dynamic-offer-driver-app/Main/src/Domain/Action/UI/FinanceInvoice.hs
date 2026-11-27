@@ -7,7 +7,7 @@ where
 
 import qualified API.Types.UI.FinanceInvoice as API
 import qualified Data.List.NonEmpty as NE
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person (Person)
@@ -111,7 +111,9 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
           pure $ (.planRideCredit) <$> mbSub
         _ -> pure Nothing
 
-      let taxAmount = invoice.totalAmount - invoice.subtotal
+      let taxAmount = case invoice.invoiceType of
+            SubscriptionFee -> maybe (invoice.totalAmount - invoice.subtotal) (.totalGstAmount) mbTaxTxn
+            _ -> invoice.totalAmount - invoice.subtotal
 
       pure $
         API.FinanceInvoiceItem
@@ -174,8 +176,9 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
     Just rideId -> do
       ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
       unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId)
-      let issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
-      QFinanceInvoiceExtra.findByReferenceIdWithStatusFallback ride.bookingId.getId mbInvoiceType (Just issuedToType)
+      let partyId = maybe driverId.getId (.getId) ride.fleetOwnerId
+      filter (\i -> i.issuedToId == partyId || i.supplierId == Just partyId)
+        <$> QFinanceInvoiceExtra.findByReferenceIdWithStatusFallback ride.bookingId.getId mbInvoiceType Nothing
     Nothing ->
       QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
         merchantOpCityId.getId
@@ -184,7 +187,6 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
         mbInvoiceType
         Nothing
         (Just driverId.getId)
-        Nothing
         Nothing
         []
         []

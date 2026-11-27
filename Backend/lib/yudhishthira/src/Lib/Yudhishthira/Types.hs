@@ -416,7 +416,7 @@ instance Enumerable LogicDomain where
       ++ (UI_DRIVER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
       ++ (UI_RIDER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
       ++ [INVOICE_TEMPLATE InvoiceTypeGeneric]
-      ++ map (INVOICE_TEMPLATE . InvoiceTypeSpecific) [SubscriptionPurchase, Ride, RideCancellation, Commission, AggregatedCommission]
+      ++ map (INVOICE_TEMPLATE . InvoiceTypeSpecific) [SubscriptionPurchase, SubscriptionFee, Ride, RideCancellation, Commission, AggregatedCommission]
 
 instance Enumerable ConfigType where
   allValues = [minBound .. maxBound]
@@ -540,7 +540,7 @@ generateLogicDomainShowInstances =
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
     b' = [minBound .. maxBound]
-    invoiceTypes = [SubscriptionPurchase, Ride, RideCancellation, Commission, AggregatedCommission]
+    invoiceTypes = [SubscriptionPurchase, SubscriptionFee, Ride, RideCancellation, Commission, AggregatedCommission]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =

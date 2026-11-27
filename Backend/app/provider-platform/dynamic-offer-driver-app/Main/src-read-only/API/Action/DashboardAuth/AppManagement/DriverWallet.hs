@@ -11,6 +11,7 @@ import qualified API.Types.Dashboard.AppManagement.DriverWallet
 import qualified "this" API.Types.UI.DriverWallet
 import qualified Control.Lens
 import qualified Domain.Action.Dashboard.AppManagement.DriverWallet
+import qualified Domain.Action.DashboardAuth.AppManagement.DriverWallet
 import qualified "this" Domain.Action.UI.Plan
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
@@ -101,7 +102,7 @@ getDriverWalletWalletTransactions a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a5 a7 a6
-        Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactions a7 a6 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.DashboardAuth.AppManagement.DriverWallet.getDriverWalletWalletTransactions a7 a6 a5 a4 a3 a2 a1
     )
 
 postDriverWalletWalletPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -144,7 +145,7 @@ getDriverWalletWalletTransactionHistory a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a6 a8 a7
-        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactionHistory a8 a7 a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.DashboardAuth.AppManagement.DriverWallet.getDriverWalletWalletTransactionHistory a8 a7 a6 a5 a4 a3 a2 a1
     )
 
 getDriverWalletWalletLedgerHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletLedgerEntriesResponse)

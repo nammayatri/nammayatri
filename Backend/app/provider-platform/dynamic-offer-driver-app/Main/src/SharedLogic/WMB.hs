@@ -27,6 +27,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
 import qualified Domain.Types.RouteTripStopMapping as Fields
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
@@ -50,7 +51,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import SharedLogic.DashboardAlert (driverAlertHandle)
+import SharedLogic.DashboardAlert (audienceLanguage, driverAlertHandle)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -245,7 +246,7 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
 
         void $ LF.rideEnd (cast tripTransaction.id) currentLocation.lat currentLocation.lon tripTransaction.merchantId tripTransaction.driverId Nothing (Just tripInfo) Nothing
         QTT.updateOnEnd (if isCancelled then CANCELLED else COMPLETED) (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
-        TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED "Ride Ended" "Your ride has ended" EmptyDynamicParam
+        TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId COMPLETED EmptyDynamicParam
 
         -- Handle next trip assignment - skip for PILOT trips
         case tripTransaction.tripType of
@@ -309,7 +310,7 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                       now <- getCurrentTime
                       void $ LF.rideDetails (cast tripTransaction.id) DRide.CANCELLED tripTransaction.merchantId tripTransaction.driverId currentLocation.lat currentLocation.lon Nothing Nothing
                       QTT.updateOnEnd CANCELLED (Just currentLocation) (Just now) (Just tripTerminationSource) tripTransaction.id
-                      TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId CANCELLED "Ride Cancelled" "Your ride has been Cancelled" EmptyDynamicParam
+                      TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId CANCELLED EmptyDynamicParam
                       runInMasterDbAndRedis $
                         -- Skip route-based operations for PILOT trips
                         case tripTransaction.tripType of
@@ -396,7 +397,7 @@ postAssignTripTransaction tripTransaction mbRoute isFirstBatchTrip currentLocati
         QDI.updateOnRide True tripTransaction.driverId
         when notify $ do
           let tripAssignedEntityData = buildTripAssignedData tripTransaction.id tripTransaction.vehicleServiceTierType tripTransaction.vehicleNumber tripTransaction.routeCode (mbRoute <&> (.shortName)) (mbRoute >>= (.roundRouteCode)) isFirstBatchTrip
-          TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId TRIP_ASSIGNED "Ride Assigned" "Ride assigned" tripAssignedEntityData
+          TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId TRIP_ASSIGNED tripAssignedEntityData
     )
     >>= \case
       Right _ -> return ()
@@ -432,7 +433,7 @@ startTripTransaction tripTransaction mbRoute mbClosestStop sourceStopInfo curren
         let tripStartTransaction = tripTransaction {tripCode = tripCode', startedNearStopCode = startedNearStopCode', startLocation = Just currentLocation, status = IN_PROGRESS, tripStartTime = Just now}
         QTT.updateOnStart tripStartTransaction.tripCode tripStartTransaction.startedNearStopCode tripStartTransaction.startLocation tripStartTransaction.status tripStartTransaction.tripStartTime (Just tripStartSource) tripStartTransaction.id
         when notify $ do
-          TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS "Ride Started" "Your ride has started" EmptyDynamicParam
+          TN.notifyWmbOnRide tripTransaction.driverId tripTransaction.merchantOperatingCityId IN_PROGRESS EmptyDynamicParam
         -- Only check wrong start stop for WIMB trips
         when (tripTransaction.tripType /= Just PILOT) $ do
           fork "Check Wrong Start Stop" $ checkWrongStartStop tripStartTransaction
@@ -666,20 +667,31 @@ tripTransactionKey driverId = \case
   PAUSED -> "WMB:TP:" <> driverId.getId
   UPCOMING -> "WMB:TU:" <> driverId.getId
 
+-- | The placeholders a fleet alert row may carry: the stop the driver reached.
+alertParams :: AlertRequestData -> [(Text, Text)]
+alertParams = \case
+  RideStopReached d -> [("stopName", d.stopName)]
+  _ -> []
+
+-- | Raises the alert to the fleet owner: the bell row and the push carry the owner's row for the
+-- alert type in their language, else the English title and body the caller built.
 triggerAlertRequest :: Id Person -> Text -> Text -> Text -> AlertRequestData -> Bool -> TripTransaction -> Flow (Id DADT.DashboardAlert)
 triggerAlertRequest driverId requesteeId title body requestData isViolated tripTransaction = do
   let alertRequestType = castAlertRequestDataToRequestType requestData
   if isViolated
     then do
       now <- getCurrentTime
+      let audience = DAA.FleetOwnerAudience (cast (Id requesteeId))
+      mbLanguage <- audienceLanguage audience
+      content <- TN.buildMerchantPNContentWithFallback tripTransaction.merchantOperatingCityId mbLanguage (DriverPush_FleetAlert alertRequestType) (alertParams requestData) (title, body)
       alertRequestIds <-
         DAT.triggerPersist
           driverAlertHandle
-          [DAA.FleetOwnerAudience (cast (Id requesteeId))]
+          [audience]
           DAT.AlertContent
             { category = DAlertCategory.WMB_ALERT,
-              title = title,
-              body = body,
+              title = TN.pushTitle content,
+              body = TN.pushBody content,
               entityId = tripTransaction.id.getId,
               entityType = DAlertEntity.TripTransactionEntity,
               entityData = toJSON requestData,
@@ -716,7 +728,7 @@ triggerAlertRequest driverId requesteeId title body requestData isViolated tripT
             merchantOperatingCityId = tripTransaction.merchantOperatingCityId,
             alertStatus = Just $ AWAITING_APPROVAL
           }
-      TN.notifyFleetWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM title body driverId Nothing requestData
+      TN.notifyFleetWithGRPCProvider tripTransaction.merchantOperatingCityId Notification.TRIGGER_FCM content driverId Nothing requestData
       pure alertRequestId
     else do
       tripAlertRequest <- QTAR.findLatestTripAlertRequest tripTransaction.merchantOperatingCityId tripTransaction.fleetOwnerId.getId alertRequestType driverId.getId tripTransaction.routeCode >>= fromMaybeM (TripAlertRequestNotFound tripTransaction.id.getId)

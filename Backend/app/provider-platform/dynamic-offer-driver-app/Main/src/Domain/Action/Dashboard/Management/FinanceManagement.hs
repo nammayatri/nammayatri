@@ -126,6 +126,7 @@ import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.InvoiceTemplate as CQIT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
@@ -482,7 +483,7 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
       useTypeList = not (null issuedToTypeList)
       isBapOrUnfilteredIssuedToType = maybe True (`Kernel.Prelude.elem` [RIDER, CUSTOMER]) mbIssuedToType
       statusIn =
-        if useTypeList
+        if useTypeList || isJust mbStatus
           then []
           else
             if isBapOrUnfilteredIssuedToType
@@ -490,48 +491,43 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
               else []
   when (isJust mbIssuedToType && useTypeList) $
     logWarning "Both issuedToType and issuedToTypes supplied; issuedToType will be ignored"
-  case mbInvoiceId of
-    Just invoiceId ->
-      QFinanceInvoice.findById (Id invoiceId) >>= \case
-        Just inv -> pure [inv]
-        Nothing -> pure []
-    Nothing -> case mbInvoiceNumber of
-      Just invoiceNumber ->
-        QFinanceInvoice.findByNumber invoiceNumber >>= \case
-          Just inv -> pure [inv]
-          Nothing -> pure []
-      Nothing -> case mbReferenceId of
-        Just referenceId -> do
-          let mbRefIssuedToType = if useTypeList then Nothing else mbIssuedToType
-          filter (\i -> not useTypeList || i.issuedToType `Kernel.Prelude.elem` issuedToTypeList)
-            <$> maybe
-              (QFinanceInvoiceExtra.findByReferenceIdWithStatusFallback referenceId mbInvoiceType mbRefIssuedToType)
-              (\status -> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId mbInvoiceType mbRefIssuedToType [status] Nothing Nothing)
-              mbStatus
-        Nothing -> do
-          let mbIssuedToId =
-                case mbInvoiceType of
-                  Just Ride -> Nothing
-                  Just Refund -> Nothing
-                  _ -> mbFleetOwnerOrDriverId
-              mbSupplierId =
-                case mbInvoiceType of
-                  Just Ride -> mbFleetOwnerOrDriverId
-                  Just Refund -> mbFleetOwnerOrDriverId
-                  _ -> Nothing
-          QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-            merchantOpCityId.getId
-            mbFrom
-            mbTo
-            mbInvoiceType
-            mbStatus
-            mbIssuedToId
-            mbSupplierId
-            (if useTypeList then Nothing else mbIssuedToType)
-            issuedToTypeList
-            statusIn
-            (Just limit)
-            (Just offset)
+  let mbSingleIssuedToType = if useTypeList then Nothing else mbIssuedToType
+      matchesFilters i =
+        i.merchantOperatingCityId == merchantOpCityId.getId
+          && maybe True (\invoiceId -> i.id.getId == invoiceId) mbInvoiceId
+          && maybe True (== i.invoiceNumber) mbInvoiceNumber
+          && maybe True (\referenceId -> i.referenceId == Just referenceId) mbReferenceId
+          && maybe True (\partyId -> i.issuedToId == partyId || i.supplierId == Just partyId) mbFleetOwnerOrDriverId
+          && maybe True (<= i.issuedAt) mbFrom
+          && maybe True (>= i.issuedAt) mbTo
+          && maybe True (== i.invoiceType) mbInvoiceType
+          && maybe True (== i.status) mbStatus
+          && maybe True (== i.issuedToType) mbSingleIssuedToType
+          && (null issuedToTypeList || i.issuedToType `Kernel.Prelude.elem` issuedToTypeList)
+          && (null statusIn || i.status `Kernel.Prelude.elem` statusIn)
+      applyFilters = take limit . drop offset . filter matchesFilters
+  case (mbInvoiceId, mbInvoiceNumber, mbReferenceId) of
+    (Just invoiceId, _, _) -> applyFilters . maybeToList <$> QFinanceInvoice.findById (Id invoiceId)
+    (_, Just invoiceNumber, _) -> applyFilters . maybeToList <$> QFinanceInvoice.findByNumber invoiceNumber
+    (_, _, Just referenceId) ->
+      applyFilters
+        <$> maybe
+          (QFinanceInvoiceExtra.findByReferenceIdWithStatusFallback referenceId mbInvoiceType mbSingleIssuedToType)
+          (\status -> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId mbInvoiceType mbSingleIssuedToType [status] Nothing Nothing)
+          mbStatus
+    _ ->
+      QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+        merchantOpCityId.getId
+        mbFrom
+        mbTo
+        mbInvoiceType
+        mbStatus
+        mbFleetOwnerOrDriverId
+        mbSingleIssuedToType
+        issuedToTypeList
+        statusIn
+        (Just limit)
+        (Just offset)
 
 -- | Get invoice list with filters
 getFinanceManagementInvoiceList ::
@@ -1897,7 +1893,10 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = NE.head pdfDatasNE
       chosenInv = chosenPdfData.financeInvoice
-  mbStoredPdf <- if lang == ENGLISH then InvoiceDocument.getStoredInvoicePdfBase64 chosenInv else pure Nothing
+  -- A language with no template of its own gets the whole PDF in English, labels included.
+  mbTemplate <- CQIT.findByMerchantOpCityIdInvoiceTypeAndLanguage (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) lang Nothing
+  let pdfLang = if isJust mbTemplate then lang else ENGLISH
+  mbStoredPdf <- if pdfLang == ENGLISH then InvoiceDocument.getStoredInvoicePdfBase64 chosenInv else pure Nothing
   pdfBase64 <- case mbStoredPdf of
     Just storedPdf -> pure storedPdf
     Nothing -> do
@@ -1905,7 +1904,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       let ctx =
             FRT.buildInvoiceContext
               FRT.BuildInvoiceContextInput
-                { language = lang,
+                { language = pdfLang,
                   logoUrl = tmplLogoUrl,
                   sellerTradeName = tmplSellerTradeName,
                   appName = tmplAppName,
@@ -1928,7 +1927,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
                   cityState = transporterConfig.invoiceConfig >>= (.cityState),
                   qrImageDataUri = mbQrDataUri
                 }
-      html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) lang tz ctx
+      html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) (Just chosenInv.invoiceType) pdfLang tz ctx
       generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $

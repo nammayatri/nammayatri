@@ -76,7 +76,7 @@ getPaymentRefundRequestList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a9 a11 a10
-        Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.Dashboard.AppManagement.Payment.getPaymentRefundRequestList a11 a10 a8 a7 a6 a5 a4 a3 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a9))
+        Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.DashboardAuth.AppManagement.Payment.getPaymentRefundRequestList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
     )
 
 getPaymentRefundRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestInfoResp)
@@ -84,7 +84,7 @@ getPaymentRefundRequestInfo a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
-        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.Payment.getPaymentRefundRequestInfo a5 a4 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3))
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.AppManagement.Payment.getPaymentRefundRequestInfo a5 a4 a3 a2 a1
     )
 
 postPaymentRefundRequestRespond :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)

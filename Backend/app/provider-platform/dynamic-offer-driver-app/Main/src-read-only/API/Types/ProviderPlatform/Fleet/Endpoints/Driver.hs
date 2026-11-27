@@ -20,6 +20,7 @@ import qualified Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.Alert.AlertRequestType
 import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.FleetPoolingPriority
+import qualified Domain.Types.TranslationKey
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Maps
@@ -1381,7 +1382,7 @@ data VehicleInfo = VehicleInfo
     vehicleRatingRemark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectReason :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     reviewRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

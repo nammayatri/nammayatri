@@ -141,7 +141,7 @@ data DocumentType
   | LegalEntityCompanyDetails
   | TermsAndConditions
   | LedgerAdjustmentProof
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Bounded, Enum)
 
 data FieldInfo = FieldInfo
   { _type :: Domain.Types.DocumentVerificationConfig.FieldType,

@@ -11,6 +11,7 @@ import qualified Domain.Types.Extra.MerchantMessage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -21,6 +22,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     createdAt :: Kernel.Prelude.UTCTime,
     domain :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageDomain,
     jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
+    language :: Kernel.External.Types.Language,
     mediaUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -110,6 +112,7 @@ data MessageKey
   | VEHICLE_APPROVED
   | SEND_WHATSAPP_OTP
   | DASHBOARD_WELCOME_EMAIL
+  | TDS_CERTIFICATE_EMAIL
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 type MerchantMessage = MerchantMessageD ('Safe)

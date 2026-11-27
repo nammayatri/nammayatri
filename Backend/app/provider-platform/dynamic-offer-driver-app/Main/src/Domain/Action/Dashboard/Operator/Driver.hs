@@ -579,7 +579,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
             let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
             let shouldActivateRc = False
                 skipMessages = False -- Need translations for API response
-            Just . castStatusRes <$> SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages Nothing
+            Just . castStatusRes <$> SStatus.statusHandler' Nothing person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs skipMessages Nothing
           else pure Nothing
 
       driverInfo <- HashMap.lookup drvOpAsn.driverId.getId driverInfoMap & fromMaybeM DriverInfoNotFound
@@ -646,7 +646,7 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
                   assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd False
                   QDOA.create assoc
                 (mbSender, message, templateId, messageType) <-
-                  MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
+                  MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId person.language $
                     MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
                       { operatorName = operator.firstName
                       }
@@ -662,7 +662,7 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
             whenNothing_ useFakeOtpM $ do
               let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
               (mbSender, message, templateId, messageType) <-
-                MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
+                MessageBuilder.buildOperatorJoiningMessage merchantOpCityId person.language $
                   MessageBuilder.BuildOperatorJoiningMessageReq
                     { otp = otpCode,
                       operatorName = operatorName
@@ -716,7 +716,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
         (mbSender, message, templateId, messageType) <-
-          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
+          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId person.language $
             MessageBuilder.BuildOperatorDeepLinkAuthMessage
               { operatorName = operator.firstName
               }
@@ -1084,7 +1084,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         forM_ validatedDocs $ \(_images, _rejectedReason, docDetail) -> do
           void $
             withTryCatch "SubmitReview:sendRejectionNotification" $
-              sendDocumentDecisionNotification merchantOpCity.id (show docDetail.documentType) (DocumentRejected docDetail.rejectedReason) person
+              sendDocumentDecisionNotification merchantOpCity.id docDetail.documentType (DocumentRejected docDetail.rejectedReason) person
 
     let domainEntityType = case req.entityType of
           API.Types.ProviderPlatform.Operator.Driver.DRIVER -> DRR.DRIVER
@@ -1198,7 +1198,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           case docType of
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
-              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID, DVRC.rejectReason = rejectReason, DVRC.rejectReasonKey = Nothing}
             DVC.VehicleInspectionForm ->
               IQuery.updateVerificationStatusByRcIdAndImageTypes Documents.INVALID rcId VDocs.vehicleDocsByRcIdList
             DVC.InspectionHub -> do
@@ -1214,7 +1214,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             DVC.VehiclePermit -> QVPermit.updateVerificationStatusByRcId Documents.INVALID rcId
             DVC.VehicleFitnessCertificate -> QFC.updateVerificationStatusByRcId Documents.INVALID rcId
             DVC.VehicleInsurance -> do
-              QVI.updateVerificationStatusAndRejectReasonByRcId Documents.INVALID rejectReason rcId
+              QVI.updateVerificationStatusAndRejectReasonByRcId Documents.INVALID rejectReason Nothing rcId
               -- An insurance uploaded as a common document takes its status from that row instead.
               mbCommonDoc <- QCommonDocExtra.findCurrentVersionByOwnerAndDocumentType (QCommonDocExtra.OwnedByRc rcId) DVC.VehicleInsurance
               forM_ mbCommonDoc $ \commonDoc -> QCommonDoc.updateByPrimaryKey commonDoc {DCommonDoc.verificationStatus = Documents.INVALID, DCommonDoc.rejectReason = rejectReason}
@@ -1230,7 +1230,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
               forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID, DDPC.rejectReason = rejectReason}
             DVC.DriverLicense -> do
               mbDoc <- DLQuery.findByDriverId personId
-              forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
+              forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason, DDL.rejectReasonKey = Nothing}
             DVC.SocialSecurityNumber -> do
               mbDoc <- QDSSN.findByDriverId personId
               forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}

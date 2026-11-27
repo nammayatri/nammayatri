@@ -53,6 +53,7 @@ import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Domain.Types.WebhookExtra as WT
@@ -113,6 +114,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
+import qualified SharedLogic.Finance.PostpaidFeeInvoice as PostpaidFeeInvoice
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.Rails as Rails
 import SharedLogic.Finance.RideInvoice (resolveInvoiceIssuedToAddress)
@@ -630,9 +632,8 @@ processWalletTopupWebhook driver order transactionStatus = do
             pure (not alreadyPosted)
           else pure False
     when creditedNow $ do
-      let notificationTitle = "Wallet Top-up Successful"
-          notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
-      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+      content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Wallet_TopupSuccess [("amount", show order.amount)] ("Wallet Top-up Successful", "Your wallet has been topped up with Rs." <> show order.amount)
+      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY content driver driver.deviceToken
 
 mkTopupInvoiceConfig :: DOrder.PaymentOrder -> InvoiceConfig
 mkTopupInvoiceConfig order =
@@ -642,6 +643,7 @@ mkTopupInvoiceConfig order =
       issuedToId = order.personId.getId,
       issuedToName = Nothing,
       issuedToAddress = Nothing,
+      issuedById = Nothing,
       referenceId = Nothing,
       lineItems = [InvoiceLineItem {description = "Wallet Top-up", descriptionType = Just WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Just Fare}],
       gstBreakdown = Nothing,
@@ -677,6 +679,7 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let mbInvoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
+      postpaidFeeInvoiceOn = serviceName == DP.YATRI_SUBSCRIPTION && fromMaybe False (transporterConfig.invoiceConfig >>= (.enablePostpaidFeeInvoice))
   outerLockRes <- Redis.whenWithLockRedisAndReturnValue (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((mbInvoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (mbInvoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
       maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (mbInvoice <&> (.driverFeeId))
@@ -700,9 +703,14 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
         forM_ driverFeeIds $ \driverFeeId -> Redis.del (manualPaymentInProgressKey driverFeeId.getId)
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
       SWalletSubscription.creditWalletForPaidDriverFees transporterConfig driver orderId.getId driverFees
-    case innerLockRes of
-      Left () -> logError $ "processPayment: payout lock held, skipped clearing driver fees for order " <> orderId.getId <> " driverFeeIds " <> show (driverFeeIds <&> (.getId)) <> "; invoice will still be marked SUCCESS and the fees stay uncleared until reconciled (clearDriverDues)"
-      Right () -> pure ()
+      pure driverFees
+    feesForInvoice <- case innerLockRes of
+      Left () -> do
+        logError $ "processPayment: payout lock held, skipped clearing driver fees for order " <> orderId.getId <> " driverFeeIds " <> show (driverFeeIds <&> (.getId)) <> "; invoice will still be marked SUCCESS and the fees stay uncleared until reconciled (clearDriverDues)"
+        pure []
+      Right feesInLock -> pure feesInLock
+    when postpaidFeeInvoiceOn $
+      PostpaidFeeInvoice.createPostpaidFeeInvoice transporterConfig driver orderId.getId (Just orderId.getId) PostpaidFeeInvoice.PostpaidOnline feesForInvoice
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
     when (sendNotification && subsConfig.sendInAppFcmNotifications && serviceName /= DP.PREPAID_SUBSCRIPTION) $ notifyPaymentSuccessIfNotNotified driver orderId
@@ -783,7 +791,9 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         merchantOperatingCity <- CQMOC.findById latestPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist latestPurchase.merchantOperatingCityId.getId)
         mbFleetInfo <- if isFleetOwner then QFOI.findByPrimaryKey person.id else pure Nothing
         mbBuyerGstinRow <- QDG.findByDriverId person.id
-        gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
+        fleetGstin <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
+        buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
+        let gstinOfParty = fleetGstin <|> buyerGstin
         let issuedByAddress = Just $ fromMaybe (show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country) merchantOperatingCity.address
             opCityAddress = fromMaybe (show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country) merchantOperatingCity.address
             issuedToAddress = Just $ resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress
@@ -809,7 +819,6 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
         -- GSTIN is encrypted on DriverGstin and must be decrypted.
         let sellerGstin = merchantOperatingCity.gstin <|> merchant.gstin
-        buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
         -- For FLEET_BUSINESS with both GSTINs present, use GSTIN state-code
         -- comparison (proper B2B path). Otherwise compare PoB vs driver/fleet
         -- addressState from local residence proof.
@@ -874,12 +883,9 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
               { subscriptionPurchaseId = latestPurchase.id
               }
         unless isFleetOwner $ do
-          let prepaidRechargeMessage =
-                "Your recharge worth Rs."
-                  <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
-                  <> " is successful"
-              prepaidRechargeTitle = "Recharge Successful!"
-          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+          let rechargeAmount = show (SPayment.roundToTwoDecimalPlaces creditAmount)
+          content <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Prepaid_RechargeSuccess [("amount", rechargeAmount)] ("Recharge Successful!", "Your recharge worth Rs." <> rechargeAmount <> " is successful")
+          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS content person person.deviceToken
 
 updatePrepaidBalanceAndExpiry ::
   ( CacheFlow m r,
@@ -953,12 +959,9 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           mbVehicleCategory
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
-      let prepaidRechargeMessage =
-            "Your recharge worth Rs."
-              <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
-              <> " is successful"
-          prepaidRechargeTitle = "Recharge Successful!"
-      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+      let rechargeAmount = show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
+      content <- buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Prepaid_RechargeSuccess [("amount", rechargeAmount)] ("Recharge Successful!", "Your recharge worth Rs." <> rechargeAmount <> " is successful")
+      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS content person person.deviceToken
       pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::

@@ -426,7 +426,7 @@ dispatchCommunicationAction ctx driverId = \case
             textFromParams "notificationType" params.templateParams >>= readMaybe . T.unpack
     withDriver $ \driver -> do
       logInfo $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey <> " as " <> show notifType
-      Notify.notifyDriver ctx.merchantOperatingCityId notifType title body driver driver.deviceToken
+      Notify.notifyDriver ctx.merchantOperatingCityId notifType (Notify.prebuiltPushContent title body) driver driver.deviceToken
   CMT.InAppOverlay params ->
     withDriver $ \driver -> do
       logInfo $ "In-app overlay for driver " <> driverId.getId <> ": " <> params.overlayKey
@@ -438,7 +438,7 @@ dispatchCommunicationAction ctx driverId = \case
         body = fromMaybe "" (textFromParams "body" params.templateParams)
     withDriver $ \driver -> do
       logInfo $ "In-app message (as FCM) for driver " <> driverId.getId <> ": " <> params.messageKey
-      Notify.notifyDriver ctx.merchantOperatingCityId FCM.DRIVER_NOTIFY title body driver driver.deviceToken
+      Notify.notifyDriver ctx.merchantOperatingCityId FCM.DRIVER_NOTIFY (Notify.prebuiltPushContent title body) driver driver.deviceToken
   CMT.SmsCommunication params ->
     logInfo $ "SMS (not yet handled) for driver " <> driverId.getId <> ": " <> params.templateKey
   CMT.BadgeCommunication params ->

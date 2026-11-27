@@ -7,7 +7,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import Kernel.External.Encryption
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (Language, SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -45,7 +45,7 @@ onCancelCore ::
   Merchant ->
   Booking.FRFSTicketBooking ->
   DOnCancel ->
-  m (Maybe (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters))
+  m (Maybe (Maybe Text, Maybe Text, Maybe Language, FRFSUtils.FRFSFareParameters))
 onCancelCore merchant booking' dOnCancel = do
   let booking = booking' {Booking.bppOrderId = Just dOnCancel.bppOrderId}
   let refundAmount = fromMaybe (negate dOnCancel.baseFare) dOnCancel.refundAmount

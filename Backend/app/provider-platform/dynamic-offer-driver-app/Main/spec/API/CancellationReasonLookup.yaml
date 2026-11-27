@@ -7,8 +7,8 @@ module: CancellationReasonLookup
 
 types:
   CancellationReasonResp:
-    reasonCode: Text
-    reasonMessage: Text
+    reasonCode: "!Text"
+    reasonMessage: TranslatedText
 
 apis:
   - GET:

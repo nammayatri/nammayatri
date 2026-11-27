@@ -6,9 +6,9 @@ import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Common
+import qualified Domain.Types.DocumentFieldConstraints
 import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
-import qualified Domain.Types.DocumentVerificationStagesConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod
@@ -16,6 +16,7 @@ import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Image
 import qualified Domain.Types.Person
+import qualified Domain.Types.TranslationKey
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface.Types
@@ -46,7 +47,7 @@ data AadhaarCardReq = AadhaarCardReq
 
 data AirConditionedTier = AirConditionedTier
   { isWorking :: Kernel.Prelude.Bool,
-    restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    restrictionMessage :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
   }
   deriving stock (Generic)
@@ -104,14 +105,14 @@ data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel
 
 data DocumentOnboardingStageAPIEntity = DocumentOnboardingStageAPIEntity
   { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    guidelines :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.ImageInfo],
-    hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    media :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationStagesConfig.MediaInfo],
+    description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    guidelines :: Kernel.Prelude.Maybe [ImageInfo],
+    hint :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    media :: Kernel.Prelude.Maybe [MediaInfo],
     order :: Kernel.Prelude.Int,
     stage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
     stageDependency :: [Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage],
-    title :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving stock (Generic)
@@ -122,12 +123,12 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,
     dependencyDocumentType :: [Domain.Types.DocumentVerificationConfig.DocumentType],
-    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    disableWarning :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     doNotValidateDuringOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     doStrictVerification :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
-    documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
+    documentFields :: Kernel.Prelude.Maybe [FieldInfo],
     documentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
     documentOnboardingStage :: Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
@@ -141,7 +142,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     onboardingStage :: Kernel.Prelude.Maybe DocumentOnboardingStageAPIEntity,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
-    title :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
     verificationProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]
   }
   deriving stock (Generic)
@@ -195,13 +196,13 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     isDefault :: Kernel.Prelude.Bool,
     isSelected :: Kernel.Prelude.Bool,
     isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    longDescription :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    name :: Kernel.Prelude.Text,
+    name :: Domain.Types.TranslationKey.TranslatedText,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.Common.ServiceTierType,
-    shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    shortDescription :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving stock (Generic)
@@ -224,6 +225,24 @@ data FarePolicyHour
   | NonPeak
   | Night
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FieldInfo = FieldInfo
+  { _type :: Domain.Types.DocumentVerificationConfig.FieldType,
+    description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    descriptionUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    fieldConstraints :: Kernel.Prelude.Maybe Domain.Types.DocumentFieldConstraints.FieldConstraints,
+    fields :: Kernel.Prelude.Maybe [FieldInfo],
+    hint :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    images :: Kernel.Prelude.Maybe [ImageInfo],
+    isMandatory :: Kernel.Prelude.Bool,
+    name :: Domain.Types.TranslationKey.TranslatedText,
+    placeholder :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FleetInfo = FleetInfo
@@ -262,11 +281,24 @@ data HVSdkCallLogReq = HVSdkCallLogReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ImageInfo = ImageInfo {imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, text :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText, title :: Domain.Types.TranslationKey.TranslatedText}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LinkToFleetReq = LinkToFleetReq
   { fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     isRevoke :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MediaInfo = MediaInfo
+  { description :: Kernel.Prelude.Maybe Domain.Types.TranslationKey.TranslatedText,
+    thumbnailUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
+    url :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -359,6 +391,45 @@ data TDSInvoiceEntry = TDSInvoiceEntry
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAirConditioned :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateAirConditionedTierReq = UpdateAirConditionedTierReq
+  { isWorking :: Kernel.Prelude.Bool,
+    restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateServiceTierReq = UpdateServiceTierReq
+  { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    autoAcceptance :: Kernel.Prelude.Maybe AutoAcceptanceInfo,
+    driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+    isDefault :: Kernel.Prelude.Bool,
+    isSelected :: Kernel.Prelude.Bool,
+    isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    name :: Kernel.Prelude.Text,
+    priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    serviceTierType :: Domain.Types.Common.ServiceTierType,
+    shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateServiceTiersReq = UpdateServiceTiersReq
+  { airConditioned :: Kernel.Prelude.Maybe UpdateAirConditionedTierReq,
+    autoAcceptLockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
+    tiers :: [UpdateServiceTierReq]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

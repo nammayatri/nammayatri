@@ -52,7 +52,7 @@ SELECT
 FROM atlas_app.merchant_operating_city moc
 WHERE moc.merchant_short_id = 'NAMMA_YATRI'
   AND moc.city = 'Bangalore'
-ON CONFLICT (merchant_operating_city_id, message_key) DO UPDATE
+ON CONFLICT (merchant_operating_city_id, message_key, language) DO UPDATE
 SET sender_header = EXCLUDED.sender_header,
     message = EXCLUDED.message,
     template_id = EXCLUDED.template_id,
@@ -107,7 +107,7 @@ SELECT
 FROM atlas_driver_offer_bpp.merchant_operating_city moc
 WHERE moc.merchant_short_id = 'NAMMA_YATRI_PARTNER'
   AND moc.city = 'Bangalore'
-ON CONFLICT (merchant_operating_city_id, message_key) DO UPDATE
+ON CONFLICT (merchant_operating_city_id, message_key, language) DO UPDATE
 SET sender_header = EXCLUDED.sender_header,
     message = EXCLUDED.message,
     template_id = EXCLUDED.template_id,
