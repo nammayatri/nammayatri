@@ -99,7 +99,6 @@ import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.SMS as Sms
 import qualified Tools.Wallet as Wallet
-import Prelude (id)
 
 --import Control.Monad.Extra (mapMaybeM)
 
@@ -1298,7 +1297,8 @@ getParkingPlaceBookings place mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry = do
         Just NotEntered -> filter (not . isEntered) stays
         Nothing -> stays
       newestFirst = sortOn (\(_, _, stay) -> Down stay.stayStart) shown
-      page = maybe id take mbLimit (drop (fromMaybe 0 mbOffset) newestFirst)
+      afterOffset = drop (fromMaybe 0 mbOffset) newestFirst
+      page = maybe afterOffset (\n -> take n afterOffset) mbLimit
   bookings <- forM page $ \(zone, root, stay) -> do
     booking <- QTB.findById root.ticketBookingId >>= fromMaybeM (InternalError $ "Ticket booking missing: " <> root.ticketBookingId.getId)
     person <- QP.findById booking.personId >>= fromMaybeM (InvalidRequest "Person not found")
