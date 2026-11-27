@@ -369,7 +369,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             supportNumber = supportNumber,
             paymentModes = resolvedPaymentModes,
             fareSettlementType = mbFareSettlementType,
-            boothSpecificFleet = boothSpecificFleet
+            boothSpecificFleet = boothSpecificFleet,
+            skipQueue = Nothing
           }
       gateInfo =
         DGI.GateInfo
@@ -516,7 +517,8 @@ mergeSpecialLocationWithExisting new (Just old) =
       DSL.render = new.render <|> old.render,
       DSL.enforceTollRoute = new.enforceTollRoute <|> old.enforceTollRoute,
       DSL.fareSettlementType = new.fareSettlementType <|> old.fareSettlementType,
-      DSL.boothSpecificFleet = new.boothSpecificFleet <|> old.boothSpecificFleet
+      DSL.boothSpecificFleet = new.boothSpecificFleet <|> old.boothSpecificFleet,
+      DSL.skipQueue = new.skipQueue <|> old.skipQueue
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
