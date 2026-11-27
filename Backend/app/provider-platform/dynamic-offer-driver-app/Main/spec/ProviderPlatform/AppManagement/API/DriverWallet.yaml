@@ -30,6 +30,7 @@ apis:
         type: WalletBalanceResponse
   - GET:
       endpoint: /wallet/{driverId}/transactions
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver
@@ -87,6 +88,7 @@ apis:
         type: PayoutHistoryResponse
   - GET:
       endpoint: /wallet/{driverId}/transactionHistory
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver

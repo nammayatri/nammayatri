@@ -8,6 +8,7 @@ import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -40,15 +41,28 @@ findAllByMerchantOpCityId ::
   m [Domain.Types.MerchantMessage.MerchantMessage]
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-findByMerchantOperatingCityIdAndMessageKey ::
+findAllByMerchantOpCityIdAndMessageKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
-  (Domain.Types.MerchantMessage.MessageKey -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
-findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey = do
-  findOneWithKV
+  (Domain.Types.MerchantMessage.MessageKey -> m [Domain.Types.MerchantMessage.MerchantMessage])
+findAllByMerchantOpCityIdAndMessageKey merchantOperatingCityId messageKey = do
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.messageKey $ Se.Eq messageKey
+        ]
+    ]
+
+findByMerchantOperatingCityIdAndMessageKeyLanguage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Domain.Types.MerchantMessage.MessageKey -> (Kernel.External.Types.Language -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage)))
+findByMerchantOperatingCityIdAndMessageKeyLanguage merchantOperatingCityId messageKey language = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey,
+          Se.Is Beam.language $ Se.Eq (Just language)
         ]
     ]
 
@@ -66,7 +80,12 @@ updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
       Se.Set Beam.templateId (Just templateId),
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.messageKey $ Se.Eq messageKey]]
+    [ Se.And
+        [ Se.Is Beam.language $ Se.Eq (Just language),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey
+        ]
+    ]
 
 instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   fromTType' (Beam.MerchantMessageT {..}) = do
@@ -76,6 +95,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
           { containsUrlButton = containsUrlButton,
             createdAt = createdAt,
             jsonData = valueToJsonData jsonData,
+            language = fromMaybe Kernel.External.Types.ENGLISH language,
             mediaUrl = mediaUrl,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -93,6 +113,7 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
       { Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
         Beam.jsonData = Just $ toJSON jsonData,
+        Beam.language = Just language,
         Beam.mediaUrl = mediaUrl,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

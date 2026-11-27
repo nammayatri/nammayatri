@@ -29,6 +29,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -183,13 +184,13 @@ notifyExcludedBeneficiary person amount reason =
   when (person.role `notElem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $ do
     firstToday <- Redis.setNxExpire ("BulkPayoutExclusionNotified:" <> person.id.getId <> ":" <> reason) (24 * 3600) True
     when firstToday $
-      fork ("BulkPayoutExclusionNotify:" <> person.id.getId) $
+      fork ("BulkPayoutExclusionNotify:" <> person.id.getId) $ do
+        content <- Notify.buildMerchantPNContentWithFallback person.merchantOperatingCityId person.language DriverPush_Payout_BankDetailsMissing [("amount", show amount), ("reason", reason)] ("Add your bank details to get paid", "Rs." <> show amount <> " is ready for payout but could not be sent: " <> reason <> ". Please add or update your bank details.")
         Notify.sendNotificationToDriver
           person.merchantOperatingCityId
           FCM.SHOW
           Nothing
           FCM.PAYOUT_VPA_REMINDER
-          "Add your bank details to get paid"
-          ("Rs." <> show amount <> " is ready for payout but could not be sent: " <> reason <> ". Please add or update your bank details.")
+          content
           person
           person.deviceToken

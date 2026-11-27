@@ -175,6 +175,9 @@ updateMockSafetyDrillStatus ::
   m ()
 updateMockSafetyDrillStatus hasCompletedMockSafetyDrill personId = QSafetySettings.updateMockSafetyDrillStatus hasCompletedMockSafetyDrill personId
 
+-- | What the emergency contacts hear once an SOS is marked safe; each app maps it to its push key.
+data SosResolvedNotification = SosResolvedSafe | LiveTrackingStopped
+
 -- | Result type for markSosAsSafe operation
 data MarkSosAsSafeResult = MarkSosAsSafeResult
   { updatedSos :: DSos.Sos,
@@ -183,7 +186,7 @@ data MarkSosAsSafeResult = MarkSosAsSafeResult
     shouldStopTracking :: Bool,
     shouldMarkAsResolved :: Bool,
     shouldNotifyContacts :: Bool,
-    notificationKey :: Text,
+    notificationKey :: SosResolvedNotification,
     isRideBased :: Bool,
     rideId :: Maybe (Id Common.Ride)
   }
@@ -262,11 +265,11 @@ markSosAsSafe sosId personId mbIsEndLiveTracking mbIsRideEnded = do
           else True
       notificationKey =
         if isRideBased
-          then "SOS_RESOLVED_SAFE"
+          then SosResolvedSafe
           else
             if shouldStopTracking && wasLiveTracking
-              then "LIVE_TRACKING_STOPPED"
-              else "SOS_RESOLVED_SAFE"
+              then LiveTrackingStopped
+              else SosResolvedSafe
 
   return $
     MarkSosAsSafeResult

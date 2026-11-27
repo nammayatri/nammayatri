@@ -169,6 +169,7 @@ postVehicleParkingFeeExemption merchantShortId opCity vehicleNumber req = do
   whenJust mbSpecialLocation $ \specialLocation -> do
     now <- getCurrentTime
     void $ runTransaction $ QSL.updateParkingFeeExemptionEnabled (Just req.exempt) now specialLocation.id
+    QSL.clearSpecialLocationListCache [merchantOpCity.id.getId]
     QSL.clearSpecialZoneInMemCache
   logInfo $
     "Parking fee exemption set to " <> show req.exempt <> " for vehicleNumber: " <> vehicleNumber

@@ -124,13 +124,6 @@ RiderConfig:
       trackingLinkRequired: Bool
       tracePollingIntervalSeconds: Maybe Seconds
       stateCode: Maybe Text
-    RiderInvoiceConfig:
-      derive: "Eq"
-      ledgerEmitEnabled: Bool
-      logoUrl: Maybe BaseUrl
-      supplierName: Maybe Text
-      supplierAddress: Maybe Text
-      supplierVatNumber: Maybe Text
 
   tableName: rider_config
 
@@ -343,7 +336,6 @@ RiderConfig:
     maxLiveVehiclesPerRoute: Int
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
-    invoiceConfig: Maybe RiderInvoiceConfig
     invoiceEmailEnabled: Maybe Bool
     # Better route point suggestion: detect a point already on the search route that
     # is a short walk from the customer's pickup/drop but cuts a large detour out of
@@ -406,6 +398,7 @@ RiderConfig:
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
     manualChargeApprovalMinCustomerVersion: Maybe Text
+    smsOtpAllowedCountryCodes: "Maybe [Text]" # Mobile country codes (e.g. "+91") that may receive an OTP over SMS. Nothing = no restriction
     enablePersonCallIdentity: Maybe Bool # When True, Twilio in-app calls use the per-person call identity (person.call_identity) and the TwiML endpoint checks the caller and whether calling is still allowed. Nothing = per-ride identities, no checks
 
   beamType:
@@ -470,7 +463,6 @@ RiderConfig:
     staticCustomerIdThresholdDay: Maybe Day
     duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
-    invoiceConfig: Maybe Value
     syncSearchDispatchConfig: Maybe Value
     alwaysAllowedNotificationCategories: "Maybe [Text]"
   constraints:
@@ -542,7 +534,6 @@ RiderConfig:
     kafkaTopicName: fromMaybe "gps-data" kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
-    invoiceConfig: invoiceConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     syncSearchDispatchConfig: syncSearchDispatchConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     alwaysAllowedNotificationCategories: fromMaybe [Domain.Types.Extra.RiderPreferences.RIDE_RELATED, Domain.Types.Extra.RiderPreferences.SAFETY] (alwaysAllowedNotificationCategories >>= traverse (readMaybe . Data.Text.unpack))|E
 
@@ -607,7 +598,6 @@ RiderConfig:
     kafkaTopicName: Just kafkaTopicName|E
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
-    invoiceConfig: (invoiceConfig >>= Just . Data.Aeson.toJSON)|E
     syncSearchDispatchConfig: (syncSearchDispatchConfig >>= Just . Data.Aeson.toJSON)|E
     alwaysAllowedNotificationCategories: Just (map show alwaysAllowedNotificationCategories)|E
 
@@ -678,6 +668,10 @@ RiderConfig:
     findByFrfsMetricsApiKey:
       kvFunction: findOneWithKV
       where: frfsMetricsApiKey
+    updateCallingConfig:
+      kvFunction: updateOneWithKV
+      params: [enableShareNumberWithDriver, pushConsentToBpp]
+      where: merchantOperatingCityId
 
   beamInstance:
     - MakeTableInstances
@@ -723,11 +717,11 @@ RiderConfig:
     serviceTierRelationshipCfg: "json"
     nonAllowedOverrideFleetNoServiceTiers: "json"
     metricsBlacklistPatterns: text []
+    smsOtpAllowedCountryCodes: text []
     ptCircuitBreakerConfig: "json"
     staticCustomerIdThresholdDay: date
     duesExcludedPaymentPurposes: text []
     externalSOSConfig: "json"
-    invoiceConfig: "json"
     syncSearchDispatchConfig: "jsonb"
 
 #   configPilot:

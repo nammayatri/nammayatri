@@ -18,7 +18,7 @@ module Storage.CachedQueries.Merchant.MerchantMessage
     findAllByMerchantOpCityId,
     findAllByMerchantOpCityIdInRideFlow,
     findByMerchantOpCityIdAndMessageKeyVehicleCategory,
-    findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow,
+    findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory,
     clearCache,
     clearCacheById,
   )
@@ -27,6 +27,7 @@ where
 import Domain.Types.MerchantMessage
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory as DVC
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -47,35 +48,39 @@ findAllByMerchantOpCityIdInRideFlow id configVersionMap =
   findAllByMerchantOpCityId id (Just configVersionMap)
 
 makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Text
-makeMerchantOpCityIdAndMessageKey id messageKey mbVehicleCategory = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> maybe "" ((":VehCat-" <>) . show) mbVehicleCategory
+makeMerchantOpCityIdAndMessageKey id messageKey mbVehicleCategory = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> maybe "" ((":VehCat-" <>) . show) mbVehicleCategory <> ":AllLanguages"
 
+-- | The English row: what every sender that does not know its recipient's language reads.
 findByMerchantOpCityIdAndMessageKeyVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
-findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory mbConfigVersionMap = do
-  res <-
-    DynamicLogic.findOneConfigWithCacheKey
-      (cast id)
-      (LYT.DRIVER_CONFIG LYT.MerchantMessage)
-      mbConfigVersionMap
-      Nothing
-      (Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory)
-      (makeMerchantOpCityIdAndMessageKey id messageKey vehicleCategory)
-  case res of
-    Just a -> return $ Just a
-    Nothing -> do
-      case vehicleCategory of
-        Nothing -> return Nothing
-        Just _ ->
-          DynamicLogic.findOneConfigWithCacheKey
-            (cast id)
-            (LYT.DRIVER_CONFIG LYT.MerchantMessage)
-            mbConfigVersionMap
-            Nothing
-            (Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey Nothing)
-            (makeMerchantOpCityIdAndMessageKey id messageKey Nothing)
+findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory mbConfigVersionMap =
+  findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory id messageKey Nothing vehicleCategory mbConfigVersionMap
 
-findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
-findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow id messageKey vehicleCategory configVersionMap =
-  findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory (Just configVersionMap)
+-- | The recipient's language, then English; the vehicle category's row, then the general one.
+-- The general rows are only read when the vehicle category has no row in the preferred language.
+-- Each cached list holds every language, so a language with no row is a cached answer too; a key
+-- with no row at all is not kept, so a row added outside the dashboard is read on the next call.
+findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe Language -> Maybe DVC.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKeyLanguageVehicleCategory id messageKey mbLanguage vehicleCategory mbConfigVersionMap = do
+  vehicleCategoryRows <- maybe (pure []) (findAllByVehicleCategory . Just) vehicleCategory
+  case find ((== preferred) . (.language)) vehicleCategoryRows of
+    Just mm -> pure (Just mm)
+    Nothing -> do
+      generalRows <- findAllByVehicleCategory Nothing
+      pure $ listToMaybe [mm | language <- languages, mm <- vehicleCategoryRows <> generalRows, mm.language == language]
+  where
+    preferred = fromMaybe ENGLISH mbLanguage
+    languages = if preferred == ENGLISH then [ENGLISH] else [preferred, ENGLISH]
+    findAllByVehicleCategory mbVehicleCategory = do
+      rows <-
+        DynamicLogic.findAllConfigsWithCacheKey
+          (cast id)
+          (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+          mbConfigVersionMap
+          Nothing
+          (Queries.findAllByMerchantOpCityIdAndMessageKeyAndVehicleCategory id messageKey mbVehicleCategory)
+          (makeMerchantOpCityIdAndMessageKey id messageKey mbVehicleCategory)
+      when (null rows) $ clearCache id messageKey mbVehicleCategory
+      pure rows
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m ()
 clearCache merchantOpCityId messageKey mbVehicleCategory =

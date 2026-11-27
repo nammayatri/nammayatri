@@ -75,7 +75,7 @@ markUserCohortMappingOptedIn ::
   (BeamFlow m r) =>
   Id Common.Person ->
   Id DCJM.CohortJourneyMapping ->
-  DUCM.OptInPeriod ->
+  DCJM.OptInPeriod ->
   UTCTime -> -- req / invite validTill (membership stays max with existing)
   UTCTime -> -- city-local optedInAt
   Text ->

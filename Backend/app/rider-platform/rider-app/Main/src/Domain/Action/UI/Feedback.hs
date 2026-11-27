@@ -281,22 +281,24 @@ feedback request personId = do
           <> feedbackMsg
           <> "\n"
 
-knowYourDriver :: Id DRide.Ride -> Maybe Bool -> App.Flow DriverProfileResponse
-knowYourDriver rideId withImages = do
+knowYourDriver :: Id Person.Person -> Id DRide.Ride -> Maybe Bool -> App.Flow DriverProfileResponse
+knowYourDriver personId rideId withImages = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   if isValueAddNP
     then do
-      res <- CallBPPInternal.getknowYourDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId withImages
+      person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      res <- CallBPPInternal.getknowYourDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId withImages person.language
       pure $ DriverProfileResponse {response = Just res}
     else pure $ DriverProfileResponse {response = Nothing}
 
-knowYourFavDriver :: Text -> Id DM.Merchant -> Maybe Bool -> App.Flow DriverProfileResponse
-knowYourFavDriver driverId merchantId withImages = do
+knowYourFavDriver :: Id Person.Person -> Text -> Id DM.Merchant -> Maybe Bool -> App.Flow DriverProfileResponse
+knowYourFavDriver personId driverId merchantId withImages = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  res <- CallBPPInternal.getKnowYourFavDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl driverId withImages
+  res <- CallBPPInternal.getKnowYourFavDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl driverId withImages person.language
   pure $ DriverProfileResponse {response = Just res}
 
 audioFeedbackUpload ::

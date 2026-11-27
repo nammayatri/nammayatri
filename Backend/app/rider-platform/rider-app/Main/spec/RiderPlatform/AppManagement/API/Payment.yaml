@@ -35,6 +35,7 @@ default:
 apis:
   - GET:
       endpoint: refundRequest/list
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - limit: Int
@@ -49,6 +50,7 @@ apis:
         type: RefundRequestResp
   - GET:
       endpoint: refundRequest/{refundRequestId}/info
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         refundRequestId: Id RefundRequest
@@ -108,8 +110,8 @@ types:
     - refundPurpose: RefundPurpose
     - status: RefundRequestStatus
     - code: RefundRequestCode
-    - description: Text
-    - responseDescription: Maybe Text
+    - description: TranslatedText
+    - responseDescription: "Maybe !Text"
     - refundsId: Maybe (Id Refunds)
     - refundsAmount: Maybe PriceAPIEntity
     - refundsTries: Int
@@ -125,14 +127,14 @@ types:
     - refundPurpose: RefundPurpose
     - status: RefundRequestStatus
     - code: RefundRequestCode
-    - description: Text
-    - responseDescription: Maybe Text
+    - description: TranslatedText
+    - responseDescription: "Maybe !Text"
     - refundsId: Maybe (Id Refunds)
     - refundsAmount: Maybe PriceAPIEntity
     - refundsTries: Int
-    - evidence: Maybe Text
+    - evidence: "Maybe !Text"
     - refundStatus: Maybe RefundStatus
-    - errorCode: Maybe Text
+    - errorCode: "Maybe !Text"
     - createdAt: UTCTime
     - updatedAt: UTCTime
   RefundRequestRespondReq:
@@ -145,7 +147,7 @@ types:
   RefundRequestRespondResp:
     - status: RefundRequestStatus
     - refundStatus: Maybe RefundStatus
-    - errorCode: Maybe Text
+    - errorCode: "Maybe !Text"
     - derive: "'HideSecrets"
   RefundComponentItem:
     - component: RefundFareComponent

@@ -199,16 +199,18 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
         then withOwnerLock walletOwnerId $ do
           mbPanCard <- QPanCard.findByDriverId ride.driverId
           mbDriverInfo <- QDI.findById (cast ride.driverId)
+          (partyName, partyAddress) <- driverInvoiceParty ride.merchantOperatingCityId ride.driverId ride.fleetOwnerId
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
           result <- runFinance ctx {entityReferenceId = rideEntity} $ do
             _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
             invoice
               InvoiceConfig
                 { invoiceType = RideCancellation,
-                  issuedToType = InvType.DRIVER,
+                  issuedToType = if isJust ride.fleetOwnerId then InvType.FLEET_OWNER else InvType.DRIVER,
                   issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
-                  issuedToName = Nothing,
-                  issuedToAddress = Nothing,
+                  issuedToName = partyName,
+                  issuedToAddress = partyAddress,
+                  issuedById = Nothing,
                   referenceId = Just booking.id.getId,
                   gstBreakdown = Nothing,
                   lineItems =

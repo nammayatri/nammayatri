@@ -26,3 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN driver_id charac
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN reject_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_insurance ADD COLUMN reject_reason_key text ;

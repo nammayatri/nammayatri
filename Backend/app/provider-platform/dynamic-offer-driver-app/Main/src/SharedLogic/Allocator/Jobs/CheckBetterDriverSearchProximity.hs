@@ -47,6 +47,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
+import SharedLogic.CallBAP (betterDriverCutoffRadius)
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
@@ -168,21 +169,22 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
           Nothing -> return $ Terminate "Booking not found"
           Just booking -> do
             mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-            case mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters) of
-              Nothing -> return $ Terminate "No proximity-abort radius configured for this city"
-              Just abortRadius -> do
+            case mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters) of
+              Nothing -> return $ Terminate "No better-driver search radius configured for this city"
+              Just searchRadius -> do
                 driverLocationResp <- LTSF.pickupDriverLocation rideId merchantId driverId
                 case lastMaybe driverLocationResp.loc of
                   Nothing -> rescheduleIn betterDriverSearchProximityInitialDelaySec -- no fresh pickup-leg location yet
                   Just latest -> do
+                    cutoffRadius <- betterDriverCutoffRadius searchRadius (mbTransporterConfig >>= (.betterDriverProximityAbortRadiusMeters)) booking driverId
                     let pickupLoc = getCoordinates booking.fromLocation
                         distance = distanceBetweenInMeters (LatLong latest.lat latest.lon) pickupLoc
-                    if distance < abortRadius
+                    if distance < cutoffRadius
                       then do
                         QST.cancelBetterDriverSearchByBookingId bookingId.getId
                         pullActiveRequests merchantId searchTry
                         return Complete
-                      else rescheduleIn $ nextCheckDelay (realToFrac (distance - abortRadius)) (observedSpeedMps driverLocationResp.loc)
+                      else rescheduleIn $ nextCheckDelay (realToFrac (distance - cutoffRadius)) (observedSpeedMps driverLocationResp.loc)
   where
     lastMaybe [] = Nothing
     lastMaybe [x] = Just x

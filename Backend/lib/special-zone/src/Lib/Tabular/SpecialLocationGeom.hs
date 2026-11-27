@@ -45,6 +45,7 @@ mkPersist
       locationType Domain.SpecialLocationType
       geom Text Maybe
       geomGeoJson Text Maybe
+      queueGeomGeoJson Text Maybe
       render Domain.RenderType Maybe
       fetchAllGateFareProduct Bool Maybe
       priority Int
@@ -58,6 +59,7 @@ mkPersist
       fareSettlementType Domain.FareSettlementType Maybe
       boothSpecificFleet Text Maybe
       poolingMode Domain.PoolingMode Maybe
+      skipQueue Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary uuid

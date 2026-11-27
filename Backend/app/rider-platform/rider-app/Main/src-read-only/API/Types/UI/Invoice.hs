@@ -29,6 +29,7 @@ data FinanceInvoiceItem = FinanceInvoiceItem
     issuedToName :: Kernel.Prelude.Maybe Data.Text.Text,
     issuedToTaxNo :: Kernel.Prelude.Maybe Data.Text.Text,
     lineItems :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    linkedInvoices :: [FinanceLinkedInvoices],
     subtotal :: Kernel.Types.Common.HighPrecMoney,
     taxAmount :: Kernel.Types.Common.HighPrecMoney,
     taxRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -38,6 +39,10 @@ data FinanceInvoiceItem = FinanceInvoiceItem
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FinanceInvoiceListRes = FinanceInvoiceListRes {invoices :: [FinanceInvoiceItem], totalItems :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FinanceLinkedInvoices = FinanceLinkedInvoices {invoiceType :: Domain.Types.Invoice.InvoiceType, invoices :: [FinanceInvoiceItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

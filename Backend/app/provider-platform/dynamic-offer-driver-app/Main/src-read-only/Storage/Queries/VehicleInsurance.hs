@@ -46,10 +46,16 @@ updateVerificationStatus verificationStatus documentImageId = do
 
 updateVerificationStatusAndRejectReasonByRcId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
-updateVerificationStatusAndRejectReasonByRcId verificationStatus rejectReason rcId = do
+  (Kernel.Types.Documents.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateVerificationStatusAndRejectReasonByRcId verificationStatus rejectReason rejectReasonKey rcId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.verificationStatus verificationStatus, Se.Set Beam.rejectReason rejectReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
+  updateWithKV
+    [ Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.rejectReason rejectReason,
+      Se.Set Beam.rejectReasonKey rejectReasonKey,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleInsurance.VehicleInsurance -> m (Maybe Domain.Types.VehicleInsurance.VehicleInsurance))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -69,6 +75,7 @@ updateByPrimaryKey (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
       Se.Set Beam.policyProvider policyProvider,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.rejectReason rejectReason,
+      Se.Set Beam.rejectReasonKey rejectReasonKey,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),

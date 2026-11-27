@@ -53,6 +53,7 @@ module Domain.Action.DashboardAuth.Fleet.Driver
     getDriverFleetVehicleListStats,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
     getDriverFleetStatusSummary,
+    getDriverVehicleInfo,
   )
 where
 
@@ -346,3 +347,6 @@ getDriverFleetStatusSummary :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Me
 getDriverFleetStatusSummary a5 a4 a3 a2 a1 = do
   (mbFleetOwnerId, _) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a3) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a3) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a1
   Domain.Action.Dashboard.Fleet.Driver.getDriverFleetStatusSummary a5 a4 a2 mbFleetOwnerId
+
+getDriverVehicleInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Driver.VehicleInfo)
+getDriverVehicleInfo a5 a4 a3 a2 a1 = Domain.Action.Dashboard.Fleet.Driver.getDriverVehicleInfo a5 a4 a3.person.language a2 a1

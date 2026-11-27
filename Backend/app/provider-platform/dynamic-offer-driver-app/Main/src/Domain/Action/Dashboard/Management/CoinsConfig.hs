@@ -153,6 +153,7 @@ processingTranslations coinsConfig eventMessageLs = do
                 language = lang,
                 message = msg,
                 messageKey = messageKey,
+                merchantOperatingCityId = Nothing,
                 updatedAt = now
               }
     )

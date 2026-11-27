@@ -77,6 +77,11 @@ types:
     taxRate: Maybe Double
     issuedToTaxNo: Maybe Text
     issuedByTaxNo: Maybe Text
+    linkedInvoices: "[FinanceLinkedInvoices]"
+
+  FinanceLinkedInvoices:
+    invoiceType: InvoiceType
+    invoices: "[FinanceInvoiceListItem]"
 
   FinanceInvoicePdfRes:
     pdfBase64: Text
@@ -107,6 +112,7 @@ apis:
         to: UTCTime
         invoiceType: InvoiceType
         status: InvoiceStatus
+        referenceId: Text
       response:
         type: FinanceInvoiceListRes
       migrate:

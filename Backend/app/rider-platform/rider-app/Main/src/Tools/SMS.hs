@@ -23,7 +23,8 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as Fields
 import Kernel.External.SMS as Reexport hiding
-  ( sendSMS,
+  ( SendSMSReq (..),
+    sendSMS,
   )
 import qualified Kernel.External.SMS as Sms
 import Kernel.External.Types (ServiceFlow)
@@ -31,12 +32,13 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import SharedLogic.MessageBuilder as Reexport (SendSMSReq (..), SmsBody, prebuiltSmsBody, smsBodyText)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
 
 sendSMS :: ServiceFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
-sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
+sendSMS merchantId merchantOperatingCityId req = Sms.sendSMS handler (Sms.SendSMSReq (smsBodyText req.smsBody) req.phoneNumber req.sender req.templateId req.messageType)
   where
     handler = Sms.SmsHandler {..}
 

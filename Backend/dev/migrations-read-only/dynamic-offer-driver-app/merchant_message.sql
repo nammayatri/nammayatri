@@ -43,3 +43,10 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN media_url text ;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN title text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN sender_email character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN language text  default 'ENGLISH';
+ALTER TABLE atlas_driver_offer_bpp.merchant_message DROP CONSTRAINT merchant_message_pkey;
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD PRIMARY KEY ( language, merchant_operating_city_id, message_key);

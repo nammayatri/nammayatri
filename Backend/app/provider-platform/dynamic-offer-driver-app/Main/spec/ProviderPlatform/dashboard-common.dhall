@@ -88,6 +88,7 @@ let DefaultImports =
 
 let defaultTypeImportMapper =
       [ { _1 = "Text", _2 = "Kernel.Prelude" }
+      , { _1 = "TranslatedText", _2 = "Domain.Types.TranslationKey" }
       , { _1 = "String", _2 = "Kernel.Prelude" }
       , { _1 = "Maybe", _2 = "Kernel.Prelude" }
       , { _1 = "Double", _2 = "Kernel.Prelude" }

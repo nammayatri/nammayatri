@@ -25,7 +25,7 @@ instance FromTType' Beam.MerchantServiceConfig Domain.Types.MerchantServiceConfi
           { createdAt = createdAt,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            runInCloud = (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack)) runInCloud,
+            runInCloud = ((Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))) runInCloud,
             serviceConfig = serviceConfig',
             updatedAt = updatedAt
           }
@@ -36,7 +36,7 @@ instance ToTType' Beam.MerchantServiceConfig Domain.Types.MerchantServiceConfig.
       { Beam.createdAt = createdAt,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.runInCloud = Kernel.Prelude.fmap Kernel.Prelude.show runInCloud,
+        Beam.runInCloud = (Kernel.Prelude.fmap Kernel.Prelude.show) runInCloud,
         Beam.configJSON = getConfigJSON serviceConfig,
         Beam.serviceName = getServiceName serviceConfig,
         Beam.updatedAt = updatedAt

@@ -35,6 +35,7 @@ where
 
 import qualified Data.Aeson as Aeson
 import Domain.Types.Invoice (InvoiceType (..), IssuedToType)
+import qualified Domain.Types.Invoice as DInvoiceType
 import Kernel.Beam.Functions (ToTType' (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -81,6 +82,7 @@ invoiceToAuditValue = Aeson.toJSON . toTType' @BeamInvoice.Invoice . hideInvoice
       Invoice
         { issuedToName = Nothing,
           issuedToAddress = Nothing,
+          issuedToGstin = SD.maskTaxNo <$> issuedToGstin,
           supplierGSTIN = SD.maskTaxNo <$> supplierGSTIN,
           supplierTaxNo = SD.maskTaxNo <$> supplierTaxNo,
           irn = Nothing,
@@ -258,17 +260,20 @@ createInvoiceWithLayout layout input entryIds = do
       externalTotal = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
       taxTotal = sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Just Tax) input.lineItems
       subtotal = totalAmount - externalTotal - taxTotal
+      issuedToGstin = if input.isVat then Nothing else input.gstinOfParty
       -- Frozen invoice JSON snapshot (system-comms / ONDC / audit), built from the same
       -- data as the row at creation time. Masked out of the audit trail below.
       renderedInvoiceSnapshot =
         Aeson.object
           [ "invoiceNumber" Aeson..= invoiceNum,
             "invoiceType" Aeson..= input.invoiceType,
+            "referenceInvoiceNumber" Aeson..= input.referenceInvoiceNumber,
             "invoiceDate" Aeson..= now,
             "issuedToType" Aeson..= input.issuedToType,
             "issuedToId" Aeson..= input.issuedToId,
             "issuedToName" Aeson..= input.issuedToName,
             "issuedToAddress" Aeson..= input.issuedToAddress,
+            "issuedToGstin" Aeson..= issuedToGstin,
             "supplierName" Aeson..= input.supplierName,
             "supplierAddress" Aeson..= input.supplierAddress,
             "supplierGSTIN" Aeson..= input.supplierGSTIN,
@@ -295,6 +300,7 @@ createInvoiceWithLayout layout input entryIds = do
             issuedToId = input.issuedToId,
             issuedToName = input.issuedToName,
             issuedToAddress = input.issuedToAddress,
+            issuedToGstin = issuedToGstin,
             issuedByType = input.issuedByType,
             issuedById = input.issuedById,
             issuedByName = input.issuedByName,
@@ -374,7 +380,7 @@ createInvoiceWithLayout layout input entryIds = do
                     taxCreditType = Output,
                     counterpartyId = input.issuedToId,
                     gstinOfParty = if isVat then Nothing else input.gstinOfParty,
-                    sacCode = if isVat then Nothing else Just (sacCodeForTransactionType txnType),
+                    sacCode = if isVat then Nothing else Just (sacCodeForTransactionType (invoiceTypeToTransactionType input.invoiceType)),
                     externalCharges = Just extCharges,
                     invoiceNumber = Just invoiceNum,
                     merchantId = input.merchantId,
@@ -592,6 +598,7 @@ invoiceTypeToTransactionType invoiceType = case invoiceType of
   Commission -> BuyerCommission
   AggregatedCommission -> BuyerCommission
   Refund -> CreditNote
+  DInvoiceType.CommissionRefund -> CreditNote
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
 invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
@@ -602,6 +609,7 @@ invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   Commission -> DirectTax.BuyerCommission
   AggregatedCommission -> DirectTax.BuyerCommission
   Refund -> DirectTax.RideFare
+  DInvoiceType.CommissionRefund -> DirectTax.BuyerCommission
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text
@@ -624,6 +632,7 @@ invoiceTypeToPurpose = \case
   Commission -> purposeCommission
   AggregatedCommission -> purposeAggregatedCommission
   Refund -> purposeRefund
+  DInvoiceType.CommissionRefund -> purposeRefund
 
 -- | Map DirectTax TransactionType to TDS section
 transactionTypeToTdsSection :: DirectTax.TransactionType -> Maybe Text

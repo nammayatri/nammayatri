@@ -59,6 +59,7 @@ import Environment
 import qualified FileManagement.Domain.Action.UI.File as DFile
 import qualified IssueManagement.Domain.Types.MediaFile as Fields
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -167,11 +168,11 @@ postRideCancelMultiple merchantShortId opCity _mbRequestorId req = do
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
 -- mbFinanceData can be deprecated later: the FINANCE detail group fetches the same data.
-getRideInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe [Common.RideDetailGroup] -> Maybe Bool -> Flow Common.RideInfoRes
-getRideInfo merchantShortId opCity rideId mbDetailGroups mbFinanceData = do
+getRideInfo :: ShortId DM.Merchant -> Context.City -> Maybe Language -> Id Common.Ride -> Maybe [Common.RideDetailGroup] -> Maybe Bool -> Flow Common.RideInfoRes
+getRideInfo merchantShortId opCity mbDashboardLanguage rideId mbDetailGroups mbFinanceData = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  DRide.rideInfo merchant.id merchantOpCityId rideId mbFinanceData (fromMaybe [] mbDetailGroups)
+  DRide.rideInfo merchant.id merchantOpCityId mbDashboardLanguage rideId mbFinanceData (fromMaybe [] mbDetailGroups)
 
 postRideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes
 postRideSync = DRide.rideSync

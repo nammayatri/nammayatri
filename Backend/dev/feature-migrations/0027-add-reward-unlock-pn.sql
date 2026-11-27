@@ -35,4 +35,4 @@ SELECT
     CURRENT_TIMESTAMP
 FROM
     atlas_app.merchant_operating_city moc
-ON CONFLICT (merchant_operating_city_id, message_key) DO NOTHING;
+ON CONFLICT DO NOTHING;

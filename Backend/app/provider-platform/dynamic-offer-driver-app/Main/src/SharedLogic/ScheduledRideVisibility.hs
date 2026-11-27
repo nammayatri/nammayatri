@@ -23,6 +23,7 @@ module SharedLogic.ScheduledRideVisibility
     factsNeededBy,
     isVisibleUnderRules,
     driverVisibilityFactsFromStats,
+    poolTagTexts,
     parseVisibilityStagesJson,
   )
 where
@@ -208,3 +209,16 @@ validateVisibilityStages stages = do
     whenJust rules.requiredTags $ \tags -> do
       when (any (T.null . T.strip) tags) $ Left $ label <> "requiredTags cannot contain an empty tag"
       when (length (nub tags) /= length tags) $ Left $ label <> "requiredTags cannot contain duplicates"
+
+poolTagTexts :: A.Value -> [Text]
+poolTagTexts (A.Object tagObject) = map render (KM.toList tagObject)
+  where
+    render (key, value) = case renderValue value of
+      Nothing -> AK.toText key
+      Just rendered -> AK.toText key <> "#" <> rendered
+    renderValue (A.String txt) = Just txt
+    renderValue (A.Bool flag) = Just (T.toLower (show flag))
+    renderValue (A.Number num) = Just (show num)
+    renderValue (A.Array values) = Just (T.intercalate "&" (mapMaybe renderValue (toList values)))
+    renderValue _ = Nothing
+poolTagTexts _ = []

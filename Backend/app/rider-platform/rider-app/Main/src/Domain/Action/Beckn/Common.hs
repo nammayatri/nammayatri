@@ -68,6 +68,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as Fields
+import Domain.Types.TranslationKeys (RiderPushKey (..))
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
@@ -553,7 +554,8 @@ rideAssignedReqHandler req = do
             DRB.supplierTaxNo = bppInfo.supplierTaxNo <|> req.booking.supplierTaxNo,
             DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId,
             DRB.issuedByGstin = bppInfo.issuedByGstin <|> req.booking.issuedByGstin,
-            DRB.issuedByTaxNo = bppInfo.issuedByTaxNo <|> req.booking.issuedByTaxNo
+            DRB.issuedByTaxNo = bppInfo.issuedByTaxNo <|> req.booking.issuedByTaxNo,
+            DRB.issuedByLogoUrl = bppInfo.issuedByLogoUrl <|> req.booking.issuedByLogoUrl
           }
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
@@ -665,19 +667,11 @@ rideAssignedReqHandler req = do
           -- re-price here voids the ride-end invoice and writes a fresh one, the invoice the
           -- PDF actually renders ends up with no recipient and no supplier.
           riderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-          assignedRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
           let assignedRiderName = riderPerson.firstName
-              assignedInvCfg = assignedRiderConfig.invoiceConfig
               ledgerCtx =
-                -- applyBookingProviderFieldsToCtx only overlays supplier fields the BPP actually
-                -- sent, so seed them from config first -- otherwise a booking without those
-                -- fields leaves the invoice with no supplier at all.
                 RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
                   (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                    { issuedToName = assignedRiderName,
-                      supplierName = assignedInvCfg >>= (.supplierName),
-                      supplierAddress = assignedInvCfg >>= (.supplierAddress),
-                      supplierVatNumber = assignedInvCfg >>= (.supplierVatNumber)
+                    { issuedToName = assignedRiderName
                     }
           let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
           logDebug $ "makePaymentIntent (ride-assigned): breakups=" <> show estimatedBreakups <> " discount=" <> show bookingDiscountAmount <> " payout=" <> show bookingPayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
@@ -711,15 +705,10 @@ rideAssignedReqHandler req = do
           -- swallowed inline (logged, assignment proceeds), so forking loses nothing.
           deferPostAssignmentWork "assign:cashRideLedger" $ do
             cashRiderPerson <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-            cashRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
-            let cashInvCfg = cashRiderConfig.invoiceConfig
-                ledgerCtx =
+            let ledgerCtx =
                   RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
                     (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
-                      { issuedToName = cashRiderPerson.firstName,
-                        supplierName = cashInvCfg >>= (.supplierName),
-                        supplierAddress = cashInvCfg >>= (.supplierAddress),
-                        supplierVatNumber = cashInvCfg >>= (.supplierVatNumber)
+                      { issuedToName = cashRiderPerson.firstName
                       }
             estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
             let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType booking.estimatedFare.amount estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount ledgerCtx
@@ -835,8 +824,8 @@ rideAssignedReqHandler req = do
                     MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
                   }
               receiverSmsReq = senderSmsReq {MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq}
-          sbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderSmsReq
-          rbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
+          sbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderPerson.language senderSmsReq
+          rbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverPerson.language receiverSmsReq
           senderMobileNumber <- decrypt encSenderMobileNumber
           receiverMobileNumber <- decrypt encReceiverMobileNumber
           let sphoneNumber = (fromMaybe "+91" senderPerson.mobileCountryCode) <> senderMobileNumber
@@ -925,7 +914,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                 MessageBuilder.pickedUp = True,
                 MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq
               }
-      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
+      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverPerson.language receiverSmsReq
       Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
 
     sendRideEndOTPMessage person = fork "sending ride end otp sms" $ do
@@ -939,7 +928,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
               let countryCode = fromMaybe "+91" person.mobileCountryCode
               let phoneNumber = countryCode <> mobileNumber
               buildSmsReq <-
-                MessageBuilder.buildSendRideEndOTPMessage merchantOperatingCityId $
+                MessageBuilder.buildSendRideEndOTPMessage merchantOperatingCityId person.language $
                   MessageBuilder.BuildSendRideEndOTPMessageReq
                     { otp = show endOtp'
                     }
@@ -1119,14 +1108,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   if not onlinePayment
     then do
       let riderName = person.firstName
-          mbInvCfg = riderConfig.invoiceConfig
           cashLedgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
               (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                { issuedToName = riderName,
-                  supplierName = mbInvCfg >>= (.supplierName),
-                  supplierAddress = mbInvCfg >>= (.supplierAddress),
-                  supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
+                { issuedToName = riderName
                 }
       let cashLedgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' cashLedgerCtx
       upsertRes <-
@@ -1161,14 +1146,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     else do
       -- Online Ride End branch → isOnline=True.
       let riderNameOnline = person.firstName
-          mbInvCfgOnline = riderConfig.invoiceConfig
           ledgerCtx =
             RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
               (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
-                { issuedToName = riderNameOnline,
-                  supplierName = mbInvCfgOnline >>= (.supplierName),
-                  supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
-                  supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)
+                { issuedToName = riderNameOnline
                 }
       let ledgerInfo = SPayment.buildLedgerInfoFromBreakups booking.riderTaxRates booking.fareSettlementType totalFare.amount breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ledgerCtx
       logDebug $ "makePaymentIntent (ride-completed): breakups=" <> show breakups <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount' <> " -> ledgerInfo=" <> show ledgerInfo
@@ -1542,7 +1523,11 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           -- creating cancellation execution payment intent which charges cancellation fee from users stripe account
           let currentPaymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
               pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
-              ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+              ledgerCtx =
+                RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+                  (RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress)
+                    { issuedToName = personD.firstName
+                    }
               cancellationTaxRegime = RidePaymentFinance.ledgerTaxRegime booking.riderTaxRates [] ledgerCtx
               cancellationGstRates = RidePaymentFinance.gstRatesFromConfig (booking.riderTaxRates >>= (.riderPayable.cancellationFee))
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
@@ -1774,7 +1759,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
         email <- mapM decrypt person.email
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   return $ ValidatedRideAssignedReq {bookingPrePersisted = False, ..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])
@@ -1930,7 +1915,7 @@ sendRideEndMessage bk = case bk.tripCategory of
                 MessageBuilder.pickedUp = True,
                 MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
               }
-      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage bk.merchantOperatingCityId senderSmsReq
+      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage bk.merchantOperatingCityId senderPerson.language senderSmsReq
       Sms.sendSMS bk.merchantId bk.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
   _ -> pure ()
 
@@ -2086,9 +2071,9 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
       when (isNothing person.payoutVpa) $ do
         let pnKey =
               if oldCustomer
-                then "REFERRAL_REWARD_ADD_VPA"
-                else "REFERRED_BY_REWARD_ADD_VPA"
-        mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow merchantOperatingCityId pnKey Nothing Nothing person.language []
+                then RiderPush_Referral_RewardAddVpa
+                else RiderPush_Referral_ReferredByRewardAddVpa
+        mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlowByKey merchantOperatingCityId pnKey Nothing Nothing person.language []
         whenJust mbMerchantPN $ \merchantPN -> do
           let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
           Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
@@ -2124,7 +2109,7 @@ sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
       trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
       messageKey = bool DMM.WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE DMM.WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE (length bookings > 1)
   trackingUrl <- MessageBuilder.shortenTrackingUrl Nothing trackLink
-  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow person.merchantOperatingCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language (Just booking.configInExperimentVersions) >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   rideDriverMobileNumber <- getDriverMobileNumber ride >>= fromMaybeM (RideFieldNotPresent "driverMobileNumber")
   let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> rideDriverMobileNumber
       fare = show booking.estimatedTotalFare.amount
@@ -2147,7 +2132,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   let phoneNumber = countryCode <> mobileNumber
       messageKey = DMM.WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
-  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
+  merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyLanguage person.merchantOperatingCityId messageKey person.language Nothing >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
 

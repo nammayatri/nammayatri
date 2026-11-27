@@ -171,6 +171,7 @@ apis:
         actorInfo: requestorId
   - GET: # RideInfoAPI
       endpoint: /{rideId}/info
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         financeData: Bool
@@ -326,16 +327,16 @@ types:
   RideListItem:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
-    - displayBookingId: Maybe Text
-    - customerName: Maybe Text
-    - customerPhoneNo: Text
-    - customerCountryCode: Maybe Text
-    - driverName: Text
-    - driverPhoneNo: Maybe Text
-    - driverCountryCode: Maybe Text
+    - displayBookingId: "Maybe !Text"
+    - customerName: "Maybe !Text"
+    - customerPhoneNo: "!Text"
+    - customerCountryCode: "Maybe !Text"
+    - driverName: "!Text"
+    - driverPhoneNo: "Maybe !Text"
+    - driverCountryCode: "Maybe !Text"
     - tripCategory: DeprecatedTripCategory # TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
     - tripCategoryV2: TripCategory
-    - vehicleNo: Text
+    - vehicleNo: "!Text"
     - fareDiff: Maybe Money
     - fareDiffWithCurrency: Maybe PriceAPIEntity
     - fareWithCurrency: Maybe PriceAPIEntity
@@ -348,19 +349,20 @@ types:
     - customerPickupLocation: Maybe LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
     - payoutRequestId: Maybe (Id PayoutRequest)
-    - vehicleManufacturer: Maybe Text
-    - vehicleModel: Maybe Text
-    - fleetName: Maybe Text
-    - fleetNumber: Maybe Text
-    - vehicleServiceTierName: Maybe Text
+    - vehicleManufacturer: "Maybe !Text"
+    - vehicleModel: "Maybe !Text"
+    - fleetName: "Maybe !Text"
+    - fleetNumber: "Maybe !Text"
+    # vehicleServiceTierName is the stored tier name; the list row carries no tier type to read a key by
+    - vehicleServiceTierName: "Maybe !Text"
     - driverArrivalTime: Maybe UTCTime
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
     - rideTags: Maybe [TagNameValue]
-    - invoiceId: Maybe Text # Finance invoice id linked to the ride's booking (booking.financeInvoiceId)
+    - invoiceId: "Maybe !Text" # Finance invoice id linked to the ride's booking (booking.financeInvoiceId)
     - driverId: Maybe (Id Driver)
-    - fleetOwnerId: Maybe Text
-    - fleetOwnerName: Maybe Text
+    - fleetOwnerId: "Maybe !Text"
+    - fleetOwnerName: "Maybe !Text"
     - driverDeviatedFromRoute: Maybe Bool
     - hasSos: Maybe Bool
     - sosStatus: Maybe SosStatus
@@ -370,8 +372,8 @@ types:
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
-    - driverName: Text
-    - driverPhoneNo: Maybe Text
+    - driverName: "!Text"
+    - driverPhoneNo: "Maybe !Text"
     - rideStatus: RideStatus
     - rideCreatedAt: UTCTime
     - cancelledBy: Maybe CancellationSource
@@ -385,8 +387,8 @@ types:
     - rideId: Id Ride
     - callCount: Int
   WalletTransactionItem:
-    - ledgerEntryId: Text
-    - referenceType: Text
+    - ledgerEntryId: "!Text"
+    - referenceType: "!Text"
     - amount: HighPrecMoney
     - createdAt: UTCTime
 
@@ -428,20 +430,20 @@ types:
     - type: MultipleRideSyncResp
   RideInfoRes:
     - rideId: Id Ride
-    - customerName: Maybe Text
-    - customerPhoneNo: Text
-    - customerCountryCode: Maybe Text
-    - rideOtp: Text
+    - customerName: "Maybe !Text"
+    - customerPhoneNo: "!Text"
+    - customerCountryCode: "Maybe !Text"
+    - rideOtp: "!Text"
     - customerPickupLocation: LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
     - actualDropLocation: Maybe LatLong
     - isDestinationEdited: Maybe Bool
     - driverId: Id Driver
-    - driverName: Text
-    - driverPhoneNo: Maybe Text
-    - driverCountryCode: Maybe Text
-    - fleetOwnerId: Maybe Text
-    - vehicleNo: Text
+    - driverName: "!Text"
+    - driverPhoneNo: "Maybe !Text"
+    - driverCountryCode: "Maybe !Text"
+    - fleetOwnerId: "Maybe !Text"
+    - vehicleNo: "!Text"
     - driverStartLocation: Maybe LatLong
     - driverCurrentLocation: Maybe LatLong
     - rideBookingTime: UTCTime
@@ -479,24 +481,25 @@ types:
     - distanceCalculationFailed: Maybe Bool
     - driverDeviatedFromRoute: Maybe Bool
     - vehicleVariant: Maybe VehicleVariant
-    - vehicleServiceTierName: Text
+    - vehicleServiceTierName: TranslatedText
     - nextStopLocation: Maybe LocationAPIEntity
     - lastStopLocation: Maybe LocationAPIEntity
     # Optional for backward compatibility. When present, this should be derived from
     # atlas_driver_offer_bpp.stop_information for the ride.
     - stopInformation: Maybe [StopInformation]
-    - endOtp: Maybe Text
-    - mbDefaultServiceTierName: Maybe Text
-    - rideCity: Maybe Text
-    - merchantOperatingCityId: Maybe Text
+    - endOtp: "Maybe !Text"
+    # mbDefaultServiceTierName is a stored tier name with no tier type next to it
+    - mbDefaultServiceTierName: "Maybe !Text"
+    - rideCity: "Maybe !Text"
+    - merchantOperatingCityId: "Maybe !Text"
     - rideCreatedAt: UTCTime
     - rideStatus: RideStatus
     - roundTrip: Maybe Bool
-    - deliveryParcelImageId: Maybe Text
+    - deliveryParcelImageId: "Maybe !Text"
     - estimatedReservedDuration: Maybe Minutes
     - isPetRide: Maybe Bool
     - cancellationPenaltyAmount: Maybe HighPrecMoney
-    - cancellationPenaltyWaivedReason: Maybe Text
+    - cancellationPenaltyWaivedReason: "Maybe !Text"
     # Finance fields (populated only when financeData=true)
     - grossRideValue: Maybe HighPrecMoney
     - platformFee: Maybe HighPrecMoney
@@ -515,35 +518,36 @@ types:
     - tdsAmount: Maybe HighPrecMoney
     - netPayableToDriver: Maybe HighPrecMoney
     - netPlatformRevenue: Maybe HighPrecMoney
-    - paymentMode: Maybe Text
-    - paymentStatus: Maybe Text
-    - paymentReferenceInternal: Maybe Text
+    # paymentMode is a code the dashboard filters on
+    - paymentMode: "Maybe !Text"
+    - paymentStatus: "Maybe !Text"
+    - paymentReferenceInternal: "Maybe !Text"
     - walletTransactions: [WalletTransactionItem]
-    - invoiceIds: [Text]
-    - badge: [Text]
+    - invoiceIds: "[!Text]"
+    - badge: [TranslatedText]
     - rating: Maybe Int
     - estimatedTollInfo: Maybe [TollInfoAPIEntity]
     - actualTollInfo: Maybe [TollInfoAPIEntity]
     - actualPickupLocation: Maybe LatLong
     - isScheduled: Maybe Bool
-    - bapId: Maybe Text
-    - bapName: Maybe Text
+    - bapId: "Maybe !Text"
+    - bapName: "Maybe !Text"
     - paymentCollectedBy: Maybe PaymentCollector
-    - fleetOwnerName: Maybe Text # fleet owner's own (person) name
-    - fleetName: Maybe Text # fleet's registered name (fleet_owner_information.fleet_name)
-    - fleetOwnerPhoneNo: Maybe Text
-    - sosId: Maybe Text
+    - fleetOwnerName: "Maybe !Text" # fleet owner's own (person) name
+    - fleetName: "Maybe !Text" # fleet's registered name (fleet_owner_information.fleet_name)
+    - fleetOwnerPhoneNo: "Maybe !Text"
+    - sosId: "Maybe !Text"
     - sosStatus: Maybe SosStatus
     - sosCreatedAt: Maybe UTCTime
-    - sosTicketId: Maybe Text
+    - sosTicketId: "Maybe !Text"
     - safetyAlertTriggered: Maybe Bool
-    - plannedPickupSpecialLocation: Maybe Text
-    - plannedDropSpecialLocation: Maybe Text
-    - actualPickupSpecialLocation: Maybe Text
-    - actualDropSpecialLocation: Maybe Text
-    - recomputeReason: Maybe Text
+    - plannedPickupSpecialLocation: "Maybe !Text"
+    - plannedDropSpecialLocation: "Maybe !Text"
+    - actualPickupSpecialLocation: "Maybe !Text"
+    - actualDropSpecialLocation: "Maybe !Text"
+    - recomputeReason: "Maybe !Text"
     - passedThroughDestination: Maybe Bool
-    - finalFarePolicyId: Maybe Text
+    - finalFarePolicyId: "Maybe !Text"
     - estimatedStaticDuration: Maybe Seconds
     - pickupEdits: Maybe [PickupEditInfo]
     - destinationEdits: Maybe [DestinationEditInfo]
@@ -552,8 +556,8 @@ types:
     - previousPickupLocation: Maybe LocationAPIEntity
     - newPickupLocation: Maybe LocationAPIEntity
   DestinationEditInfo:
-    - bookingUpdateRequestId: Text
-    - status: Text
+    - bookingUpdateRequestId: "!Text"
+    - status: "!Text"
     - createdAt: UTCTime
     - validTill: UTCTime
     - previousDropLocation: Maybe LocationAPIEntity
@@ -567,15 +571,15 @@ types:
     - estimatedFare: PriceAPIEntity
     - estimatedDuration: Maybe Seconds
     - snapToRoadFailed: Maybe Bool
-    - oldFareParamsId: Text
-    - fareParamsId: Text
-    - farePolicyId: Text
+    - oldFareParamsId: "!Text"
+    - fareParamsId: "!Text"
+    - farePolicyId: "!Text"
   TollInfoAPIEntity:
-    - id: Text
-    - name: Text
+    - id: "!Text"
+    - name: "!Text"
   StopInformation:
-    - stopId: Text
-    - stopLocId: Text
+    - stopId: "!Text"
+    - stopLocId: "!Text"
     - stopOrder: Int
     - waitingTimeStart: UTCTime
     - waitingTimeEnd: Maybe UTCTime
@@ -584,19 +588,19 @@ types:
   LocationAPIEntity:
     - lat: Double
     - lon: Double
-    - street: Maybe Text
-    - city: Maybe Text
-    - state: Maybe Text
-    - country: Maybe Text
-    - building: Maybe Text
-    - areaCode: Maybe Text
-    - area: Maybe Text
-    - id: Text
+    - street: "Maybe !Text"
+    - city: "Maybe !Text"
+    - state: "Maybe !Text"
+    - country: "Maybe !Text"
+    - building: "Maybe !Text"
+    - areaCode: "Maybe !Text"
+    - area: "Maybe !Text"
+    - id: "!Text"
   CancellationSource:
     - enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication, ByFleetOwner"
   RideSyncRes:
     - newStatus: RideStatus
-    - message: Text
+    - message: "!Text"
     - derive: "Show, 'HideSecrets"
   RideStatus:
     - enum: "RIDE_UPCOMING, RIDE_NEW, RIDE_INPROGRESS, RIDE_COMPLETED, RIDE_CANCELLED"
@@ -607,12 +611,12 @@ types:
     - derive: "'HideSecrets"
   MultipleRideSyncRes:
     - recordType: NewType
-    - list: [Either Text MultipleRideData]
+    - list: "[Either !Text MultipleRideData]"
     - derive: "'HideSecrets"
   MultipleRideData:
     - rideId: Id Ride
     - newStatus: RideStatus
-    - message: Text
+    - message: "!Text"
   Status:
     - enum: "ON_RIDE, ON_PICKUP, IDLE"
   ActualRoute:
@@ -626,7 +630,7 @@ types:
     - actualRoute: [ActualRoute]
     - derive: "'HideSecrets"
   RideEstimatedRouteRes:
-    - transactionId: Text
+    - transactionId: "!Text"
     - estimatedDistance: Maybe Meters
     - calls: [MapsRouteCall]
     - editDestinations: [EditDestinationRoute]
@@ -635,8 +639,8 @@ types:
     - requestedWaypoints: [LatLong]
     - call: MapsRouteCall
   MapsRouteCall:
-    - apiName: Text
-    - provider: Text
+    - apiName: "!Text"
+    - provider: "!Text"
     - calledAt: UTCTime
     - routes: [MapsRouteOption]
   MapsRouteOption:
@@ -654,7 +658,7 @@ types:
     - inputPoints: [LatLong]
     - snapped: Maybe SnappedResult
   SnappedResult:
-    - provider: Text
+    - provider: "!Text"
     - distanceMeters: Int
     - snappedPoints: [LatLong]
   SnapDistanceFailure:
@@ -662,7 +666,7 @@ types:
     - calledAt: UTCTime
     - attempts: [SnapAttempt]
   SnapAttempt:
-    - provider: Text
+    - provider: "!Text"
     - reason: SnapRejectReason
     - confidence: Maybe Double
   SnapRejectReason:
@@ -688,31 +692,31 @@ types:
     - derive': "Show, Generic, ToSchema"
   RideInfo:
     - rideShortId: ShortId Ride
-    - customerName: Maybe Text
-    - customerPhoneNo: Text
-    - driverName: Text
-    - driverPhoneNo: Maybe Text
-    - vehicleNo: Text
+    - customerName: "Maybe !Text"
+    - customerPhoneNo: "!Text"
+    - driverName: "!Text"
+    - driverPhoneNo: "Maybe !Text"
+    - vehicleNo: "!Text"
     - status: BookingStatus
     - rideCreatedAt: UTCTime
     - pickupLocationLat: Maybe Double
     - pickupLocationLon: Maybe Double
-    - pickupLocationStreet: Maybe Text
-    - pickupLocationCity: Maybe Text
-    - pickupLocationState: Maybe Text
-    - pickupLocationCountry: Maybe Text
-    - pickupLocationBuilding: Maybe Text
-    - pickupLocationAreaCode: Maybe Text
-    - pickupLocationArea: Maybe Text
+    - pickupLocationStreet: "Maybe !Text"
+    - pickupLocationCity: "Maybe !Text"
+    - pickupLocationState: "Maybe !Text"
+    - pickupLocationCountry: "Maybe !Text"
+    - pickupLocationBuilding: "Maybe !Text"
+    - pickupLocationAreaCode: "Maybe !Text"
+    - pickupLocationArea: "Maybe !Text"
     - dropLocationLat: Maybe Double
     - dropLocationLon: Maybe Double
-    - dropLocationStreet: Maybe Text
-    - dropLocationCity: Maybe Text
-    - dropLocationState: Maybe Text
-    - dropLocationCountry: Maybe Text
-    - dropLocationBuilding: Maybe Text
-    - dropLocationAreaCode: Maybe Text
-    - dropLocationArea: Maybe Text
+    - dropLocationStreet: "Maybe !Text"
+    - dropLocationCity: "Maybe !Text"
+    - dropLocationState: "Maybe !Text"
+    - dropLocationCountry: "Maybe !Text"
+    - dropLocationBuilding: "Maybe !Text"
+    - dropLocationAreaCode: "Maybe !Text"
+    - dropLocationArea: "Maybe !Text"
     - fare: Maybe Money
     - fareWithCurrency: Maybe PriceAPIEntity
     - personId: Id Driver
@@ -791,12 +795,12 @@ types:
 
   RideFlowDebugRes:
     - currentStage: FlowStage
-    - tripCategory: Maybe Text
+    - tripCategory: "Maybe !Text"
     - timeline: [FlowStageEntry]
     - bapData: Maybe BAPSideDebug
     - bppData: Maybe BPPSideDebug
     - crossReferenceIds: CrossReferenceIds
-    - issues: [Text]
+    - issues: "[!Text]"
     - derive: "'HideSecrets"
   FlowStage:
     - enum: "BAP_SEARCH_CREATED, BPP_SEARCH_RECEIVED, BPP_ESTIMATES_CREATED, BAP_ON_SEARCH_RECEIVED, BAP_SELECT_SENT, BPP_DRIVER_SEARCH_STARTED, BPP_DRIVER_QUOTES_RECEIVED, BAP_ON_SELECT_RECEIVED, BAP_INIT_SENT, BPP_BOOKING_CREATED, BAP_ON_INIT_RECEIVED, BAP_CONFIRM_SENT, BPP_CONFIRM_PROCESSED, BAP_ON_CONFIRM_RECEIVED, BPP_RIDE_STARTED, BAP_RIDE_STARTED, BPP_RIDE_COMPLETED, BAP_RIDE_COMPLETED, FLOW_CANCELLED, FLOW_UNKNOWN"
@@ -806,18 +810,18 @@ types:
     - stage: FlowStage
     - status: FlowStageStatus
     - timestamp: Maybe UTCTime
-    - detail: Maybe Text
+    - detail: "Maybe !Text"
 
   # Cross-reference IDs to link BAP and BPP sides
   CrossReferenceIds:
-    - transactionId: Maybe Text
-    - bapSearchRequestId: Maybe Text
-    - bppSearchRequestId: Maybe Text
-    - bapBookingId: Maybe Text
-    - bppBookingId: Maybe Text
-    - bapRideId: Maybe Text
-    - bppRideId: Maybe Text
-    - rideShortId: Maybe Text
+    - transactionId: "Maybe !Text"
+    - bapSearchRequestId: "Maybe !Text"
+    - bppSearchRequestId: "Maybe !Text"
+    - bapBookingId: "Maybe !Text"
+    - bppBookingId: "Maybe !Text"
+    - bapRideId: "Maybe !Text"
+    - bppRideId: "Maybe !Text"
+    - rideShortId: "Maybe !Text"
 
   # ---- BPP (Driver-App) Side Debug Data ----
   BPPSideDebug:
@@ -828,89 +832,89 @@ types:
     - booking: Maybe BPPBookingDebug
     - ride: Maybe BPPRideDebug
   BPPSearchRequestDebug:
-    - id: Text
-    - transactionId: Maybe Text
+    - id: "!Text"
+    - transactionId: "Maybe !Text"
     - createdAt: UTCTime
     - estimatedDistance: Maybe Meters
     - estimatedDuration: Maybe Seconds
     - autoAssignEnabled: Maybe Bool
-    - area: Maybe Text
+    - area: "Maybe !Text"
   BPPSearchTryDebug:
-    - id: Text
-    - status: Text
-    - vehicleServiceTier: Text
+    - id: "!Text"
+    - status: "!Text"
+    - vehicleServiceTier: "!Text"
     - searchRepeatCounter: Int
-    - searchRepeatType: Text
-    - tripCategory: Text
+    - searchRepeatType: "!Text"
+    - tripCategory: "!Text"
     - createdAt: UTCTime
     - validTill: UTCTime
   BPPEstimateDebug:
-    - id: Text
-    - tripCategory: Text
-    - vehicleServiceTier: Text
+    - id: "!Text"
+    - tripCategory: "!Text"
+    - vehicleServiceTier: "!Text"
     - minFare: HighPrecMoney
     - maxFare: HighPrecMoney
     - createdAt: UTCTime
   BPPDriverQuoteDebug:
-    - id: Text
-    - driverId: Text
-    - driverName: Text
-    - status: Text
+    - id: "!Text"
+    - driverId: "!Text"
+    - driverName: "!Text"
+    - status: "!Text"
     - estimatedFare: HighPrecMoney
     - validTill: UTCTime
     - distanceToPickup: Meters
     - durationToPickup: Seconds
     - createdAt: UTCTime
   BPPBookingDebug:
-    - id: Text
-    - status: Text
-    - tripCategory: Text
+    - id: "!Text"
+    - status: "!Text"
+    - tripCategory: "!Text"
     - estimatedFare: HighPrecMoney
-    - riderId: Maybe Text
-    - specialZoneOtpCode: Maybe Text
-    - searchTryId: Maybe Text
+    - riderId: "Maybe !Text"
+    - specialZoneOtpCode: "Maybe !Text"
+    - searchTryId: "Maybe !Text"
     - createdAt: UTCTime
     - updatedAt: UTCTime
   BPPRideDebug:
-    - id: Text
-    - shortId: Text
-    - status: Text
-    - driverId: Text
-    - otp: Text
-    - endOtp: Maybe Text
+    - id: "!Text"
+    - shortId: "!Text"
+    - status: "!Text"
+    - driverId: "!Text"
+    - otp: "!Text"
+    - endOtp: "Maybe !Text"
     - fare: Maybe HighPrecMoney
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
     - chargeableDistance: Maybe Meters
     - distanceCalculationFailed: Maybe Bool
-    - rideEndedBy: Maybe Text
+    - rideEndedBy: "Maybe !Text"
     - createdAt: UTCTime
     - updatedAt: UTCTime
 
   RideEvidenceListRes:
     - evidence: [RideEvidenceItem]
   RideEvidenceItem:
-    - id: Text
-    - fileId: Text
-    - driverId: Text
-    - description: Maybe Text
+    - id: "!Text"
+    - fileId: "!Text"
+    - driverId: "!Text"
+    - description: "Maybe !Text"
     - rideStatus: RideStatus
-    - fileStatus: Maybe Text
+    - fileStatus: "Maybe !Text"
     - createdAt: UTCTime
     - isHidden: Bool
     - hiddenAt: Maybe UTCTime
-    - hiddenBy: Maybe Text
-    - hiddenReason: Maybe Text
-    - thumbnailUrl: Maybe Text
-    - imageUrl: Maybe Text
+    - hiddenBy: "Maybe !Text"
+    - hiddenReason: "Maybe !Text"
+    - thumbnailUrl: "Maybe !Text"
+    - imageUrl: "Maybe !Text"
     - urlsExpireAt: Maybe UTCTime
   SetRideEvidenceVisibilityReq:
     - isHidden: Bool
     - reason: Maybe Text
     - derive: "'HideSecrets"
   RideEvidenceFileRes:
-    - evidenceId: Text
-    - content: Text
+    - evidenceId: "!Text"
+    - content: "!Text"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -64,8 +64,8 @@ where
 import qualified Data.Aeson as A
 import Data.OpenApi (ToSchema)
 import qualified Data.Time as DT
-import qualified Domain.Types.MerchantPushNotification as Fields
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig (TransporterConfig (..))
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Notification as Notification
@@ -76,7 +76,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
 
@@ -163,13 +162,17 @@ type AvailableForRidesEndFlow m r =
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   )
 
+endedPushKey :: AvailableForRidesEndReason -> DriverPushKey
+endedPushKey = \case
+  REQUEST_LIMIT_REACHED -> DriverPush_AvailableForRidesEnded_RequestLimitReached
+  CONSECUTIVE_REJECTIONS -> DriverPush_AvailableForRidesEnded_ConsecutiveRejections
+  DRIVER_AT_FAULT_CANCELLATION -> DriverPush_AvailableForRidesEnded_DriverAtFaultCancellation
+
 notifyEnded :: AvailableForRidesEndFlow m r => DP.Person -> AvailableForRidesEndReason -> m ()
 notifyEnded person reason = do
   let merchantOpCityId = person.merchantOperatingCityId
-      messageKey = availableForRidesEndedEvent <> "_" <> show reason
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId messageKey Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
-  let (title, body) = maybe (defaultEndedContent reason) (\merchantPN -> (merchantPN.title, merchantPN.body)) mbMerchantPN
-  Notify.notifyDriverWithProviders merchantOpCityId Notification.DRIVER_NOTIFY title body person person.deviceToken Nothing $
+  content <- Notify.buildMerchantPNContentWithFallback merchantOpCityId (Just $ fromMaybe ENGLISH person.language) (endedPushKey reason) [] (defaultEndedContent reason)
+  Notify.notifyDriverWithProviders merchantOpCityId Notification.DRIVER_NOTIFY content person person.deviceToken Nothing $
     AvailableForRidesEndedData {event = availableForRidesEndedEvent, reason}
 
 enabledConfig :: TransporterConfig -> Maybe (Minutes, Int, Int)

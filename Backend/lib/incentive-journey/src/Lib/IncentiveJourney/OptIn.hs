@@ -10,14 +10,31 @@ module Lib.IncentiveJourney.OptIn
     isOptInPeriodActive,
     optInPeriodExclusiveEnd,
     hasStaleOptIn,
+    resolveCampaignOptInPeriod,
+    listOptInPeriod,
   )
 where
 
 import Data.Time (Day, UTCTime (UTCTime), addDays, diffDays, utctDay)
 import Kernel.Prelude
+import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.UserCohortMapping as DUCM
 import Lib.IncentiveJourney.Period (mkDailyPeriodKey, mkJourneyPeriodKeyWithStart)
 import Lib.IncentiveJourney.Types (JourneyPeriodType (Weekly))
+
+-- | Cadence for marking opt-in: CJM config wins, else request, else Daily.
+resolveCampaignOptInPeriod :: DCJM.CohortJourneyMapping -> Maybe DCJM.OptInPeriod -> DCJM.OptInPeriod
+resolveCampaignOptInPeriod cjm mbReq =
+  case cjm.optInPeriod of
+    Just period -> period
+    Nothing -> fromMaybe DCJM.Daily mbReq
+
+-- | What list/dashboard expose for OptIn campaigns. Assigned → Nothing.
+listOptInPeriod :: DCJM.CohortJourneyMapping -> Maybe DCJM.OptInPeriod
+listOptInPeriod cjm =
+  case fromMaybe DCJM.Assigned cjm.campaignUserLinkType of
+    DCJM.Assigned -> Nothing
+    DCJM.OptIn -> Just (fromMaybe DCJM.Daily cjm.optInPeriod)
 
 -- | Whether this UCM's OptIn is still live for the current city-local wall-clock.
 -- Missing optInPeriod defaults to Daily (same as POST /optIn).
@@ -30,13 +47,13 @@ isOptInActiveForLocalTime localNow mbCampaignStartDate ucm =
   case ucm.optedInAt of
     Nothing -> False
     Just optedInAt ->
-      isOptInPeriodActive localNow (fromMaybe DUCM.Daily ucm.optInPeriod) mbCampaignStartDate optedInAt
+      isOptInPeriodActive localNow (fromMaybe DCJM.Daily ucm.optInPeriod) mbCampaignStartDate optedInAt
 
-isOptInPeriodActive :: UTCTime -> DUCM.OptInPeriod -> Maybe UTCTime -> UTCTime -> Bool
+isOptInPeriodActive :: UTCTime -> DCJM.OptInPeriod -> Maybe UTCTime -> UTCTime -> Bool
 isOptInPeriodActive localNow period mbCampaignStartDate optedInAt =
   case period of
-    DUCM.Daily -> mkDailyPeriodKey localNow == mkDailyPeriodKey optedInAt
-    DUCM.Weekly ->
+    DCJM.Daily -> mkDailyPeriodKey localNow == mkDailyPeriodKey optedInAt
+    DCJM.Weekly ->
       case mbCampaignStartDate of
         Just startDate ->
           mkJourneyPeriodKeyWithStart localNow Weekly startDate
@@ -50,11 +67,11 @@ isOptInPeriodActive localNow period mbCampaignStartDate optedInAt =
 -- | Exclusive end of the opt-in period containing localNow (city-local wall-clock as UTCTime).
 -- Daily → next local midnight.
 -- Weekly → startDate-anchored week end (start + (idx+1)*7); without startDate → localDay+7.
-optInPeriodExclusiveEnd :: UTCTime -> DUCM.OptInPeriod -> Maybe UTCTime -> UTCTime
+optInPeriodExclusiveEnd :: UTCTime -> DCJM.OptInPeriod -> Maybe UTCTime -> UTCTime
 optInPeriodExclusiveEnd localNow period mbCampaignStartDate =
   case period of
-    DUCM.Daily -> UTCTime (addDays 1 (utctDay localNow)) 0
-    DUCM.Weekly -> UTCTime (weeklyExclusiveEndDay localNow mbCampaignStartDate) 0
+    DCJM.Daily -> UTCTime (addDays 1 (utctDay localNow)) 0
+    DCJM.Weekly -> UTCTime (weeklyExclusiveEndDay localNow mbCampaignStartDate) 0
 
 weeklyExclusiveEndDay :: UTCTime -> Maybe UTCTime -> Day
 weeklyExclusiveEndDay localNow mbCampaignStartDate =

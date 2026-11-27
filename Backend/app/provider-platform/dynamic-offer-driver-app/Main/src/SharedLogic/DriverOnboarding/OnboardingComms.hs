@@ -26,9 +26,11 @@ where
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TranslationKeys (DriverPushKey (..), TranslationKey (..))
 import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.Interface.Types as Notification
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import Kernel.Types.Forkable (Forkable, fork)
 import Kernel.Types.Id
@@ -36,50 +38,51 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Fields as Fields
 import qualified Tools.Notifications as TN
 
-driverOnboardingAsChangedKey :: Text
-driverOnboardingAsChangedKey = "DRIVER_ONBOARDING_AS_CHANGED"
+driverOnboardingAsChangedKey :: DriverPushKey
+driverOnboardingAsChangedKey = DriverPush_Driver_OnboardingAsChanged
 
-fleetOwnerDriverOnboardingAsChangedKey :: Text
-fleetOwnerDriverOnboardingAsChangedKey = "FLEET_OWNER_DRIVER_ONBOARDING_AS_CHANGED"
+fleetOwnerDriverOnboardingAsChangedKey :: DriverPushKey
+fleetOwnerDriverOnboardingAsChangedKey = DriverPush_FleetOwner_DriverOnboardingAsChanged
 
-driverFleetOwnerChangedKey :: Text
-driverFleetOwnerChangedKey = "DRIVER_FLEET_OWNER_CHANGED"
+driverFleetOwnerChangedKey :: DriverPushKey
+driverFleetOwnerChangedKey = DriverPush_Driver_FleetOwnerChanged
 
-fleetOwnerDriverAddedKey :: Text
-fleetOwnerDriverAddedKey = "FLEET_OWNER_DRIVER_ADDED"
+fleetOwnerDriverAddedKey :: DriverPushKey
+fleetOwnerDriverAddedKey = DriverPush_FleetOwner_DriverAdded
 
-fleetOwnerDriverRemovedKey :: Text
-fleetOwnerDriverRemovedKey = "FLEET_OWNER_DRIVER_REMOVED"
+fleetOwnerDriverRemovedKey :: DriverPushKey
+fleetOwnerDriverRemovedKey = DriverPush_FleetOwner_DriverRemoved
 
-driverUnlinkFromFleetKey :: Text
-driverUnlinkFromFleetKey = "DRIVER_UNLINK_FROM_FLEET"
+driverUnlinkFromFleetKey :: DriverPushKey
+driverUnlinkFromFleetKey = DriverPush_FleetOwner_DriverUnlinked
 
-fleetOwnerDriverLeftKey :: Text
-fleetOwnerDriverLeftKey = "FLEET_OWNER_DRIVER_LEFT"
+fleetOwnerDriverLeftKey :: DriverPushKey
+fleetOwnerDriverLeftKey = DriverPush_FleetOwner_DriverLeft
 
-driverRemovedFromFleetKey :: Text
-driverRemovedFromFleetKey = "DRIVER_REMOVED_FROM_FLEET"
+driverRemovedFromFleetKey :: DriverPushKey
+driverRemovedFromFleetKey = DriverPush_Driver_RemovedFromFleet
 
-driverLeftFleetKey :: Text
-driverLeftFleetKey = "DRIVER_LEFT_FLEET"
+driverLeftFleetKey :: DriverPushKey
+driverLeftFleetKey = DriverPush_Driver_LeftFleet
 
-fleetOwnerVehicleUnlinkedKey :: Text
-fleetOwnerVehicleUnlinkedKey = "FLEET_OWNER_VEHICLE_UNLINKED"
+fleetOwnerVehicleUnlinkedKey :: DriverPushKey
+fleetOwnerVehicleUnlinkedKey = DriverPush_FleetOwner_VehicleUnlinked
 
-fleetVehicleUnlinkedKey :: Text
-fleetVehicleUnlinkedKey = "FLEET_VEHICLE_UNLINKED"
+fleetVehicleUnlinkedKey :: DriverPushKey
+fleetVehicleUnlinkedKey = DriverPush_Driver_VehicleUnlinked
 
-driverDeclinedFleetInviteKey :: Text
-driverDeclinedFleetInviteKey = "DRIVER_DECLINED_FLEET_INVITE"
+driverDeclinedFleetInviteKey :: DriverPushKey
+driverDeclinedFleetInviteKey = DriverPush_Driver_DeclinedFleetInvite
 
-fleetOwnerDriverDeclinedInviteKey :: Text
-fleetOwnerDriverDeclinedInviteKey = "FLEET_OWNER_DRIVER_DECLINED_INVITE"
+fleetOwnerDriverDeclinedInviteKey :: DriverPushKey
+fleetOwnerDriverDeclinedInviteKey = DriverPush_FleetOwner_DriverDeclinedInvite
 
 setOnboardingAs :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> SGuard.Actor -> DP.Person -> DI.OnboardingAs -> m ()
 setOnboardingAs transporterConfig actor driver onboardingAs = setOnboardingAsHelper transporterConfig actor driver onboardingAs True
@@ -133,7 +136,10 @@ notifyOnOnboardingAsChange :: OnboardingFlow m r => DP.Person -> DI.OnboardingAs
 notifyOnOnboardingAsChange driver onboardingAs = do
   let merchantOpCityId = driver.merchantOperatingCityId
       driverName = mkDriverName driver
-      dynamicParams = [("driverName", driverName), ("onboardingAs", show onboardingAs)]
+      -- The onboarding mode is named in each reader's language.
+      dynamicParams recipient = do
+        onboardingAsName <- fromMaybe (show onboardingAs) <$> CQTranslations.findTextByKey (Just merchantOpCityId) (fromMaybe ENGLISH recipient.language) (OnboardingAs_Name onboardingAs)
+        pure [("driverName", driverName), ("onboardingAs", onboardingAsName)]
       entityData =
         TN.OnboardingChangeEntityData
           { driverId = driver.id.getId,
@@ -144,9 +150,11 @@ notifyOnOnboardingAsChange driver onboardingAs = do
   mbDriverInfo <- QDIExtra.findById (cast driver.id)
   mbFleetOwner <- findActiveFleetOwner driver.id
   when (maybe False (.enabled) mbDriverInfo || isJust mbFleetOwner) $ do
-    TN.notifyDriverOnMerchantPN merchantOpCityId driver driverOnboardingAsChangedKey Notification.DRIVER_NOTIFY dynamicParams entityData
-    whenJust mbFleetOwner $ \fleetOwner ->
-      TN.notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner fleetOwnerDriverOnboardingAsChangedKey Notification.DRIVER_NOTIFY dynamicParams entityData
+    driverParams <- dynamicParams driver
+    TN.notifyDriverOnMerchantPN merchantOpCityId driver driverOnboardingAsChangedKey Notification.DRIVER_NOTIFY driverParams entityData
+    whenJust mbFleetOwner $ \fleetOwner -> do
+      fleetOwnerParams <- dynamicParams fleetOwner
+      TN.notifyFleetOwnerOnMerchantPN merchantOpCityId fleetOwner fleetOwnerDriverOnboardingAsChangedKey Notification.DRIVER_NOTIFY fleetOwnerParams entityData
 
 notifyOnFleetOwnerChange :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> DP.Person -> DP.Person -> Maybe DP.Person -> m ()
 notifyOnFleetOwnerChange merchantOpCityId driver newFleetOwner mbOldFleetOwner = do

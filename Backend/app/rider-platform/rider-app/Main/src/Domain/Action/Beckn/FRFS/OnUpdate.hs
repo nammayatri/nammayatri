@@ -59,7 +59,7 @@ onUpdate merchant booking' dOnUpdate = do
   case dOnUpdate.orderStatus of
     _ | dOnUpdate.isRefundAck -> logInfo $ "FRFS on_update refund acknowledgement received for booking " <> booking.id.getId
     Spec.CANCELLED -> do
-      (mRiderNumber, mRiderMobileCountryCode, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
-      FRFSCancel.handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters
+      (mRiderNumber, mRiderMobileCountryCode, mRiderLanguage, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
+      FRFSCancel.handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode mRiderLanguage fareParameters
       FRFSCancelJourney.cancelJourney booking
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"

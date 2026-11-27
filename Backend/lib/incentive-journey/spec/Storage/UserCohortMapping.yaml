@@ -1,18 +1,10 @@
 imports:
   Person: Lib.IncentiveJourney.Domain.Types.Common
   CohortJourneyMapping: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
+  OptInPeriod: Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping
 
 UserCohortMapping:
   tableName: user_cohort_mapping
-
-  types:
-    OptInPeriod:
-      enum: "Daily, Weekly"
-      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
-
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <OptInPeriod>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <OptInPeriod>
 
   fields:
     id: Id UserCohortMapping
@@ -20,7 +12,7 @@ UserCohortMapping:
     cohortMappingId: Id CohortJourneyMapping
     enabled: Bool
     validTill: UTCTime
-    # Null for Assigned cohorts. Set when OptIn invite is created.
+    # Snapshot of CJM cadence at opt-in. Null for Assigned / before opt-in.
     optInPeriod: Maybe OptInPeriod
     # Null = invited / eligible but not active for eval. Just = opted in for this period.
     optedInAt: Maybe UTCTime

@@ -673,9 +673,8 @@ describePassettoFailure = \case
   where
     withoutInput = T.take 300 . fst . T.breakOn " at '"
 
--- TEMP DEBUG (remove once the Grid key issue is found): `Grid.decide` with every step logged in full, the
--- decrypted apiKey included. The image is logged as size and sha256 only. Same call, manager and error
--- mapping as the kernel's.
+-- `Grid.decide` with the request and raw response logged. The apiKey is never logged; the image is logged as
+-- size and sha256 only. Same call, manager and error mapping as the kernel's.
 type GridDecisionRawAPI =
   "v1"
     :> "decisions"
@@ -704,25 +703,20 @@ decideLogged ::
   Grid.GridDecisionReq ->
   m Grid.GridDecisionResp
 decideLogged cfg req = do
-  logInfo $ "TEMP DEBUG Grid apiKey ciphertext: " <> unEncrypted cfg.apiKey
   apiKey <-
     Catch.try (decrypt cfg.apiKey) >>= \case
       Left (e :: SomeException) -> do
-        logError $ "TEMP DEBUG Grid apiKey decrypt failed: " <> show e
+        logError $ "Grid apiKey decrypt failed: " <> show e
         Catch.throwM e
-      Right k -> do
-        logInfo $ "TEMP DEBUG Grid apiKey decrypted: " <> k
-        pure k
+      Right k -> pure k
   let (bearer, litellmKey) = case fromMaybe Grid.AuthorizationBearer cfg.authHeader of
         Grid.AuthorizationBearer -> (Just $ "Bearer " <> apiKey, Nothing)
         Grid.XLiteLLMApiKey -> (Nothing, Just apiKey)
   logInfo $
-    "TEMP DEBUG Grid request: POST "
+    "Grid request: POST "
       <> T.pack (Servant.showBaseUrl cfg.url)
-      <> "/v1/decisions, Authorization="
-      <> show bearer
-      <> ", x-litellm-api-key="
-      <> show litellmKey
+      <> "/v1/decisions, authHeader="
+      <> (if isJust bearer then "Authorization" else "x-litellm-api-key")
       -- the image as size and hash only: megabytes per line get cut by log pipelines, and it shows the vehicle
       <> ", body (images left out)="
       <> encodeToText req {Grid.images = []}
@@ -739,7 +733,7 @@ decideLogged cfg req = do
   case res of
     Left clientErr@(Servant.FailureResponse _ resp) -> do
       logError $
-        "TEMP DEBUG Grid raw response: status "
+        "Grid raw response: status "
           <> show (statusCode (Servant.responseStatusCode resp))
           <> ", headers="
           <> show (toList (Servant.responseHeaders resp))
@@ -747,10 +741,10 @@ decideLogged cfg req = do
           <> decodeUtf8 (BS.toStrict (Servant.responseBody resp))
       maybe (apiError clientErr) (\(e :: GridError.GridError) -> throwError e) (fromResponse resp)
     Left clientErr -> do
-      logError $ "TEMP DEBUG Grid call failed: " <> show clientErr
+      logError $ "Grid call failed: " <> show clientErr
       apiError clientErr
     Right (GridRawBody body) -> do
-      logInfo $ "TEMP DEBUG Grid raw response: status 200, body=" <> decodeUtf8 (BS.toStrict body)
+      logInfo $ "Grid raw response: status 200, body=" <> decodeUtf8 (BS.toStrict body)
       case A.eitherDecode body of
         Right resp -> pure resp
         Left msg ->

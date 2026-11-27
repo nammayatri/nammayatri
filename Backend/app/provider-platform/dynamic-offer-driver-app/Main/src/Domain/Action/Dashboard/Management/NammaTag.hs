@@ -305,6 +305,7 @@ instance Default FRT.InvoiceContext where
         hasAdjustments = False,
         issuedToName = Nothing,
         issuedToAddress = Nothing,
+        issuedToGstin = Nothing,
         supplierName = Nothing,
         supplierAddress = Nothing,
         supplierGSTIN = Nothing,

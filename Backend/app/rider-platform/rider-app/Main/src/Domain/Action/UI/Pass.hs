@@ -136,7 +136,6 @@ import qualified Storage.CachedQueries.PassType as CQPassType
 import qualified Storage.CachedQueries.Translations as QT
 import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.EntityValueLog as QEntityValueLog
 import qualified Storage.Queries.FRFSPassTicketStatistics as QFRFSPassTicketStatistics
 -- Storage.Queries.Pass re-exports Storage.Queries.PassExtra, so this alias covers
@@ -1044,9 +1043,9 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
 
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let moid = person.merchantOperatingCityId
-  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language))
-  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language))
-  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language))
+  nameTranslation <- QT.findByOpsKey moid language (mkPassMessageKey pass.id "name")
+  benefitTranslation <- QT.findByOpsKey moid language (mkPassMessageKey pass.id "benefitDescription")
+  descriptionTranslation <- QT.findByOpsKey moid language (mkPassMessageKey pass.id "description")
   let name = maybe pass.name (Just . (.message)) nameTranslation
   let benefitDescription = maybe pass.benefitDescription (.message) benefitTranslation
   let description = maybe pass.description (Just . (.message)) descriptionTranslation
@@ -1126,9 +1125,9 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass mbPayment
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let passId = Id.cast purchasedPass.id :: Id.Id DPass.Pass
   let moid = purchasedPass.merchantOperatingCityId
-  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "name") language))
-  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "benefitDescription") language))
-  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "description") language))
+  nameTranslation <- QT.findByOpsKey moid language (mkPassMessageKey passId "name")
+  benefitTranslation <- QT.findByOpsKey moid language (mkPassMessageKey passId "benefitDescription")
+  descriptionTranslation <- QT.findByOpsKey moid language (mkPassMessageKey passId "description")
 
   let name = maybe purchasedPass.passName (Just . (.message)) nameTranslation
   let benefitDescription = maybe purchasedPass.benefitDescription (.message) benefitTranslation
@@ -1431,7 +1430,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         let countryCode = fromMaybe "+91" person.mobileCountryCode
             phoneNumberWithCountryCode = countryCode <> phoneNumber
         withLogTag ("sending Pass Purchased Success SMS" <> Id.getId person.id) $ do
-          buildSmsReq <- MessageBuilder.buildPassSuccessMessage merchantOpCityId $ MessageBuilder.BuildPassSuccessMessage {passName}
+          buildSmsReq <- MessageBuilder.buildPassSuccessMessage merchantOpCityId person.language $ MessageBuilder.BuildPassSuccessMessage {passName}
           Sms.sendSMS merchantId merchantOpCityId (buildSmsReq phoneNumberWithCountryCode)
             >>= Sms.checkSmsResult
 

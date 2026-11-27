@@ -282,12 +282,15 @@ library
       Domain.Action.Dashboard.SearchTry
       Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
+      Domain.Action.Dashboard.Translation
       Domain.Action.DashboardAuth.AppManagement.MerchantOnboarding
       Domain.Action.DashboardAuth.AppManagement.Payment
       Domain.Action.DashboardAuth.IssueManagement.Issue
+      Domain.Action.DashboardAuth.Management.Customer
       Domain.Action.DashboardAuth.Management.Merchant
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
+      Domain.Action.DashboardAuth.Management.Ride
       Domain.Action.Internal.Auth
       Domain.Action.Internal.Cac
       Domain.Action.Internal.DriverArrivalNotf
@@ -487,6 +490,7 @@ library
       Domain.Types.Station
       Domain.Types.TicketDashboard
       Domain.Types.TicketKapture
+      Domain.Types.TranslationKeys
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
@@ -1094,6 +1098,7 @@ library
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.Sos
       API.Action.DashboardAuth.Management.SosMedia
+      API.Action.DashboardAuth.Management.Translation
       API.Action.DashboardAuth.RideBooking
       API.Action.DashboardAuth.RideBooking.AddBaggage
       API.Action.DashboardAuth.RideBooking.Booking
@@ -1262,6 +1267,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.SearchTry
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
+      API.Types.RiderPlatform.Management.Endpoints.Translation
       API.Types.RiderPlatform.Management.FeedbackForm
       API.Types.RiderPlatform.Management.FRFSAlerts
       API.Types.RiderPlatform.Management.FRFSTicket
@@ -1280,6 +1286,7 @@ library
       API.Types.RiderPlatform.Management.SearchTry
       API.Types.RiderPlatform.Management.Sos
       API.Types.RiderPlatform.Management.SosMedia
+      API.Types.RiderPlatform.Management.Translation
       API.Types.UI.AlertWebhook
       API.Types.UI.AssetManifest
       API.Types.UI.AssetReleaseInternal

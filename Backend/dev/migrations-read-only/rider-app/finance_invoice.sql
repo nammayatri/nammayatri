@@ -112,3 +112,9 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN unsigned_qr_code text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN issued_to_gstin text ;

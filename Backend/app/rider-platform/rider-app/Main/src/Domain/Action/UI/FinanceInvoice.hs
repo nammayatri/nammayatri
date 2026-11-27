@@ -3,6 +3,7 @@ module Domain.Action.UI.FinanceInvoice (getFinanceInvoicePdf, renderFinanceInvoi
 import qualified API.Types.UI.FinanceInvoice as API
 import Data.List.NonEmpty as NE
 import qualified Data.Time as DT
+import qualified Domain.Types.Booking as Fields
 import Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -11,7 +12,7 @@ import Environment (Flow)
 import qualified Environment as Fields
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
-import Kernel.Prelude (listToMaybe, showBaseUrl)
+import Kernel.Prelude (listToMaybe)
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -31,6 +32,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as YudhishthiraBeamFlow
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
@@ -63,9 +65,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
         throwError $ InvalidRequest "Invoice does not belong to this rider"
       pure [inv]
     Nothing -> case (mbInvoiceType, mbReferenceId) of
-      (Just Ride, Just rideId) -> fetchInvoicesByRideId rideId personId (Just Ride)
-      (Just RideCancellation, Just rideId) -> fetchInvoicesByRideId rideId personId (Just RideCancellation)
-      (Just Refund, Just rideId) -> fetchInvoicesByRideId rideId personId (Just Refund)
+      (_, Just rideId) -> fetchInvoicesByRideId rideId personId mbInvoiceType
       (Just Ride, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=Ride"
       (Just RideCancellation, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=RideCancellation"
       (Just Refund, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=Refund"
@@ -80,7 +80,6 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
               mbInvoiceType
               Nothing
               (Just personId.getId)
-              Nothing
               Nothing
               []
               statusFilter
@@ -111,7 +110,6 @@ renderFinanceInvoicePdf ::
 renderFinanceInvoicePdf merchantOperatingCityId lang invoices = do
   mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing
   let tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
-      tmplLogoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl
       -- AggregatedCommission isn't rendered for riders — these BPP-side fields aren't on RiderConfig.
       tmplSellerTradeName = Nothing :: Maybe Text
       tmplAppName = Nothing :: Maybe Text
@@ -144,6 +142,9 @@ renderFinanceInvoicePdf merchantOperatingCityId lang invoices = do
   -- match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = NE.head pdfDatasNE
       chosenInv = chosenPdfData.financeInvoice
+  mbChosenRide <- maybe (pure Nothing) (QRideLite.findByIdLite . Id) chosenInv.referenceId
+  mbChosenBooking <- maybe (pure Nothing) (QBooking.findById . (.bookingId)) mbChosenRide
+  let tmplLogoUrl = mbChosenBooking >>= (.issuedByLogoUrl)
       ctx =
         FRT.buildInvoiceContext
           FRT.BuildInvoiceContextInput
@@ -184,4 +185,4 @@ fetchInvoicesByRideId rideId personId mbInvoiceType = do
   booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.riderId == personId) $
     throwError $ InvalidRequest "Ride does not belong to this rider"
-  QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType Nothing [Draft, Issued, Paid] (Just 1) (Just 0)
+  QInvoiceExtra.findByReferenceIdWithStatusFallback rideId mbInvoiceType Nothing

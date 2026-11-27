@@ -819,11 +819,13 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
             let cooldown = fromMaybe 900 gate.notificationCooldownInSec
             calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier variant
             logDebug $ "checkAndNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for variant=" <> variant
-            allSortedDrivers <- fmap concat $
+            sortedDriversByVariant <-
               forM calloutVariants $ \cv -> do
                 queueResp <- measuringDurationToLog INFO ("checkAndNotifyDriverDemand.getQueueDrivers cv=" <> show cv) $ LTSFlow.getQueueDrivers specialLocationId (show cv)
-                pure $ sortOn (.queuePosition) queueResp.drivers
-            let queueDriverIds = nub $ map (.driverId) allSortedDrivers
+                pure (show cv, sortOn (.queuePosition) queueResp.drivers)
+            let allSortedDrivers = concatMap snd sortedDriversByVariant
+                queueVariantMap = mkQueueVariantMap sortedDriversByVariant
+                queueDriverIds = nub $ map (.driverId) allSortedDrivers
             logInfo $
               "Notifying drivers gateId=" <> gateId <> " variant=" <> variant
                 <> " needed="
@@ -832,7 +834,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
                 <> show (length queueDriverIds)
                 <> " cooldown="
                 <> show cooldown
-            eligibleNearGate <- filterInBatches 50 needed specialLocationId variant gateId gate.enableQueueFilter merchantId gate queueDriverIds
+            eligibleNearGate <- filterInBatches 50 needed specialLocationId variant gateId gate.enableQueueFilter merchantId gate queueVariantMap queueDriverIds
             logInfo $
               "Eligible drivers after batched filter gateId=" <> gateId <> " variant=" <> variant
                 <> " eligibleNearGate="
@@ -879,7 +881,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       -- fails, fare calc is silently skipped (notification still sent without perKmFare).
       mbServiceTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
-  (eligiblePriority, priorityVariantMap) <- filterEligibleDrivers merchantId specialLocationId vehicleType gateId gate.enableQueueFilter priorityDriverIds
+  (eligiblePriority, priorityVariantMap) <- filterEligibleDrivers merchantId specialLocationId vehicleType gateId gate.enableQueueFilter Map.empty priorityDriverIds
   calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier vehicleType
   logDebug $ "forceNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for vehicleType=" <> vehicleType
   if null calloutVariants
@@ -894,12 +896,14 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       queueCount <-
         if remaining > 0
           then do
-            allSortedDrivers <- fmap concat $
+            sortedDriversByVariant <-
               forM calloutVariants $ \cv -> do
                 queueResp <- measuringDurationToLog INFO ("forceNotifyDriverDemand.getQueueDrivers cv=" <> show cv) $ LTSFlow.getQueueDrivers specialLocationId (show cv)
-                pure $ sortOn (.queuePosition) queueResp.drivers
-            let queueDriverIds = nub $ filter (`notElem` priorityDriverIds) $ map (.driverId) allSortedDrivers
-            eligibleNearGate <- filterInBatches 50 remaining specialLocationId vehicleType gateId gate.enableQueueFilter merchantId gate queueDriverIds
+                pure (show cv, sortOn (.queuePosition) queueResp.drivers)
+            let allSortedDrivers = concatMap snd sortedDriversByVariant
+                queueVariantMap = mkQueueVariantMap sortedDriversByVariant
+                queueDriverIds = nub $ filter (`notElem` priorityDriverIds) $ map (.driverId) allSortedDrivers
+            eligibleNearGate <- filterInBatches 50 remaining specialLocationId vehicleType gateId gate.enableQueueFilter merchantId gate queueVariantMap queueDriverIds
             notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh mbTriggerRequestId (take remaining eligibleNearGate)
           else pure 0
       pure (priorityCount + queueCount)
@@ -1075,16 +1079,17 @@ filterInBatches ::
   Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter
   Id DM.Merchant ->
   DGI.GateInfo ->
+  Map.Map (Id DP.Person) Text ->
   [Id DP.Person] -> -- all queue driver IDs
   m [Id DP.Person]
-filterInBatches batchSize needed specialLocationId vehicleType gateId mbFilterAirport merchantId gate allDriverIds = do
+filterInBatches batchSize needed specialLocationId vehicleType gateId mbFilterAirport merchantId gate queueVariantMap allDriverIds = do
   let batches = chunksOf batchSize allDriverIds
   go [] batches
   where
     go acc [] = pure acc
     go acc _ | length acc >= needed = pure (take needed acc)
     go acc (batch : rest) = do
-      (eligible, variantMap) <- filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAirport batch
+      (eligible, variantMap) <- filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAirport queueVariantMap batch
       nearGate <- filterByGateProximity merchantId gate variantMap eligible
       go (acc <> nearGate) rest
     chunksOf _ [] = []
@@ -1109,10 +1114,11 @@ filterEligibleDrivers ::
   Text -> -- vehicleType
   Text -> -- gateId
   Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter: when entry is True, the driver's enableForAirport must be ENABLED
+  Map.Map (Id DP.Person) Text ->
   [Id DP.Person] ->
   m ([Id DP.Person], Map.Map (Id DP.Person) Text) -- (eligible drivers, driverId -> variant map)
-filterEligibleDrivers _ _ _ _ _ [] = pure ([], Map.empty)
-filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAirport driverIds = do
+filterEligibleDrivers _ _ _ _ _ _ [] = pure ([], Map.empty)
+filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAirport queueVariantMap driverIds = do
   shards <- asks (.gateNotifiedKeyShards)
   now <- getCurrentTime
   let cooldownKeyFor d = mkGateDriverNotifiedKey shards gateId d.getId
@@ -1164,8 +1170,7 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
           ]
   -- Bulk DB: driver vehicles for service-tier and per-vehicle airport-switch filters.
   vehicles <- measuringDurationToLog INFO ("filterEligibleDrivers.findVehicles n=" <> show (length driverIds)) $ QV.findAllByDriverIds driverIds
-  let driverVariantMap = Map.fromList [(v.driverId, show v.variant) | v <- vehicles]
-      getDriverVehicleVariant did = fromMaybe "" (Map.lookup did driverVariantMap)
+  let driverVariantMap = Map.union queueVariantMap (Map.fromList [(v.driverId, show v.variant) | v <- vehicles])
       mbTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
       vehicleAirportFilterEnabled = fromMaybe False (Map.lookup vehicleType =<< mbFilterAirport)
   let vehicleEligibleDriverIds = case mbTier of
@@ -1205,15 +1210,50 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
     logInfo $ "filterEligibleDrivers removing ineligible drivers from queue specialLocationId=" <> specialLocationId <> " count=" <> show (length toRemoveWithReason)
     fork "removeIneligibleFromQueue" $
       forM_ toRemoveWithReason $ \(driver, reason) ->
-        void $
-          LTSFlow.manualQueueRemove
-            specialLocationId
-            (getDriverVehicleVariant driver)
-            merchantId
-            driver
-            (Just reason)
-            True
+        removeDriverFromQueue specialLocationId (Map.lookup driver driverVariantMap) merchantId driver reason
   pure (eligibleDrivers, driverVariantMap)
+
+mkQueueVariantMap :: [(Text, [Fields.QueueDriverEntry])] -> Map.Map (Id DP.Person) Text
+mkQueueVariantMap sortedDriversByVariant =
+  Map.fromListWith (flip const) [(d.driverId, cv) | (cv, ds) <- sortedDriversByVariant, d <- ds]
+
+removeDriverFromQueue ::
+  ( CoreMetrics m,
+    MonadFlow m,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r
+  ) =>
+  Text ->
+  Maybe Text ->
+  Id DM.Merchant ->
+  Id DP.Person ->
+  Text ->
+  m ()
+removeDriverFromQueue specialLocationId mbVariant merchantId driverId reason =
+  case mbVariant of
+    Nothing ->
+      logError $
+        "Skipping queue removal, vehicle variant unknown specialLocationId=" <> specialLocationId
+          <> " driverId="
+          <> driverId.getId
+          <> " reason="
+          <> reason
+    Just variant -> do
+      result <- withTryCatch "removeDriverFromQueue" $ LTSFlow.manualQueueRemove specialLocationId variant merchantId driverId (Just reason) True
+      case result of
+        Left err ->
+          logError $
+            "Queue removal failed specialLocationId=" <> specialLocationId
+              <> " variant="
+              <> variant
+              <> " driverId="
+              <> driverId.getId
+              <> " reason="
+              <> reason
+              <> " error="
+              <> show err
+        Right _ -> pure ()
 
 -- | Fetch all gates of a special location with their parsed pickup-zone polygons.
 --   1-hour in-memory cache keyed by specialLocationId; gate polygons are admin-edited
@@ -1265,7 +1305,6 @@ filterByGateProximity ::
   m [Id DP.Person]
 filterByGateProximity _ _ _ [] = pure []
 filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
-  let getDriverVehicleVariant did = fromMaybe "" (Map.lookup did driverVariantMap)
   cachedGates <- measuringDurationToLog INFO "filterByGateProximity.getCachedGates" $ getCachedGatesForProximity targetGate.specialLocationId
   let otherQueueableGates = filter (\g -> g.gateId /= targetGate.id.getId && g.canQueueUpOnGate) cachedGates
       mbTargetCached = find (\g -> g.gateId == targetGate.id.getId) cachedGates
@@ -1294,14 +1333,7 @@ filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
             <> show (map (.driverId.getId) staleLocations)
       forM_ staleLocations $ \dl ->
         fork ("manualQueueRemoveStale-" <> dl.driverId.getId) $
-          void $
-            LTSFlow.manualQueueRemove
-              targetGate.specialLocationId.getId
-              (getDriverVehicleVariant dl.driverId)
-              dl.merchantId
-              dl.driverId
-              (Just "stale_driver_location")
-              True
+          removeDriverFromQueue targetGate.specialLocationId.getId (Map.lookup dl.driverId driverVariantMap) dl.merchantId dl.driverId "stale_driver_location"
       let locByDriver = Map.fromList $ map (\dl -> (dl.driverId, LatLong dl.lat dl.lon)) freshLocations
       (kept, dropped) <-
         flip partitionM driverIds $ \driverId ->
@@ -1309,14 +1341,7 @@ filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
             Nothing -> do
               unless (Set.member driverId locatedDriverIds) $
                 fork ("manualQueueRemoveNoLoc-" <> driverId.getId) $
-                  void $
-                    LTSFlow.manualQueueRemove
-                      targetGate.specialLocationId.getId
-                      (getDriverVehicleVariant driverId)
-                      merchantId
-                      driverId
-                      (Just "no_driver_location")
-                      True
+                  removeDriverFromQueue targetGate.specialLocationId.getId (Map.lookup driverId driverVariantMap) merchantId driverId "no_driver_location"
               pure False
             Just loc -> do
               let nearTarget = maybe False (isPointInOrNearGate loc gateProximityExclusionMeters) mbTargetCached

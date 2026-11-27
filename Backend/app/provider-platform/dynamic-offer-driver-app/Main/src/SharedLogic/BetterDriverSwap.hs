@@ -93,13 +93,14 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
   oldBooking <- QRB.findById (Id oldBookingIdText) >>= fromMaybeM (BookingDoesNotExist oldBookingIdText)
   oldRide <- QRide.findActiveByRBId oldBooking.id >>= fromMaybeM (RideNotFound $ "no active ride for old booking: " <> oldBookingIdText)
   when (oldRide.status `elem` [DRide.INPROGRESS, DRide.COMPLETED]) $ throwError (RideRequestAlreadyAcceptedOrCancelled oldRide.id.getId)
-  forM_ transporterConfig.betterDriverProximityAbortRadiusMeters $ \abortRadius -> do
+  forM_ transporterConfig.betterDriverSearchMaxRadiusMeters $ \searchRadius -> do
     locResult <- withTryCatch "betterDriverSwapOldDriverLocation" $ LTSF.pickupDriverLocation oldRide.id merchant.id oldRide.driverId
     case locResult of
       Left err -> logError $ "Better-driver swap: old driver location for ride " <> oldRide.id.getId <> " failed: " <> show err
-      Right locResp ->
+      Right locResp -> do
+        cutoffRadius <- BP.betterDriverCutoffRadius searchRadius transporterConfig.betterDriverProximityAbortRadiusMeters oldBooking oldRide.driverId
         forM_ (listToMaybe $ reverse locResp.loc) $ \latest ->
-          when (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates oldBooking.fromLocation) < abortRadius) $ do
+          when (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates oldBooking.fromLocation) < cutoffRadius) $ do
             cancelBetterDriverSearchAndPullOffers merchant.id oldBooking.id
             throwError (RideRequestAlreadyAcceptedOrCancelled oldRide.id.getId)
   -- Same lock Beckn init takes: a concurrent cancel-search would deactivate the quote.

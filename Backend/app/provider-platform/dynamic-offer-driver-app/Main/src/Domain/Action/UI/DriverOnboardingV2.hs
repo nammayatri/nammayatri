@@ -53,7 +53,8 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
-import qualified Domain.Types.Translations as Fields
+import Domain.Types.TranslationKey (TranslatedText, textAsReceived)
+import Domain.Types.TranslationKeys (AcUsageMessage (..), TranslationKey (..))
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
@@ -118,11 +119,11 @@ import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.DocumentVerificationStagesConfig as CQDVSC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.DocumentVerificationStagesConfig (DocumentVerificationStagesConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
@@ -144,7 +145,6 @@ import qualified Storage.Queries.IdfyVerificationExtra as IVQueryExtra
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
-import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
@@ -174,15 +174,18 @@ mkDocumentVerificationConfigAPIEntityWithStage ::
   Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
 mkDocumentVerificationConfigAPIEntityWithStage onboardingStages language verificationProvidersPriorityList Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} = do
-  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Title") language))
-  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = show documentType <> "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (show documentType <> "_Description") language))
+  translatedTitle <- CQTranslations.findTranslatedText (Just merchantOperatingCityId) language (Document_Title documentType) title
+  translatedDescription <- CQTranslations.findOptionalTranslatedText (Just merchantOperatingCityId) language (Document_Description documentType) description
+  translatedFields <- traverse (translateDocumentFields merchantOperatingCityId language documentType) documentFields
+  translatedDisableWarning <- forM disableWarning $ CQTranslations.findTranslatedText (Just merchantOperatingCityId) language (Document_DisableWarning documentType)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
-      { title = maybe title (.message) mbTitle,
-        description = maybe description (Just . (.message)) mbDescription,
+      { title = translatedTitle,
+        description = translatedDescription,
+        disableWarning = translatedDisableWarning,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         applicableTo = applicableTo,
-        documentFields = documentFields,
+        documentFields = translatedFields,
         documentFlowGrouping = fromMaybe Domain.STANDARD documentFlowGrouping,
         verificationProvidersPriorityList = verificationProvidersPriorityList,
         doStrictVerification = doStrictVerifcation,
@@ -192,23 +195,79 @@ mkDocumentVerificationConfigAPIEntityWithStage onboardingStages language verific
 
 -- Stage metadata the onboarding hub renders around the documents. Documents carry the same
 -- DocumentOnboardingStage, so that value is the join key -- no separate string field is served.
--- Translation keys are namespaced "DocumentOnboardingStage_<stage>_Title" so a stage can never
--- collide with a DocumentType of the same name, which shares the message_translation table.
+-- Translation keys are "OnboardingStage.Title.<stage>" (legacy name "DocumentOnboardingStage_<stage>_Title")
+-- so a stage can never collide with a DocumentType of the same name, which shares the translations table.
 mkOnboardingStageAPIEntity ::
   Language ->
   Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentOnboardingStageAPIEntity
-mkOnboardingStageAPIEntity language Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig {..} = do
-  let translationKey suffix = "DocumentOnboardingStage_" <> show documentOnboardingStage <> suffix
-  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = translationKey "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (translationKey "_Title") language))
-  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = translationKey "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (translationKey "_Description") language))
+mkOnboardingStageAPIEntity language config = do
+  let Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig {..} = config
+  (translatedHint, translatedMedia, translatedGuidelines) <- translateStageTexts language config
+  translatedTitle <- CQTranslations.findTranslatedText (Just merchantOperatingCityId) language (OnboardingStage_Title documentOnboardingStage) title
+  translatedDescription <- CQTranslations.findOptionalTranslatedText (Just merchantOperatingCityId) language (OnboardingStage_Description documentOnboardingStage) description
   return $
     API.Types.UI.DriverOnboardingV2.DocumentOnboardingStageAPIEntity
       { stage = documentOnboardingStage,
-        title = maybe title (.message) mbTitle,
-        description = maybe description (Just . (.message)) mbDescription,
+        title = translatedTitle,
+        description = translatedDescription,
+        hint = translatedHint,
+        media = translatedMedia,
+        guidelines = translatedGuidelines,
         ..
       }
+
+-- | A document's form fields for an API response: every text leaf in the reader's language where
+-- its key has text, else as configured.
+translateDocumentFields :: (CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Language -> Domain.Types.DocumentVerificationConfig.DocumentType -> [Domain.Types.DocumentVerificationConfig.FieldInfo] -> m [API.Types.UI.DriverOnboardingV2.FieldInfo]
+translateDocumentFields merchantOpCityId language documentType fields = do
+  (textOf, optionalTextOf) <- CQTranslations.findTranslatedTextsCached (show documentType) merchantOpCityId language (SDO.documentFieldKeys documentType fields)
+  let translate field =
+        let fieldId = fromMaybe field.name field.requestKey
+            translateImage (mbName, image) =
+              API.Types.UI.DriverOnboardingV2.ImageInfo
+                { title = maybe (textAsReceived image.title) (\name -> textOf (DocumentField_ImageTitle documentType fieldId name) image.title) mbName,
+                  text = maybe (textAsReceived <$> image.text) (\name -> optionalTextOf (DocumentField_ImageText documentType fieldId name) image.text) mbName,
+                  imageUrl = image.imageUrl
+                }
+         in API.Types.UI.DriverOnboardingV2.FieldInfo
+              { name = textOf (DocumentField_Label documentType fieldId) field.name,
+                hint = optionalTextOf (DocumentField_Hint documentType fieldId) field.hint,
+                placeholder = optionalTextOf (DocumentField_Placeholder documentType fieldId) field.placeholder,
+                description = optionalTextOf (DocumentField_Description documentType fieldId) field.description,
+                images = map translateImage (SDO.keyedByTitle field.images) <$ field.images,
+                fields = map translate <$> field.fields,
+                _type = field._type,
+                isMandatory = field.isMandatory,
+                regexValidation = field.regexValidation,
+                descriptionUrl = field.descriptionUrl,
+                dropdownValues = field.dropdownValues,
+                fieldConstraints = field.fieldConstraints,
+                requestKey = field.requestKey
+              }
+  pure (map translate fields)
+
+-- | A stage's hint, media and Do's/Don'ts for an API response, in the reader's language where their
+-- keys have text, else as configured; image and video links untouched.
+translateStageTexts :: (CacheFlow m r, EsqDBFlow m r) => Language -> Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig -> m (Maybe TranslatedText, Maybe [API.Types.UI.DriverOnboardingV2.MediaInfo], Maybe [API.Types.UI.DriverOnboardingV2.ImageInfo])
+translateStageTexts language config = do
+  (textOf, optionalTextOf) <- CQTranslations.findTranslatedTextsCached (show stage) config.merchantOperatingCityId language (SDO.stageTextKeys config)
+  let translateGuideline (mbName, guideline) =
+        API.Types.UI.DriverOnboardingV2.ImageInfo
+          { title = maybe (textAsReceived guideline.title) (\name -> textOf (OnboardingStage_GuidelineTitle stage name) guideline.title) mbName,
+            text = maybe (textAsReceived <$> guideline.text) (\name -> optionalTextOf (OnboardingStage_GuidelineText stage name) guideline.text) mbName,
+            imageUrl = guideline.imageUrl
+          }
+      translateMedia (mbName, item) =
+        API.Types.UI.DriverOnboardingV2.MediaInfo
+          { title = maybe (textAsReceived item.title) (\name -> textOf (OnboardingStage_MediaTitle stage name) item.title) mbName,
+            description = maybe (textAsReceived <$> item.description) (\name -> optionalTextOf (OnboardingStage_MediaDescription stage name) item.description) mbName,
+            url = item.url,
+            thumbnailUrl = item.thumbnailUrl
+          }
+  pure (optionalTextOf (OnboardingStage_Hint stage) config.hint, map translateMedia (SDO.keyedByTitle config.media) <$ config.media, map translateGuideline (SDO.keyedByTitle config.guidelines) <$ config.guidelines)
+  where
+    stage = config.documentOnboardingStage
 
 getOnboardingConfigs ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -517,52 +576,63 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
     if any (isJust . (.specialZone)) baseCityVehicleServiceTiers
       then getDriverCurrentSpecialLocationId personId
       else pure Nothing
-  let cityVehicleServiceTiers = map (CQVST.applySpecialZoneName mbSpecialLocationId) baseCityVehicleServiceTiers
   let personLanguage = fromMaybe ENGLISH person.language
 
-  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just baseCityVehicleServiceTiers) personId merchantOpCityId
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditionedThreshold) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
   autoAcceptLockedByFleet <- maybe False (not . (.allowDriverToToggle)) <$> FleetDriverSettings.getDriverFleetAutoAssignConfig personId merchantOpCityId
-  let tierOptions =
-        driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
-          let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
-              isNonOxygenDefault = oxygen /= Just 1
-          API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
-            { isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || (isNonACDefault && isNonOxygenDefault),
-              isDefault = (vehicleCategory /= Just DVC.AMBULANCE) && ((vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault), -- No default in Ambulance
-              isUsageRestricted = Just usageRestricted,
-              priority = Just priority,
-              airConditioned = airConditionedThreshold,
-              -- Tier's configured minimum wallet balance, shown upfront regardless of current balance.
-              autoAcceptance =
-                autoAcceptanceConfig <&> \cfg ->
-                  API.Types.UI.DriverOnboardingV2.AutoAcceptanceInfo
-                    { minWalletBalanceRequired = cfg.minWalletBalance,
-                      mode = Just cfg.mode,
-                      isSelected = Just $ serviceTierType `elem` fromMaybe [] vehicle.selectedAutoAcceptTiers
-                    },
-              ..
-            }
+  tierOptions <-
+    forM driverVehicleServiceTierTypes $ \(tier@VehicleServiceTier {..}, usageRestricted) -> do
+      let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
+          isNonOxygenDefault = oxygen /= Just 1
+          inSpecialZone = maybe False (\zone -> Just zone.specialZoneId == mbSpecialLocationId) specialZone
+      -- A special zone's own tier name, typed by ops, wins over the keyed name.
+      translatedName <-
+        if inSpecialZone
+          then pure (textAsReceived (CQVST.applySpecialZoneName mbSpecialLocationId tier).name)
+          else CQTranslations.findTranslatedText (Just merchantOpCityId) personLanguage (ServiceTier_Name serviceTierType) name
+      translatedShortDescription <- CQTranslations.findOptionalTranslatedText (Just merchantOpCityId) personLanguage (ServiceTier_ShortDescription serviceTierType) shortDescription
+      translatedLongDescription <- CQTranslations.findOptionalTranslatedText (Just merchantOpCityId) personLanguage (ServiceTier_LongDescription serviceTierType) longDescription
+      pure
+        API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier
+          { name = translatedName,
+            shortDescription = translatedShortDescription,
+            longDescription = translatedLongDescription,
+            isSelected = (serviceTierType `elem` vehicle.selectedServiceTiers) || (isNonACDefault && isNonOxygenDefault),
+            isDefault = (vehicleCategory /= Just DVC.AMBULANCE) && ((vehicle.variant `elem` defaultForVehicleVariant) || isNonACDefault), -- No default in Ambulance
+            isUsageRestricted = Just usageRestricted,
+            priority = Just priority,
+            airConditioned = airConditionedThreshold,
+            -- Tier's configured minimum wallet balance, shown upfront regardless of current balance.
+            autoAcceptance =
+              autoAcceptanceConfig <&> \cfg ->
+                API.Types.UI.DriverOnboardingV2.AutoAcceptanceInfo
+                  { minWalletBalanceRequired = cfg.minWalletBalance,
+                    mode = Just cfg.mode,
+                    isSelected = Just $ serviceTierType `elem` fromMaybe [] vehicle.selectedAutoAcceptTiers
+                  },
+            ..
+          }
 
   mbAirConditioned <-
     if isACCheckEnabledForCity
       then do
         restrictionMessageItem <-
           if not isACAllowedForDriver
-            then getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "AC_RESTRICTION_MESSAGE", language = Just personLanguage}) (Just (MTQuery.findByErrorAndLanguage "AC_RESTRICTION_MESSAGE" personLanguage))
+            then CQTranslations.findOptionalTranslatedText (Just merchantOpCityId) personLanguage (AcUsage_Message Restricted) Nothing
             else
               if isACWorkingForVehicle
-                then getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "AC_WORKING_MESSAGE", language = Just personLanguage}) (Just (MTQuery.findByErrorAndLanguage "AC_WORKING_MESSAGE" personLanguage))
+                then CQTranslations.findOptionalTranslatedText (Just merchantOpCityId) personLanguage (AcUsage_Message Working) Nothing
                 else return Nothing
         return $
           Just $
             API.Types.UI.DriverOnboardingV2.AirConditionedTier
               { isWorking = isACWorking,
-                restrictionMessage = restrictionMessageItem <&> (.message),
+                restrictionMessage = restrictionMessageItem,
                 usageRestrictionType = driverInfo.acUsageRestrictionType
               }
       else return Nothing
@@ -607,7 +677,8 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
             (pure Nothing)
             ( \loc ->
                 fmap (.id.getId)
-                  <$> QSpecialLocation.findPickupSpecialLocationByLatLong LatLong {lat = loc.lat, lon = loc.lon}
+                  -- Queue polygon: drivers queued from the outer ring get the zone's tier names.
+                  <$> QSpecialLocation.findQueueSpecialLocationByLatLong LatLong {lat = loc.lat, lon = loc.lon}
             )
       )
         `C.catchAll` \err -> do
@@ -625,7 +696,7 @@ computeAutoAcceptSignal ::
   (ServiceTierType -> Bool) ->
   DVeh.Vehicle ->
   VehicleServiceTier ->
-  Maybe API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier ->
+  Maybe API.Types.UI.DriverOnboardingV2.UpdateServiceTierReq ->
   AutoAcceptSignal
 computeAutoAcceptSignal hasAutoAssignTag vehicle driverServiceTier mbTierRequest =
   case driverServiceTier.autoAcceptanceConfig of
@@ -656,10 +727,10 @@ postDriverUpdateServiceTiers ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
+    API.Types.UI.DriverOnboardingV2.UpdateServiceTiersReq ->
     Environment.Flow APISuccess
   )
-postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
+postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateServiceTiersReq {..} = do
   -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing

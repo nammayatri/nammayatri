@@ -72,6 +72,7 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import Domain.Types.TranslationKeys (DriverPushKey (..))
 import Domain.Types.TransporterConfig hiding (InvoiceConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
@@ -96,7 +97,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferPending, transfer_, withMasterReads, withOwnerLock)
+import Lib.Finance (AccountRole (..), FinanceCtx (supplierId), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferPending, transfer_, withMasterReads, withOwnerLock)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
@@ -473,9 +474,8 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                 mbVC
                 >>= fromEitherM (\err -> InternalError ("Failed to debit prepaid balance: " <> show err))
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-            let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
-                balanceUpdatedTitle = "Subscription balance updated!"
-            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
+            content <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Prepaid_BalanceUpdated [("balance", show newBalance)] ("Subscription balance updated!", "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance)
+            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE content driver driver.deviceToken
             (contributingPurchaseIds, anyExhausted) <- checkAndMarkExhaustedSubscriptions counterpartyDriver ride.driverId.getId DSP.DRIVER mbVC
             unless (null contributingPurchaseIds) $
               QRide.updateSubscriptionPurchaseIds (Just contributingPurchaseIds) ride.id
@@ -495,9 +495,8 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
             let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
             when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
               logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
-              let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
-                  unsubscribedTitle = "Low Balance Alert!"
-              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+              lowBalanceContent <- buildMerchantPNContentWithFallback driver.merchantOperatingCityId driver.language DriverPush_Prepaid_LowBalance [] ("Low Balance Alert!", "Your subscription balance is low. Please recharge to get rides")
+              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED lowBalanceContent driver driver.deviceToken
             finalizeDeferredExpiry expiredPurchases ride.driverId.getId DSP.DRIVER mbVC
 
     mkRideDebitAllocationMetadata counterpartyType ownerId ownerType fare mbVC = do
@@ -587,10 +586,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       carriedDuesTaxAmount = fromMaybe 0 fareParams.cancellationDuesTax
       carriedDuesBaseAmount = max 0 (fromMaybe 0 fareParams.customerCancellationDues - carriedDuesTaxAmount)
       commissionTaxPct = (.tax) <$> (mbFarePolicy >>= (.commissionTaxConfig))
-      commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
+      commissionAmount = fromMaybe 0 ride.commission
       (commissionBaseAmount, commissionVatAmount) = splitGrossByTaxPct commissionTaxPct commissionAmount
-      cancellationCommissionAmount = fromMaybe 0 (ride.cancellationDuesCommission <|> booking.cancellationDuesCommission)
-      cancellationCommissionVat = Tax.taxTotal (ride.cancellationDuesCommissionTaxBreakup <|> booking.cancellationDuesCommissionTaxBreakup)
+      cancellationCommissionAmount = fromMaybe 0 ride.cancellationDuesCommission
+      cancellationCommissionVat = Tax.taxTotal ride.cancellationDuesCommissionTaxBreakup
       cancellationCommissionBase = cancellationCommissionAmount - cancellationCommissionVat
       rawBaseFare = totalFare - taxAmount - tollAmount - tollVatAmount - parkingAmount - parkingVatAmount - airportFeeAmount - airportFeeTaxAmount - fromMaybe 0 fareParams.customerCancellationDues - fromMaybe 0 fareParams.paymentProcessingFee - fromMaybe 0 fareParams.paymentProcessingFeeTax
       customerDiscountAmount = fromMaybe 0 ride.discountAmount
@@ -696,7 +695,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         (paymentChargeAmt, paymentChargeVatAmt) = splitGrossByTaxPct ((.tax) <$> (booking.paymentChargeDetails >>= (.chargeTax))) paymentChargeGross
         customerBearsPayment = mbPaymentBearer == Just PAYMENT_CUSTOMER
         paymentChargeTaxRef = walletReferencePGPaymentChargesTax taxRegime
-    let mkRideLineItems issuedToType =
+    let rideLineItems =
           let -- Tagged Fare/Tax pair: groupId pairs the two lines so the renderer
               -- collapses them into one main-table row.
               mkPair gId ty isExt desc descType amt =
@@ -746,37 +745,21 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               commonLines =
                 [ if customerBearsPayment then mkPair "g-payment" Fare False "Payment Charge" PaymentCharge (fromMaybe 0 fareParams.paymentProcessingFee) else Nothing,
                   if customerBearsPayment then mkPair "g-payment" Tax False "Payment Charge VAT" PaymentChargeTax (fromMaybe 0 fareParams.paymentProcessingFeeTax) else Nothing,
-                  if issuedToType == CUSTOMER then mkAdjustment "Discount" OfferDiscount (negate discountSubsidyAmount) else Nothing,
+                  mkAdjustment "Discount" OfferDiscount (negate discountSubsidyAmount),
                   mkAdjustment "Tip" Tip tipAmount
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         -- GST place of supply = the pickup State.
         mbPlaceOfSupply = gstPlaceOfSupply booking.fromLocation
-        customerInvoiceConfig =
+        rideInvoiceConfig =
           InvoiceConfig
             { invoiceType = BeckInvoice.Ride,
               issuedToType = CUSTOMER,
               issuedToId = maybe "" (.getId) booking.riderId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
-              lineItems = mkRideLineItems CUSTOMER,
-              gstBreakdown = rideGstBreakdown,
-              referenceId = Just booking.id.getId,
-              isVat = isVat,
-              issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing,
-              paymentMode = Just (if isOnline then "ONLINE" else "CASH"),
-              periodStart = Nothing,
-              periodEnd = Nothing
-            }
-        driverInvoiceConfig =
-          InvoiceConfig
-            { invoiceType = BeckInvoice.Ride,
-              issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
-              issuedToId = driverOrFleetPersonId.getId,
-              issuedToName = mbDriver <&> (.firstName),
-              issuedToAddress = Nothing,
-              lineItems = mkRideLineItems (if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER),
+              issuedById = ctx.supplierId,
+              lineItems = rideLineItems,
               gstBreakdown = rideGstBreakdown,
               referenceId = Just booking.id.getId,
               isVat = isVat,
@@ -798,11 +781,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     -- doubled; the invoices are created only if missing.
     -- From the master, like the ledger once-checks: a retry must see invoices the previous run created.
     existingRideInvoices <- withMasterReads (QFInvoice.findByReferenceId (Just booking.id.getId))
-    let driverInvoiceIssuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
-        -- A voided or cancelled ride invoice (a tip update voids it and mints a replacement) is not one to reuse.
-        findRideInvoice issuedTo = find (\inv -> inv.invoiceType == BeckInvoice.Ride && inv.issuedToType == issuedTo && inv.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) existingRideInvoices
-        existingCustomerInvoice = findRideInvoice CUSTOMER
-        existingDriverInvoice = findRideInvoice driverInvoiceIssuedToType
+    let existingRideInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Ride && inv.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) existingRideInvoices
     result <- runFinance ctx $ do
       -- Ride-earning components. Online: 2-leg pass-through (BAP cash in via
       -- BuyerExternal, then credited to driver wallet). Cash: single leg
@@ -877,15 +856,15 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         if isOnline
           then void $ transfer BuyerAsset OwnerLiability tipAmount walletReferenceTips Nothing
           else void $ transfer BuyerControl OwnerControl tipAmount walletReferenceTips Nothing
-      if isJust existingCustomerInvoice then pure Nothing else invoice customerInvoiceConfig
+      if isJust existingRideInvoice then pure Nothing else invoice rideInvoiceConfig
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Failed to create wallet transaction: " <> show e)) (Left err)
       Right (mbPostedInvoiceId, _entryIds) -> do
-        let mbInvoiceId = mbPostedInvoiceId <|> (existingCustomerInvoice <&> (.id))
+        let mbInvoiceId = mbPostedInvoiceId <|> (existingRideInvoice <&> (.id))
         -- A newly created invoice, or a retry of a run that stopped before the booking was linked to its
         -- invoice. The booking link is written last, so it also marks these steps as finished; the steps
         -- themselves are safe to repeat.
-        when (isNothing existingCustomerInvoice || isNothing booking.financeInvoiceId) $ do
+        when (isNothing existingRideInvoice || isNothing booking.financeInvoiceId) $ do
           whenJust mbInvoiceId $ \invId -> do
             QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
             -- B2C self-generated unsigned QR (no IRN) on the customer tax invoice.
@@ -897,24 +876,13 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 GenerateInvoicePdfJobData {invoiceId = invId.getId}
           QRB.updateFinanceInvoiceId booking.id ((.getId) <$> mbInvoiceId)
 
-    -- Standalone driver / fleet-owner Ride invoice mirroring the customer
-    -- invoice. No transfers in this block → no ledger entries are linked,
-    -- so no duplicate IndirectTaxTransaction is emitted.
-    let generateDriverInvoice = maybe True (fromMaybe True . (.enableDriverInvoice)) transporterConfig.invoiceConfig
-    when (generateDriverInvoice && isNothing existingDriverInvoice) $ do
-      driverInvoiceResult <- runFinance ctx $ invoice driverInvoiceConfig
-      case driverInvoiceResult of
-        Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
-        Right (mbDriverInvoiceId, _) -> whenJust mbDriverInvoiceId $ \invId -> QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
-    -- A retry of a run that created the driver invoice but stopped before stamping it.
-    whenJust existingDriverInvoice $ \inv ->
-      when (isNothing inv.placeOfSupply) $ QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing inv.id
     unless (maybe False (isOnlinePaymentInstrument . (.paymentInstrument)) mbPaymentMethod) $
       markBookingInvoicesStatus FInvoice.Paid BeckInvoice.Ride booking.id
 
     let commissionAlreadyCollectedAtBooth = SL.commissionCollectedAtBooth booking.fareSettlementType
         existingCommissionInvoice = find (\inv -> inv.invoiceType == BeckInvoice.Commission) existingRideInvoices
     when (commissionAmount + cancellationCommissionAmount > 0) $ do
+      (commissionPartyName, commissionPartyAddress) <- driverInvoiceParty ride.merchantOperatingCityId ride.driverId ride.fleetOwnerId
       let commissionRef = walletReferenceCommission
           commissionVatRef = walletReferenceCommissionTax taxRegime
           commissionInvoiceConfig =
@@ -922,8 +890,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               { invoiceType = BeckInvoice.Commission,
                 issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
                 issuedToId = driverOrFleetPersonId.getId,
-                issuedToName = mbDriver <&> (.firstName),
-                issuedToAddress = Nothing,
+                issuedToName = commissionPartyName,
+                issuedToAddress = commissionPartyAddress,
+                issuedById = Nothing,
                 referenceId = Just booking.id.getId,
                 lineItems =
                   catMaybes
@@ -1187,7 +1156,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           mbPlanForWaiver <- do
             mbDriverPlanForWaiver <- findByDriverIdWithServiceName (cast driverId) serviceName
             getPlan mbDriverPlanForWaiver serviceName merchantOpCityId Nothing currentVehicleCategory
-          if maybe False (.waivesSpecialRideCharges) mbPlanForWaiver
+          if fromMaybe False (mbPlanForWaiver >>= (.waivesSpecialRideCharges))
             then return (0, 0, 0, False)
             else return (fee, feeCgst, feeSgst, True)
         _ -> return (0, 0, 0, False)

@@ -20,6 +20,7 @@ instance FromTType' Beam.Translations Domain.Types.Translations.Translations whe
           { createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
             language = language,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             message = message,
             messageKey = messageKey,
             updatedAt = updatedAt
@@ -31,6 +32,7 @@ instance ToTType' Beam.Translations Domain.Types.Translations.Translations where
       { Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.language = language,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.message = message,
         Beam.messageKey = messageKey,
         Beam.updatedAt = updatedAt

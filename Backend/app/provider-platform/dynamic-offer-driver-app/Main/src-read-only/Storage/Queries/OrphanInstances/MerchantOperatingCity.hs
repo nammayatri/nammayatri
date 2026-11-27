@@ -18,13 +18,14 @@ import qualified Storage.Beam.MerchantOperatingCity as Beam
 
 instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.MerchantOperatingCity where
   fromTType' (Beam.MerchantOperatingCityT {..}) = do
-    cloudBaseUrl' <- (Kernel.Prelude.pure . (Kernel.Prelude.>>= parseBaseUrl)) cloudBaseUrl
+    cloudBaseUrl' <- ((Kernel.Prelude.pure . (Kernel.Prelude.>>= parseBaseUrl))) cloudBaseUrl
     pure $
       Just
         Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-          { city = city,
+          { address = address,
+            city = city,
             cloudBaseUrl = cloudBaseUrl',
-            cloudType = (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack)) cloudType,
+            cloudType = ((Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))) cloudType,
             country = country,
             countryDialCode = countryDialCode,
             currency = fromMaybe Kernel.Types.Common.INR currency,
@@ -44,9 +45,10 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
 instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.MerchantOperatingCity where
   toTType' (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}) = do
     Beam.MerchantOperatingCityT
-      { Beam.city = city,
-        Beam.cloudBaseUrl = Kernel.Prelude.fmap showBaseUrl cloudBaseUrl,
-        Beam.cloudType = Kernel.Prelude.fmap Kernel.Prelude.show cloudType,
+      { Beam.address = address,
+        Beam.city = city,
+        Beam.cloudBaseUrl = (Kernel.Prelude.fmap showBaseUrl) cloudBaseUrl,
+        Beam.cloudType = (Kernel.Prelude.fmap Kernel.Prelude.show) cloudType,
         Beam.country = country,
         Beam.countryDialCode = countryDialCode,
         Beam.currency = Just currency,

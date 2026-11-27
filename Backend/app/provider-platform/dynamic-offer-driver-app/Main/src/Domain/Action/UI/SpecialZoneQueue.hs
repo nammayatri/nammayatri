@@ -95,7 +95,8 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
   acceptedRes <- mapM enrichRes (freshAccepted ++ staleInZone)
   let responseRequests = validActiveRequests ++ acceptedRes
   mbSpecialLoc <- case mbDriverLoc of
-    (loc : _) -> LQSL.findSpecialLocationByLatLongFull (LatLong loc.lat loc.lon)
+    -- Queue polygon: a driver queued from the outer ring must see their skip count/limit too.
+    (loc : _) -> LQSL.findQueueSpecialLocationByLatLongFull (LatLong loc.lat loc.lon)
     [] -> pure Nothing
   (skipCount, maxSkips) <- case mbSpecialLoc of
     Just specialLoc -> do
