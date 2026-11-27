@@ -103,30 +103,66 @@ type API =
                                                     )
                                              )
                                       )
-                                        :<|> ( "sharedCab"
-                                                 :> ( Capture
-                                                        "merchantId"
-                                                        (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
-                                                        :> ( "trip"
-                                                               :> ( Capture
-                                                                      "tripId"
-                                                                      Kernel.Prelude.Text
-                                                                      :> ( "expire"
-                                                                             :> ( QueryParam
-                                                                                    "earnings"
-                                                                                    Kernel.Types.Common.HighPrecMoney
-                                                                                    :> ( Header
-                                                                                           "token"
-                                                                                           Kernel.Prelude.Text
-                                                                                           :> Post
-                                                                                                '[JSON]
-                                                                                                Kernel.Types.APISuccess.APISuccess
-                                                                                       )
-                                                                                )
-                                                                         )
-                                                                  )
-                                                           )
-                                                    )
+                                        :<|> ( ( "sharedCab"
+                                                   :> ( Capture
+                                                          "merchantId"
+                                                          (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
+                                                          :> ( "trip"
+                                                                 :> ( Capture
+                                                                        "tripId"
+                                                                        Kernel.Prelude.Text
+                                                                        :> ( "expire"
+                                                                               :> ( QueryParam
+                                                                                      "earnings"
+                                                                                      Kernel.Types.Common.HighPrecMoney
+                                                                                      :> ( Header
+                                                                                             "token"
+                                                                                             Kernel.Prelude.Text
+                                                                                             :> Post
+                                                                                                  '[JSON]
+                                                                                                  Kernel.Types.APISuccess.APISuccess
+                                                                                         )
+                                                                                  )
+                                                                           )
+                                                                    )
+                                                             )
+                                                      )
+                                               )
+                                                 :<|> ( ( "sharedCab"
+                                                            :> ( "recordDriverRouteTrip"
+                                                                   :> ( Header
+                                                                          "token"
+                                                                          Kernel.Prelude.Text
+                                                                          :> ( ReqBody
+                                                                                 '[JSON]
+                                                                                 API.Types.UI.SharedCabInternal.SharedCabDriverRouteTripReq
+                                                                                 :> Post
+                                                                                      '[JSON]
+                                                                                      Kernel.Types.APISuccess.APISuccess
+                                                                             )
+                                                                      )
+                                                               )
+                                                        )
+                                                          :<|> ( "sharedCab"
+                                                                   :> ( "driverRouteTrips"
+                                                                          :> ( QueryParam
+                                                                                 "days"
+                                                                                 Kernel.Prelude.Int
+                                                                                 :> ( MandatoryQueryParam
+                                                                                        "driverId"
+                                                                                        Kernel.Prelude.Text
+                                                                                        :> ( Header
+                                                                                               "token"
+                                                                                               Kernel.Prelude.Text
+                                                                                               :> Get
+                                                                                                    '[JSON]
+                                                                                                    [API.Types.UI.SharedCabInternal.SharedCabDriverRouteTripCount]
+                                                                                           )
+                                                                                    )
+                                                                             )
+                                                                      )
+                                                               )
+                                                      )
                                              )
                                     )
                            )
@@ -134,7 +170,7 @@ type API =
          )
 
 handler :: Environment.FlowServer API
-handler = postSharedCabAllocationFCM :<|> postSharedCabDemandNudge :<|> postSharedCabCheckInFCM :<|> getSharedCabDriverCallNumber :<|> getSharedCabTripActive :<|> postSharedCabTripExpire
+handler = postSharedCabAllocationFCM :<|> postSharedCabDemandNudge :<|> postSharedCabCheckInFCM :<|> getSharedCabDriverCallNumber :<|> getSharedCabTripActive :<|> postSharedCabTripExpire :<|> postSharedCabRecordDriverRouteTrip :<|> getSharedCabDriverRouteTrips
 
 postSharedCabAllocationFCM :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Tools.Notifications.SharedCabAllocationEntityData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSharedCabAllocationFCM a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabAllocationFCM a2 a1
@@ -153,3 +189,9 @@ getSharedCabTripActive a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withReque
 
 postSharedCabTripExpire :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)))
 postSharedCabTripExpire a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabTripExpire a4 a3 a2 a1
+
+postSharedCabRecordDriverRouteTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabDriverRouteTripReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postSharedCabRecordDriverRouteTrip a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabRecordDriverRouteTrip a2 a1
+
+getSharedCabDriverRouteTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.UI.SharedCabInternal.SharedCabDriverRouteTripCount]))
+getSharedCabDriverRouteTrips a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabDriverRouteTrips a3 a2 a1

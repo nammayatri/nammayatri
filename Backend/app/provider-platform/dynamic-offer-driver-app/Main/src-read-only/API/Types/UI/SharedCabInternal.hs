@@ -3,6 +3,7 @@
 module API.Types.UI.SharedCabInternal where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.DriverRouteTrip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -18,6 +19,21 @@ data SharedCabDemandNudgeReq = SharedCabDemandNudgeReq {onRoutePlates :: [Kernel
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SharedCabDriverCallNumberResp = SharedCabDriverCallNumberResp {driverNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabDriverRouteTripCount = SharedCabDriverRouteTripCount {routeCode :: Kernel.Prelude.Text, tripCount :: Kernel.Prelude.Int}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabDriverRouteTripReq = SharedCabDriverRouteTripReq
+  { driverId :: Kernel.Prelude.Text,
+    idempotencyKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    source :: Kernel.Prelude.Maybe Domain.Types.DriverRouteTrip.DriverRouteTripSource,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

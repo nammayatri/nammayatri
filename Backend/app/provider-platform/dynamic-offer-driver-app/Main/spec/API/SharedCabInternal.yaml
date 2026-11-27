@@ -5,6 +5,7 @@ imports:
   Merchant: Domain.Types.Merchant
   HighPrecMoney: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
+  DriverRouteTripSource: Domain.Types.DriverRouteTrip
 
 module: SharedCabInternal
 
@@ -64,6 +65,20 @@ types:
     routes: "[SharedCabNudgeRoute]"
     onRoutePlates: "[!Text]"
     tunables: SharedCabNudgeTunables
+    derive: "Show"
+
+  SharedCabDriverRouteTripReq:
+    driverId: Text
+    routeCode: Text
+    source: Maybe DriverRouteTripSource
+    idempotencyKey: Maybe Text
+    rideId: Maybe Text
+    vehicleNumber: Maybe Text
+    derive: "Show"
+
+  SharedCabDriverRouteTripCount:
+    routeCode: "!Text"
+    tripCount: Int
     derive: "Show"
 
 apis:
@@ -128,3 +143,23 @@ apis:
         token: Text
       response:
         type: APISuccess
+  - POST:
+      endpoint: /sharedCab/recordDriverRouteTrip
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabDriverRouteTripReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /sharedCab/driverRouteTrips
+      auth: NoAuth
+      mandatoryQuery:
+        driverId: Text
+      query:
+        - days: Int
+      headers:
+        token: Text
+      response:
+        type: "[API.Types.UI.SharedCabInternal.SharedCabDriverRouteTripCount]"
