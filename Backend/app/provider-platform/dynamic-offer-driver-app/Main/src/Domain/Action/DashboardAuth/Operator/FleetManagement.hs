@@ -13,6 +13,7 @@ module Domain.Action.DashboardAuth.Operator.FleetManagement
   ( postFleetManagementFleetCreate,
     postFleetManagementFleetRegister,
     postFleetManagementFleetLinkSendOtp,
+    postFleetManagementFleetMemberAssociationCreate,
   )
 where
 
@@ -30,6 +31,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Validation
 import Servant
+import qualified SharedLogic.FleetScope
 import Tools.Auth
 import qualified Tools.Auth.DashboardRegistration
 import Tools.Auth.DashboardUserAuth
@@ -53,9 +55,19 @@ postFleetManagementFleetRegister a4 a3 a2 a1 = do
   Kernel.Prelude.pure Kernel.Types.APISuccess.Success
 
 postFleetManagementFleetLinkSendOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpReq -> Environment.Flow API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpRes)
-postFleetManagementFleetLinkSendOtp a4 a3 a2 a1 = do
-  mbDashboardPersonId <- Tools.Auth.DashboardRegistration.dashboardPersonIdByMobile a1.mobileNumber a1.mobileCountryCode
-  res <- Domain.Action.Dashboard.Operator.FleetManagement.postFleetManagementFleetLinkSendOtp a4 a3 mbDashboardPersonId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
-  Kernel.Prelude.when (Kernel.Prelude.isNothing mbDashboardPersonId) $
-    Tools.Auth.DashboardRegistration.createFleetOwnerDashboardPerson a4.getShortId a3 a1.mobileNumber a1.mobileCountryCode res.fleetOwnerId.getId
-  Kernel.Prelude.pure res
+postFleetManagementFleetLinkSendOtp a4 a3 a2 a1 = case a1.fleetId of
+  -- A fleet named by id already exists: there is no phone number to look a dashboard person up by,
+  -- and nothing to create.
+  Kernel.Prelude.Just _ -> Domain.Action.Dashboard.Operator.FleetManagement.postFleetManagementFleetLinkSendOtp a4 a3 Kernel.Prelude.Nothing (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
+  Kernel.Prelude.Nothing -> do
+    mbDashboardPersonId <- Tools.Auth.DashboardRegistration.dashboardPersonIdByMobile a1.mobileNumber a1.mobileCountryCode
+    res <- Domain.Action.Dashboard.Operator.FleetManagement.postFleetManagementFleetLinkSendOtp a4 a3 mbDashboardPersonId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
+    Kernel.Prelude.when (Kernel.Prelude.isNothing mbDashboardPersonId) $
+      Tools.Auth.DashboardRegistration.createFleetOwnerDashboardPerson a4.getShortId a3 a1.mobileNumber a1.mobileCountryCode res.fleetOwnerId.getId
+    Kernel.Prelude.pure res
+
+-- | An operator links a member only to a fleet that is linked to them.
+postFleetManagementFleetMemberAssociationCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetMemberAssociationCreateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFleetManagementFleetMemberAssociationCreate a4 a3 a2 a1 = do
+  SharedLogic.FleetScope.assertOperatorOperatesFleet a2 a1.fleetOwnerId
+  Domain.Action.Dashboard.Operator.FleetManagement.postFleetManagementFleetMemberAssociationCreate a4 a3 a1

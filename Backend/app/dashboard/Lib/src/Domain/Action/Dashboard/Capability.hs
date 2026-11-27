@@ -17,7 +17,9 @@ module Domain.Action.Dashboard.Capability where
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Types.Capability as DC
+import qualified Domain.Types.FleetScopeMode as DFSM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonRoleAssignment as DPRA
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -28,13 +30,16 @@ import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessAudit as QAudit
 import qualified Storage.Queries.Capability as QCap
 import qualified Storage.Queries.CapabilityEndpoint as QCE
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonCapability as QPC
+import qualified Storage.Queries.PersonRoleAssignment as QPRA
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.RoleCapability as QRC
-import Tools.Auth.Capability (adminTierOf, computeEffective, isSuperAdmin)
+import Tools.Auth.Capability (adminTierOf, computeEffective, computeEffectiveForRoleGroups, isSuperAdmin)
 import qualified Tools.Auth.Capability as Capability
 import Tools.Auth.Dashboard
+import qualified Tools.Auth.FleetScope as FleetScope
 import Tools.Error
 
 -- Access Control framework admin surface (dashboard unification Phase 4).
@@ -52,7 +57,10 @@ import Tools.Error
 
 data UserCapabilitiesRes = UserCapabilitiesRes
   { capabilities :: [Text],
-    adminTier :: Text
+    adminTier :: Text,
+    -- | How the caller's merchant treats fleet scope: OFF, SHADOW or ENFORCE. The UI follows it to pick the old
+    -- or the new fleet screens, so one setting per merchant switches a whole merchant.
+    fleetScopeMode :: DFSM.FleetScopeMode
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -173,12 +181,36 @@ audit tokenInfo action targetType targetId beforeValue afterValue reason = do
 
 ------------------------------------------------------------------ handlers
 
-getUserCapabilities :: BeamFlow m r => TokenInfo -> m UserCapabilitiesRes
-getUserCapabilities tokenInfo = do
+-- | The caller's capabilities. With no fleet named, the ones their own role gives, and in ENFORCE also
+-- those of the roles they hold on the session's city or on the merchant. With fleets named (a
+-- comma-separated list of fleet ids, the ones the session works on), the ones they hold on every one of
+-- those fleets: the roles assigned on that fleet plus the roles held on the session's city or the merchant,
+-- so a screen is only offered what every selected fleet allows.
+getUserCapabilities :: BeamFlow m r => TokenInfo -> Maybe Text -> m UserCapabilitiesRes
+getUserCapabilities tokenInfo mbFleetIds = do
   person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  effective <- computeEffective tokenInfo.personId person.roleId
   tier <- adminTierOf tokenInfo.personId
-  pure UserCapabilitiesRes {capabilities = effective, adminTier = tier}
+  mbMerchant <- QMerchant.findById tokenInfo.merchantId
+  let fleetIds = maybe [] (filter (not . T.null) . map T.strip . T.splitOn ",") mbFleetIds
+      scopeMode = maybe DFSM.OFF (.fleetScopeMode) mbMerchant
+  assignments <-
+    if null fleetIds && scopeMode /= DFSM.ENFORCE
+      then pure []
+      else QPRA.findAllActiveByPersonIdAndMerchantId tokenInfo.personId tokenInfo.merchantId
+  let wideRoles = maybe [] (\merchant -> FleetScope.wideRoleIdsHere merchant tokenInfo.city assignments) mbMerchant
+  effective <-
+    if null fleetIds
+      then concatMap Set.toList <$> computeEffectiveForRoleGroups tokenInfo.personId [person.roleId : filter (/= person.roleId) wideRoles]
+      else do
+        roleGroups <- forM fleetIds $ \fleetId -> do
+          let fleetRoles = [a.roleId | a <- assignments, a.scopeType == DPRA.FLEET, a.scopeId == fleetId]
+          when (null fleetRoles) $ throwError AccessDenied
+          pure (fleetRoles <> wideRoles)
+        perFleet <- computeEffectiveForRoleGroups tokenInfo.personId roleGroups
+        pure $ case perFleet of
+          firstFleet : otherFleets -> Set.toList (foldl' Set.intersection firstFleet otherFleets)
+          [] -> []
+  pure UserCapabilitiesRes {capabilities = effective, adminTier = tier, fleetScopeMode = scopeMode}
 
 listCapabilities :: BeamFlow m r => TokenInfo -> m ListCapabilitiesRes
 listCapabilities _ = do

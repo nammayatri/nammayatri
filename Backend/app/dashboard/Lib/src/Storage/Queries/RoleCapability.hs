@@ -30,6 +30,9 @@ create = createWithKV
 findAllByRoleId :: BeamFlow m r => Id DRole.Role -> m [DC.RoleCapability]
 findAllByRoleId roleId = findAllWithKV [Se.Is BeamRC.roleId $ Se.Eq $ getId roleId]
 
+findAllByRoleIds :: BeamFlow m r => [Id DRole.Role] -> m [DC.RoleCapability]
+findAllByRoleIds roleIds = findAllWithKV [Se.Is BeamRC.roleId $ Se.In $ getId <$> roleIds]
+
 deleteByRoleIdAndCapabilityId :: BeamFlow m r => Id DRole.Role -> Id DC.Capability -> m ()
 deleteByRoleIdAndCapabilityId roleId capabilityId =
   deleteWithKV

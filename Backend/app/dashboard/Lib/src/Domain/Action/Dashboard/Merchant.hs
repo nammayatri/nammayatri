@@ -17,7 +17,9 @@ module Domain.Action.Dashboard.Merchant where
 import Dashboard.Common
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.AssignmentSync as AssignSync
 import qualified Domain.Action.Dashboard.Person as DPerson
+import qualified Domain.Types.FleetScopeMode as DFSM
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.API as AP
@@ -108,6 +110,7 @@ createMerchantWithAdmin tokenInfo req = do
   QP.create person
   merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
   QAccess.create merchantAccess
+  AssignSync.syncPersonAssignments person.id
   pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [AP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) [] Nothing
 
 createMerchant ::
@@ -151,7 +154,8 @@ buildMerchant req = do
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
         trackLoginLogoutForRoles = [],
-        adminEmailDomains = []
+        adminEmailDomains = [],
+        fleetScopeMode = DFSM.OFF
       }
 
 changeMerchantEnableState ::

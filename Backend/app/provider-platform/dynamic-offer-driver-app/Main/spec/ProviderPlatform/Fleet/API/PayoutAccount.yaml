@@ -12,6 +12,7 @@ apis:
   - POST:
       name: postPayoutAccount
       endpoint: /payout/account
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: PayoutAccountReq
@@ -31,6 +32,7 @@ apis:
   - POST:
       name: postPayoutAccountStatus
       endpoint: /payout/account/status
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: PayoutAccountStatusReq

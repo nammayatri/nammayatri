@@ -23,6 +23,7 @@ module API.Dashboard.Fleet.Registration
   )
 where
 
+import API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 (FleetOwnerVerifiedRes (..))
 import qualified Domain.Action.Dashboard.Fleet.Registration as DFleet
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -46,7 +47,7 @@ type FleetOwnerVerifyAPI =
   "verify"
     :> "otp"
     :> ReqBody '[JSON] DFleet.FleetOwnerLoginReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] FleetOwnerVerifiedRes
 
 type FleetOwnerLoginAPI =
   "login"
@@ -83,7 +84,7 @@ handler _ _ =
 fleetOwnerLogin :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerLogin = withDashboardFlowHandlerAPI . DFleet.fleetOwnerLogin
 
-fleetOwnerVerify :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
+fleetOwnerVerify :: DFleet.FleetOwnerLoginReq -> FlowHandler FleetOwnerVerifiedRes
 fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
 fleetOwnerRegister :: Maybe Bool -> DFleet.FleetOwnerRegisterReq -> FlowHandler DFleet.FleetOwnerRegisterRes

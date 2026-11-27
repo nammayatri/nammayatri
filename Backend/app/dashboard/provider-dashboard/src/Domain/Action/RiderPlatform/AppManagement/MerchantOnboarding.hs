@@ -23,6 +23,7 @@ import qualified "rider-app" API.Types.Dashboard.AppManagement.MerchantOnboardin
 import AWS.S3 (FileType (..))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.MerchantOnboarding
@@ -155,6 +156,7 @@ dashboardSideHandler handler = case handler.handlerName of
     person <- QP.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (InvalidRequest "Person not found")
     role <- QR.findByDashboardAccessType Domain.Types.Role.TICKET_DASHBOARD_MERCHANT >>= fromMaybeM (RoleDoesNotExist (show Domain.Types.Role.TICKET_DASHBOARD_MERCHANT))
     QP.updatePersonRole person.id role
+    AssignSync.syncPersonAssignments person.id
   where
     getMetadataValue :: Text -> Maybe Text
     getMetadataValue key = snd <$> find (\(k, _) -> k == key) handler.metadata

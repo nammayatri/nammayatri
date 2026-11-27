@@ -97,6 +97,6 @@ postRegistrationDashboardRegister merchantShortId opCity Common.CreateDashboardO
           }
   res <- postOperatorRegister merchantShortId opCity req
   whenJust fleetAssignment $ \fl -> do
-    let fleetLinkReq = FleetManagementCommon.FleetOwnerSendOtpReq {mobileNumber = fl.fleetOwnerMobileNo, mobileCountryCode = fl.fleetOwnerMobileCountryCode}
+    let fleetLinkReq = FleetManagementCommon.FleetOwnerSendOtpReq {mobileNumber = fl.fleetOwnerMobileNo, mobileCountryCode = fl.fleetOwnerMobileCountryCode, fleetId = Nothing}
     void $ FleetManagement.postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity res.personId.getId fleetLinkReq True Nothing
   return res

@@ -22,17 +22,20 @@ import qualified Data.HashSet as HS
 import Data.List (groupBy, nub, sortOn, (\\))
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.AssignmentSync as AssignSync
 import qualified Domain.Action.Dashboard.Capability as DCap
 import qualified Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.DeletedUser as DDU
 import qualified Domain.Types.Entity as DE
 import qualified Domain.Types.EntityAccess as DEA
+import qualified Domain.Types.FleetScopeMode as DFSM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as DPT
 import qualified Domain.Types.Person.Type as SP
+import qualified Domain.Types.PersonRoleAssignment as DPRA
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import qualified Domain.Types.Transaction as DT
@@ -63,6 +66,7 @@ import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonCapability as QPC
 import qualified Storage.Queries.PersonResourceAccess as QPRA
+import qualified Storage.Queries.PersonRoleAssignment as QAssignment
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
@@ -73,6 +77,7 @@ import qualified Tools.Auth.ApiAuth as ApiAuth
 import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
+import qualified Tools.Auth.FleetScope as FleetScope
 import Tools.Auth.Merchant
 import qualified Tools.Auth.Verify as Verify
 import Tools.Error
@@ -393,6 +398,7 @@ createPerson tokenInfo personEntity = do
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing [] Nothing
   QP.create person
+  AssignSync.syncPersonAssignments personId
   return $ CreatePersonRes personAPIEntity
 
 driverRoleName :: MonadFlow m => DRole.DashboardAccessType -> m Text
@@ -505,7 +511,7 @@ makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
       merchantAccesslistWithCity
 
 assignRole ::
-  (BeamFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r, Auth.AuthFlow m r, Redis.HedisFlow m r) =>
   TokenInfo ->
   Id DP.Person ->
   Id DRole.Role ->
@@ -529,8 +535,111 @@ assignRole tokenInfo personId roleId = do
     throwError $ InvalidRequest "Cannot change your own role"
   DCap.guardAdminMutation tokenInfo.personId newRole.dashboardAccessType
   DCap.guardAdminMutation tokenInfo.personId oldRole.dashboardAccessType
+  rolesBefore <- FleetScope.rolesHeldBy person
   QP.updatePersonRole personId newRole
+  FleetScope.endSessionsOnTwoFaRoleGrant personId rolesBefore newRole
+  AssignSync.syncPersonAssignments personId
   recordAdminActionOnPerson DT.DashboardUserRoleAssign tokenInfo personId
+  pure Success
+
+data GrantRoleReq = GrantRoleReq
+  { roleId :: Id DRole.Role,
+    -- | CITY or MERCHANT. A role on a fleet is offered through the fleet instead.
+    scopeType :: DPRA.ScopeType,
+    -- | The city, for a CITY role.
+    operatingCity :: Maybe City.City
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+-- | Give a person another role on a city or on the whole merchant, beside their own. It adds access only
+-- once the merchant's fleet scope is ENFORCE, and only inside that city or merchant. The person must
+-- already reach it: this gives a role there, not access to it.
+grantRole ::
+  (BeamFlow m r, EncFlow m r, Auth.AuthFlow m r, Redis.HedisFlow m r) =>
+  TokenInfo ->
+  Id DP.Person ->
+  GrantRoleReq ->
+  m APISuccess
+grantRole tokenInfo personId req = do
+  when (tokenInfo.personId == personId) $
+    throwError $ InvalidRequest "Cannot change your own roles"
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  ownRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  role <- QRole.findById req.roleId >>= fromMaybeM (RoleDoesNotExist req.roleId.getId)
+  when (DRole.isBppSyncRole role) $
+    throwError $ InvalidRequest "Fleet and operator roles cannot be granted on a city or merchant"
+  merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
+  scopeId <- case (req.scopeType, req.operatingCity) of
+    (DPRA.CITY, Just scopeCity) -> do
+      held <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id scopeCity
+      when (isNothing held) $ throwError $ InvalidRequest "The person has no access to this city. Assign the city first."
+      pure $ show scopeCity
+    (DPRA.MERCHANT, Nothing) -> do
+      held <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+      when (null held) $ throwError $ InvalidRequest "The person has no access to this merchant"
+      pure merchant.id.getId
+    _ -> throwError $ InvalidRequest "Give a city with a CITY role, and none with a MERCHANT role. Fleet roles are offered through the fleet."
+  -- The same protections as changing the person's own role ('assignRole').
+  DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
+  DCap.guardAdminMutation tokenInfo.personId ownRole.dashboardAccessType
+  when (isAdminTier role.dashboardAccessType) $ do
+    decPerson <- decrypt person
+    assertAdminEmailDomainForPerson tokenInfo person role decPerson.email
+  rolesBefore <- FleetScope.rolesHeldBy person
+  existing <- QAssignment.findByPersonRoleScope personId role.id req.scopeType scopeId merchant.id
+  case existing of
+    Just assignment -> do
+      when (assignment.status == DPRA.ACTIVE && assignment.manuallyGranted) $
+        throwError $ InvalidRequest "The person already holds this role there"
+      QAssignment.grantManually tokenInfo.personId assignment.id
+    Nothing -> do
+      assignmentId <- generateGUID
+      now <- getCurrentTime
+      QAssignment.create
+        DPRA.PersonRoleAssignment
+          { id = assignmentId,
+            personId = personId,
+            roleId = role.id,
+            scopeType = req.scopeType,
+            scopeId = scopeId,
+            merchantId = merchant.id,
+            status = DPRA.ACTIVE,
+            grantedBy = Just tokenInfo.personId,
+            manuallyGranted = True,
+            handoverFrom = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+  when (merchant.fleetScopeMode == DFSM.ENFORCE) $
+    FleetScope.endSessionsOnTwoFaRoleGrant personId rolesBefore role
+  recordAdminActionOnPerson DT.DashboardUserRoleGrant tokenInfo personId
+  pure Success
+
+-- | Take back a city or merchant role that was granted with 'grantRole'. The roles that follow the person's
+-- own role and city access are changed there, and fleet roles through the fleet.
+revokeRole ::
+  BeamFlow m r =>
+  TokenInfo ->
+  Id DP.Person ->
+  Id DPRA.PersonRoleAssignment ->
+  m APISuccess
+revokeRole tokenInfo personId assignmentId = do
+  when (tokenInfo.personId == personId) $
+    throwError $ InvalidRequest "Cannot change your own roles"
+  assignment <- QAssignment.findById assignmentId >>= fromMaybeM (InvalidRequest "No such assignment")
+  unless (assignment.personId == personId && assignment.merchantId == tokenInfo.merchantId) $
+    throwError $ InvalidRequest "No such assignment"
+  unless (assignment.manuallyGranted && assignment.scopeType /= DPRA.FLEET) $
+    throwError $ InvalidRequest "Only a city or merchant role that was granted on its own can be revoked here"
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  ownRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  role <- QRole.findById assignment.roleId >>= fromMaybeM (RoleDoesNotExist assignment.roleId.getId)
+  DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
+  DCap.guardAdminMutation tokenInfo.personId ownRole.dashboardAccessType
+  QAssignment.updateStatus DPRA.REVOKED assignment.id
+  -- Where the person's own role is this same role, the sync puts it back as one it manages.
+  AssignSync.syncPersonAssignments personId
+  recordAdminActionOnPerson DT.DashboardUserRoleRevoke tokenInfo personId
   pure Success
 
 assignMerchantCityAccess ::
@@ -567,6 +676,7 @@ assignMerchantCityAccess tokenInfo personId req = do
     throwError $ InvalidRequest "Merchant access already assigned."
   merchantAccess <- buildMerchantAccess personId merchant.id merchant.shortId req.operatingCity
   QAccess.create merchantAccess
+  AssignSync.syncPersonAssignments personId
   pure Success
 
 resetMerchantAccess ::
@@ -594,6 +704,7 @@ resetMerchantAccess tokenInfo personId req = do
       Auth.cleanCachedTokensByMerchantId personId merchant.id
       QAccess.deleteById x.id
       QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
+      AssignSync.syncPersonAssignments personId
       pure Success
 
 resetMerchantCityAccess ::
@@ -621,6 +732,7 @@ resetMerchantCityAccess tokenInfo personId req = do
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchant.id req.operatingCity
       QAccess.deleteById merchantAccess.id
       QReg.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
+      AssignSync.syncPersonAssignments personId
       pure Success
 
 changePassword ::
@@ -902,6 +1014,8 @@ deletePerson tokenInfo personId mbDeleteReason = do
   -- person_resource_access.person_id is likewise a NOT NULL FK to person; clear
   -- the departing user's Layer C assignments before the person delete.
   QPRA.deleteAllByPersonId personId
+  -- person_role_assignment.person_id references person as well.
+  AssignSync.removePersonAssignments personId
   QP.deletePerson personId
   pure Success
 
@@ -1155,6 +1269,7 @@ bulkUpsert tokenInfo merchantShortId req = do
                 AccessCreate acc -> QAccess.create acc
                 AccessUnchanged -> pure ()
           syncEntityGrants merchant.id now heldByPerson builtOps
+          forM_ builtOps $ AssignSync.syncPersonAssignments . opPersonId
           pure builtOps
       )
       (Redis.withCrossAppRedis $ Redis.unlockRedis lockKey)

@@ -25,6 +25,7 @@ where
 import qualified Dashboard.Common.Merchant
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Merchant
+import qualified "lib-dashboard" Domain.Types.FleetScopeMode as DFSM
 import qualified Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified Environment
@@ -107,7 +108,9 @@ processMerchantCreateRequest merchantShortId opCity canCreateMerchant req@Dashbo
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
           trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
-          adminEmailDomains = baseMerchant.adminEmailDomains
+          adminEmailDomains = baseMerchant.adminEmailDomains,
+          -- A new merchant starts with assignments switched off, whatever its base merchant has.
+          fleetScopeMode = DFSM.OFF
         }
 
 -- | @\/specialLocation\/upsert@: the KML file is optional here; only convert one

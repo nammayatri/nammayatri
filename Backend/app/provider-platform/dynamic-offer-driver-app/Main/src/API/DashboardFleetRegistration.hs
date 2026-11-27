@@ -46,7 +46,6 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified "lib-dashboard" Storage.Beam.SchemaInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
-import qualified "lib-dashboard" Storage.Queries.Person as QP
 
 type API =
   "fleet"
@@ -98,16 +97,11 @@ fleetOwnerLogin req = withFlowHandlerAPI' $ do
 
 fleetOwnerVerify :: DP.FleetOwnerLoginReq -> FlowHandler DP.FleetOwnerVerifyRes
 fleetOwnerVerify req = withFlowHandlerAPI' $ do
-  person <-
-    runInDashboardDb $
-      QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
-        >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- resolveDashboardMerchant req.merchantId req.city
-  void $ DP.fleetOwnerVerify req
-  token <- runInDashboardDb $ DashboardReg.generateToken person.id merchant req.city
-  when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $
-    runInDashboardDb $
-      QP.updatePersonVerifiedStatus person.id True
+  mbBoundPersonId <- DP.fleetOwnerVerifyBoundPerson req
+  -- The OTP was issued to one person; a session is minted for that person, not for whoever
+  -- the phone number happens to match in the dashboard.
+  token <- runInDashboardDb $ DashboardReg.mintFleetOtpSession merchant req.city req.mobileNumber req.mobileCountryCode mbBoundPersonId
   pure $ DP.FleetOwnerVerifyRes {authToken = token}
 
 fleetOwnerRegister :: DP.FleetOwnerRegisterReq -> FlowHandler FleetOwnerRegisterResp
@@ -120,7 +114,7 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
   (dashboardMerchant, fleetOwnerRole) <- runInDashboardDb $ DashboardReg.validateFleetOwnerRegistration req'
   res <- DP.fleetOwnerRegister req (Just enabled)
   runInDashboardDb $ DashboardReg.createFleetOwnerDashboardOnly fleetOwnerRole dashboardMerchant req' (Id res.personId)
-  token <- runInDashboardDb $ DashboardReg.generateToken (Id res.personId) merchant req.city
+  token <- runInDashboardDb $ DashboardReg.mintFleetRegisterSession merchant req.city (Id res.personId)
   pure $ FleetOwnerRegisterResp "Success" (Just token)
 
 buildFleetOwnerRegisterReq :: DP.FleetOwnerRegisterReq -> DashboardReg.FleetRegisterReq

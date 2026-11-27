@@ -27,18 +27,28 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import qualified SharedLogic.Fleet
+import qualified SharedLogic.FleetScope
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
 getNotificationNotificationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp)
 getNotificationNotificationList a5 a4 a3 a2 a1 = do
-  fleetOwnerIds <- Kernel.Prelude.map Kernel.Prelude.fst Kernel.Prelude.<$> SharedLogic.Fleet.getFleetOwnerIds (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) Kernel.Prelude.Nothing
+  fleetOwnerIds <- topicFleetOwnerIds a3
   topic <- Tools.Auth.DashboardUserAuth.resolveRequestorTopic fleetOwnerIds a3
   Domain.Action.Dashboard.Management.Notification.getNotificationNotificationList a5 a4 topic a2 a1
 
 postNotificationNotificationRespond :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Notification.RespondReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNotificationNotificationRespond a4 a3 a2 a1 = do
-  fleetOwnerIds <- Kernel.Prelude.map Kernel.Prelude.fst Kernel.Prelude.<$> SharedLogic.Fleet.getFleetOwnerIds (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) Kernel.Prelude.Nothing
+  fleetOwnerIds <- topicFleetOwnerIds a2
   topic <- Tools.Auth.DashboardUserAuth.resolveRequestorTopic fleetOwnerIds a2
   Domain.Action.Dashboard.Management.Notification.postNotificationNotificationRespond a4 a3 topic a1
+
+-- | The fleets that decide which notification topic the operator reads. An enforced fleet owner gets exactly the
+-- fleets they hold. Anyone else keeps what provider-dashboard did: an operator with no driver-app person (an admin)
+-- has no fleets, which leaves their own topic, rather than failing the request.
+topicFleetOwnerIds :: DashboardUser -> Environment.Flow [Kernel.Prelude.Text]
+topicFleetOwnerIds user
+  | SharedLogic.FleetScope.isEnforced user = Kernel.Prelude.map Kernel.Prelude.fst Kernel.Prelude.<$> SharedLogic.FleetScope.scopedFleetOwnerIds user Kernel.Prelude.Nothing
+  | Kernel.Prelude.otherwise = do
+    resolved <- try @_ @SomeException (Kernel.Prelude.map Kernel.Prelude.fst Kernel.Prelude.<$> SharedLogic.FleetScope.scopedFleetOwnerIds user Kernel.Prelude.Nothing)
+    Kernel.Prelude.pure (Kernel.Prelude.either (Kernel.Prelude.const []) identity resolved)

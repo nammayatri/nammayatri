@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.BehaviourManagement.CancellationRate as CR
 import qualified SharedLogic.DriverOnboarding as SD
+import qualified SharedLogic.FleetContact as SFleetContact
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -86,7 +87,7 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
         Nothing -> return (Nothing, Nothing)
         Just fda -> do
           fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound $ fda.fleetOwnerId)
-          fleetOwnerMobileNumber_ <- mapM decrypt fleetOwner.mobileNumber
+          fleetOwnerMobileNumber_ <- (.mobileNumber) <$> SFleetContact.contactOf fleetOwner
           return (fleetOwnerMobileNumber_, Just $ fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName)
     _ -> return (Nothing, Nothing)
 

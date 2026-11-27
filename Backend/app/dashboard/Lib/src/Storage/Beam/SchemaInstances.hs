@@ -43,6 +43,7 @@ import qualified Storage.Beam.MerchantPair as BeamMPair
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.PersonCapability as BeamPC
 import qualified Storage.Beam.PersonResourceAccess as BeamPRA
+import qualified Storage.Beam.PersonRoleAssignment as BeamPRoleA
 import qualified Storage.Beam.PersonTier as BeamPT
 import qualified Storage.Beam.RegistrationToken as BeamRT
 import qualified Storage.Beam.Role as BeamR
@@ -89,3 +90,5 @@ instance HasSchemaName BeamT.TransactionT where schemaName _ = dashboardSchema
 
 instance HasSchemaName BeamPRA.PersonResourceAccessT where
   schemaName _ = resolveSchema (T.pack "atlas_dashboard")
+
+instance HasSchemaName BeamPRoleA.PersonRoleAssignmentT where schemaName _ = dashboardSchema

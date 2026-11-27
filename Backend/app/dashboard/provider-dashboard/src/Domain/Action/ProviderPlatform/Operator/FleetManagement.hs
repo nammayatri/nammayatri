@@ -95,14 +95,16 @@ postFleetManagementFleetUnlink merchantShortId opCity apiTokenInfo fleetOwnerId 
 postFleetManagementFleetLinkSendOtp :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpReq -> Environment.Flow API.Types.ProviderPlatform.Operator.FleetManagement.FleetOwnerSendOtpRes
 postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
+  -- A fleet named by id already exists: there is no phone number to look a dashboard person up by, and nothing to create.
+  let namedById = isJust req.fleetId
+  mbPerson <- if namedById then pure Nothing else QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   let createReq = API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLoginReqV2 req.mobileNumber req.mobileCountryCode Nothing
   let req' = DRegistrationV2.buildFleetOwnerRegisterReqV2 merchantShortId opCity createReq
   res <-
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
       Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) ((.id.getId) <$> mbPerson) apiTokenInfo.personId.getId req
-  when (isNothing mbPerson) $ do
+  when (isNothing mbPerson && not namedById) $ do
     fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show FLEET_OWNER)
     let personId = Kernel.Types.Id.cast @API.Types.ProviderPlatform.Fleet.RegistrationV2.Person @DP.Person res.fleetOwnerId
     DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole apiTokenInfo.merchant req' personId

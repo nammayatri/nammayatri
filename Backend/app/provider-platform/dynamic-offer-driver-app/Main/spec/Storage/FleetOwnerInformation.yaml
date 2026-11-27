@@ -71,6 +71,9 @@ FleetOwnerInformation:
     initiatedBy: Maybe InitiatedBy
     latestScheduledCommissionAggregationPeriodEnd: Maybe UTCTime # latest period an AggregatedCommission job has been enqueued for; enqueue-time idempotency marker
     enableCashRide: Maybe Bool
+    contactMobileCountryCode: Maybe Text # who the fleet itself can be reached on: payments, payouts and alerts read these. Not a login and not a lookup key; empty means fall back to the owner's own phone and email.
+    contactMobileNumber: Maybe (EncryptedHashedField e Text)
+    contactEmail: Maybe (EncryptedHashedField e Text)
 
   excludedFields: [merchantOperatingCityId]
   default:
@@ -113,6 +116,12 @@ FleetOwnerInformation:
     stripeIdNumber:
       stripeIdNumberEncrypted: Maybe Text
       stripeIdNumberHash: Maybe DbHash
+    contactMobileNumber:
+      contactMobileNumberEncrypted: Maybe Text
+      contactMobileNumberHash: Maybe DbHash
+    contactEmail:
+      contactEmailEncrypted: Maybe Text
+      contactEmailHash: Maybe DbHash
 
   fromTType:
     gstNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem gstNumberEncrypted gstNumberHash|E
@@ -120,6 +129,8 @@ FleetOwnerInformation:
     aadhaarNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash|E
     businessLicenseNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem businessLicenseNumberEncrypted businessLicenseNumberHash|E
     stripeIdNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem stripeIdNumberEncrypted stripeIdNumberHash|E
+    contactMobileNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem contactMobileNumberEncrypted contactMobileNumberHash|E
+    contactEmail: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem contactEmailEncrypted contactEmailHash|E
     isEligibleForSubscription: fromMaybe True isEligibleForSubscription | E
     stripeAddress: stripeAddress >>= Kernel.Utils.JSON.valueToMaybe|E
 
@@ -138,6 +149,10 @@ FleetOwnerInformation:
       businessLicenseNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
       stripeIdNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
       stripeIdNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      contactMobileNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      contactMobileNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      contactEmailEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      contactEmailHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
       isEligibleForSubscription: Just isEligibleForSubscription | E
       stripeAddress: Kernel.Prelude.fmap toJSON
 
@@ -216,6 +231,11 @@ FleetOwnerInformation:
     businessLicenseNumberHash: bytea
     stripeAddress: json
     fleetName: character varying (255)
+    contactMobileCountryCode: character varying (8)
+    contactMobileNumberEncrypted: character varying (255)
+    contactMobileNumberHash: bytea
+    contactEmailEncrypted: character varying (255)
+    contactEmailHash: bytea
 
   extraOperations:
     - EXTRA_QUERY_FILE

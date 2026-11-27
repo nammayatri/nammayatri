@@ -90,6 +90,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Data.Text as T
 import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
+import qualified "lib-dashboard" Domain.Types.FleetScopeMode as DFSM
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -538,7 +539,9 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
           trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
-          adminEmailDomains = baseMerchant.adminEmailDomains
+          adminEmailDomains = baseMerchant.adminEmailDomains,
+          -- A new merchant starts with assignments switched off, whatever its base merchant has.
+          fleetScopeMode = DFSM.OFF
         }
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes

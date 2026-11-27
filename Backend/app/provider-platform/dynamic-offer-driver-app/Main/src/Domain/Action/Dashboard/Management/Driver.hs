@@ -433,14 +433,22 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
     Just fda -> case HM.lookup fda.fleetOwnerId fleetOwnerById of
       Nothing -> pure Nothing
       Just fleetOwner -> do
-        fleetOwnerMobile <- mapM decrypt fleetOwner.mobileNumber
         let mbFoi = HM.lookup fda.fleetOwnerId fleetOwnerInfoById
+            mbContactMobile = mbFoi >>= (.contactMobileNumber)
+        -- The fleet is reached on its own contact (see SharedLogic.FleetContact); the owner's own phone is the fallback.
+        -- The fleet rows are already in hand here, so this does not ask for them again for every driver.
+        fleetOwnerMobile <- case mbContactMobile of
+          Just contactMobile -> Just <$> decrypt contactMobile
+          Nothing -> mapM decrypt fleetOwner.mobileNumber
+        let fleetOwnerMobileCountryCode = case (mbContactMobile, mbFoi >>= (.contactMobileCountryCode)) of
+              (Just _, Just contactCountryCode) -> Just contactCountryCode
+              _ -> fleetOwner.mobileCountryCode
         pure $
           Just
             Common.DriverAssociationInfo
               { personId = cast @DP.Person @Common.Person fleetOwner.id,
                 name = Just $ fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName,
-                mobileCountryCode = fleetOwner.mobileCountryCode,
+                mobileCountryCode = fleetOwnerMobileCountryCode,
                 mobileNumber = fleetOwnerMobile,
                 fleetName = mbFoi >>= (.fleetName),
                 verified = (.verified) <$> mbFoi,

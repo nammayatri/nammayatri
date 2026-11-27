@@ -174,18 +174,21 @@ findByFleetOwnerIdAndOperatorId ::
   m (Maybe FleetOperatorAssociation)
 findByFleetOwnerIdAndOperatorId fleetOwnerId operatorId isActive = do
   now <- getCurrentTime
-  listToMaybe
-    <$> findAllWithOptionsKV
+  -- The link's end date is checked on the rows read, not left to the query: a link whose date has passed stays
+  -- marked active until something ends it, and it must not be taken for a live one. A link with no end date is not
+  -- taken for a live one either.
+  links <-
+    findAllWithOptionsKV
       [ Se.And
           [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId.getId,
             Se.Is BeamFOA.operatorId $ Se.Eq operatorId.getId,
-            Se.Is BeamFOA.isActive $ Se.Eq isActive,
-            Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+            Se.Is BeamFOA.isActive $ Se.Eq isActive
           ]
       ]
       (Se.Desc BeamFOA.createdAt)
-      (Just 1)
       Nothing
+      Nothing
+  pure . listToMaybe $ filter (\link -> maybe False (> now) link.associatedTill) links
 
 findAllActiveByOperatorId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

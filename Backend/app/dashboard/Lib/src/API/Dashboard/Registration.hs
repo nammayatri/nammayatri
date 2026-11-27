@@ -17,6 +17,7 @@ module API.Dashboard.Registration where
 import qualified Domain.Action.Dashboard.Registration as DReg
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth.Dashboard
@@ -59,12 +60,19 @@ type API =
              :> Post '[JSON] DReg.DispatchNotificationsRes
            :<|> "switchMerchant"
              :> DashboardAuth 'DASHBOARD_USER
+             :> Header "token" Text
              :> ReqBody '[JSON] DReg.SwitchMerchantReq
              :> Post '[JSON] DReg.LoginRes
            :<|> "switchMerchantAndCity"
              :> DashboardAuth 'DASHBOARD_USER
+             :> Header "token" Text
              :> ReqBody '[JSON] DReg.SwitchMerchantAndCityReq
              :> Post '[JSON] DReg.LoginRes
+           :<|> "switchScope"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> Header "token" Text
+             :> ReqBody '[JSON] DReg.SwitchScopeReq
+             :> Post '[JSON] DReg.SwitchScopeRes
        )
 
 handler :: DashboardLoginFlow r => FlowServerR r API
@@ -81,6 +89,7 @@ handler =
     :<|> twoFaDispatchDeadlineNotifications
     :<|> switchMerchant
     :<|> switchMerchantAndCity
+    :<|> switchScope
 
 login :: DashboardLoginFlow r => DReg.LoginReq -> FlowHandlerR r DReg.LoginRes
 login = withDashboardDbFlowHandlerAPI . DReg.login
@@ -112,8 +121,21 @@ twoFaExempt token = withDashboardDbFlowHandlerAPI . DReg.setTwoFaExempt token
 twoFaDispatchDeadlineNotifications :: DashboardLoginFlow r => TokenInfo -> FlowHandlerR r DReg.DispatchNotificationsRes
 twoFaDispatchDeadlineNotifications = withDashboardDbFlowHandlerAPI . DReg.dispatchTwoFaDeadlineNotifications
 
-switchMerchant :: DashboardLoginFlow r => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandlerR r DReg.LoginRes
-switchMerchant token = withDashboardDbFlowHandlerAPI . DReg.switchMerchant token
+switchMerchant :: DashboardLoginFlow r => TokenInfo -> Maybe Text -> DReg.SwitchMerchantReq -> FlowHandlerR r DReg.LoginRes
+switchMerchant tokenInfo mbToken req = withDashboardDbFlowHandlerAPI $ do
+  token <- requireSessionToken mbToken
+  DReg.switchMerchant tokenInfo token req
 
-switchMerchantAndCity :: DashboardLoginFlow r => TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandlerR r DReg.LoginRes
-switchMerchantAndCity token = withDashboardDbFlowHandlerAPI . DReg.switchMerchantAndCity token
+switchMerchantAndCity :: DashboardLoginFlow r => TokenInfo -> Maybe Text -> DReg.SwitchMerchantAndCityReq -> FlowHandlerR r DReg.LoginRes
+switchMerchantAndCity tokenInfo mbToken req = withDashboardDbFlowHandlerAPI $ do
+  token <- requireSessionToken mbToken
+  DReg.switchMerchantAndCity tokenInfo token req
+
+switchScope :: DashboardLoginFlow r => TokenInfo -> Maybe Text -> DReg.SwitchScopeReq -> FlowHandlerR r DReg.SwitchScopeRes
+switchScope tokenInfo mbToken req = withDashboardDbFlowHandlerAPI $ do
+  token <- requireSessionToken mbToken
+  DReg.switchScope tokenInfo token req
+
+-- | The token the request was authenticated with, for the routes that act on the session itself.
+requireSessionToken :: (MonadThrow m, Log m) => Maybe Text -> m Text
+requireSessionToken = fromMaybeM (InvalidRequest "token is required")

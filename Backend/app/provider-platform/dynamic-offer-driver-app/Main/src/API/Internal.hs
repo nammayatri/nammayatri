@@ -21,6 +21,7 @@ import qualified API.Internal.Estimate as Estimate
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.FleetBookingInformation as FleetBookingInformation
+import qualified API.Internal.FleetScopeBackfill as FleetScopeBackfill
 import qualified API.Internal.FleetVehiclesAssociation as FleetVehiclesAssociation
 import qualified API.Internal.GeometryList as GeometryList
 import qualified API.Internal.GeometryUpdate as GeometryUpdate
@@ -84,6 +85,7 @@ type API =
            :<|> ViolationDetection.API
            :<|> Estimate.API
            :<|> FleetBookingInformation.API
+           :<|> FleetScopeBackfill.API
            :<|> FleetVehiclesAssociation.API
            :<|> CancellationDues.CustomerCancellationDuesWaiveOffAPI
            :<|> SpecialLocationList.API
@@ -136,6 +138,7 @@ handler env =
     :<|> ViolationDetection.handler
     :<|> Estimate.handler
     :<|> FleetBookingInformation.handler
+    :<|> FleetScopeBackfill.handler
     :<|> FleetVehiclesAssociation.handler
     :<|> CancellationDues.handler
     :<|> SpecialLocationList.handler

@@ -15,6 +15,7 @@
 module Tools.Auth.Capability
   ( CachedAccess (..),
     computeEffective,
+    computeEffectiveForRoleGroups,
     resolveAccess,
     adminTierOf,
     isSuperAdmin,
@@ -27,6 +28,7 @@ module Tools.Auth.Capability
 where
 
 import Data.List (nub)
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Types.Capability as DC
@@ -110,15 +112,25 @@ invalidateEveryone = do
 
 -- | Effective set = (role capabilities ∪ live GRANTs) − live DENYs.
 computeEffective :: BeamFlow m r => Id DP.Person -> Id DRole.Role -> m [Text]
-computeEffective personId roleId = do
+computeEffective personId roleId =
+  computeEffectiveForRoleGroups personId [[roleId]] <&> \case
+    effective : _ -> Set.toList effective
+    [] -> []
+
+-- | The effective set for each group of roles, in the order given: what the roles of a group give together,
+-- plus the person's live GRANTs, minus their live DENYs. The roles' capabilities and the person's overrides are
+-- each read once, however many groups there are.
+computeEffectiveForRoleGroups :: BeamFlow m r => Id DP.Person -> [[Id DRole.Role]] -> m [Set.Set Text]
+computeEffectiveForRoleGroups personId groups = do
   now <- getCurrentTime
-  roleCaps <- QRC.findAllByRoleId roleId
+  roleCaps <- QRC.findAllByRoleIds (nub (concat groups))
   overrides <- QPC.findAllByPersonId personId
   let live pc = maybe True (> now) pc.expiresAt
-      grants = [pc.capabilityId.getId | pc <- overrides, pc.mode == DC.GRANT, live pc]
+      grants = Set.fromList [pc.capabilityId.getId | pc <- overrides, pc.mode == DC.GRANT, live pc]
       denies = Set.fromList [pc.capabilityId.getId | pc <- overrides, pc.mode == DC.DENY, live pc]
-      base = map (.capabilityId.getId) roleCaps
-  pure $ Set.toList $ Set.fromList (base <> grants) `Set.difference` denies
+      capsByRole = Map.fromListWith Set.union [(rc.roleId, Set.singleton rc.capabilityId.getId) | rc <- roleCaps]
+      capsOf roleId = Map.findWithDefault Set.empty roleId capsByRole
+  pure [(Set.unions (map capsOf group) `Set.union` grants) `Set.difference` denies | group <- groups]
 
 adminTierOf :: BeamFlow m r => Id DP.Person -> m Text
 adminTierOf personId = maybe DC.userTier (.adminTier) <$> QPT.findByPersonId personId

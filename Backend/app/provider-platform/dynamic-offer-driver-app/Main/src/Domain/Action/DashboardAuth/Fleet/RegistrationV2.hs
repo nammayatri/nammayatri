@@ -14,6 +14,10 @@ module Domain.Action.DashboardAuth.Fleet.RegistrationV2
     postRegistrationV2VerifyOtp,
     postRegistrationV2Register,
     putRegistrationV2ProfileLanguage,
+    postRegistrationV2CreateFleet,
+    postRegistrationV2AcceptFleetAssignment,
+    getRegistrationV2Contact,
+    postRegistrationV2Contact,
   )
 where
 
@@ -32,6 +36,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Validation
 import Servant
+import qualified SharedLogic.FleetScope
 import Tools.Auth
 import qualified Tools.Auth.DashboardRegistration
 import Tools.Auth.DashboardUserAuth
@@ -47,8 +52,8 @@ postRegistrationV2LoginOtp a3 a2 a1 = do
 
 postRegistrationV2VerifyOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerVerifyReqV2 -> Environment.Flow API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerVerifyResV2)
 postRegistrationV2VerifyOtp a3 a2 a1 = do
-  _ <- Domain.Action.Dashboard.Fleet.RegistrationV2.postRegistrationV2VerifyOtp a3 a2 a1
-  authToken <- Tools.Auth.DashboardRegistration.issueFleetOwnerAuthToken a3.getShortId a2 a1.mobileNumber a1.mobileCountryCode
+  mbBoundPersonId <- Domain.Action.Dashboard.Fleet.RegistrationV2.fleetOwnerVerifyBoundPerson a3 a2 a1
+  authToken <- Tools.Auth.DashboardRegistration.issueFleetOwnerAuthToken a3.getShortId a2 a1.mobileNumber a1.mobileCountryCode mbBoundPersonId
   Kernel.Prelude.pure API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerVerifyResV2 {API.Types.ProviderPlatform.Fleet.RegistrationV2.authToken = authToken}
 
 postRegistrationV2Register :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerRegisterReqV2 -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -65,3 +70,37 @@ putRegistrationV2ProfileLanguage a4 a3 a2 a1 = do
   _ <- Domain.Action.Dashboard.Fleet.RegistrationV2.putRegistrationV2ProfileLanguage a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
   Tools.Auth.DashboardRegistration.updateDashboardPersonLanguage (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1.language
   Kernel.Prelude.pure Kernel.Types.APISuccess.Success
+
+-- | Create a fleet for the signed-in person; see 'Domain.Action.Dashboard.Fleet.RegistrationV2.createFleetAsPerson'.
+postRegistrationV2CreateFleet ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  DashboardUser ->
+  API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetCreateReqV2 ->
+  Environment.Flow API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetCreateResV2
+postRegistrationV2CreateFleet merchantShortId opCity dashboardUser req =
+  Domain.Action.Dashboard.Fleet.RegistrationV2.createFleetAsPerson merchantShortId opCity dashboardUser.person dashboardUser.merchant req
+
+-- | Accept an offer to work on a fleet; see 'Domain.Action.Dashboard.Fleet.RegistrationV2.acceptFleetAssignmentAsPerson'.
+postRegistrationV2AcceptFleetAssignment ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  DashboardUser ->
+  API.Types.ProviderPlatform.Fleet.RegistrationV2.AcceptFleetAssignmentReqV2 ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postRegistrationV2AcceptFleetAssignment _merchantShortId opCity dashboardUser req =
+  Domain.Action.Dashboard.Fleet.RegistrationV2.acceptFleetAssignmentAsPerson opCity dashboardUser.person dashboardUser.merchant req
+
+-- | The contact a fleet is reached on. The fleet is the caller's selected one, or the one the request names when
+-- it is in their scope; see 'Domain.Action.Dashboard.Fleet.RegistrationV2.getFleetContact'.
+getRegistrationV2Contact :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetContactRes)
+getRegistrationV2Contact _ _ a2 a1 = do
+  fleetOwnerId <- SharedLogic.FleetScope.scopedFleetOwnerId a2 a1
+  Domain.Action.Dashboard.Fleet.RegistrationV2.getFleetContact fleetOwnerId
+
+-- | Set the contact a fleet is reached on: the fleet the request names when it is in the caller's scope, else their
+-- selected one.
+postRegistrationV2Contact :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.RegistrationV2.UpdateFleetContactReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postRegistrationV2Contact _ _ a2 a1 = do
+  fleetOwnerId <- SharedLogic.FleetScope.scopedFleetOwnerId a2 a1.fleetOwnerId
+  Domain.Action.Dashboard.Fleet.RegistrationV2.updateFleetContact fleetOwnerId a1

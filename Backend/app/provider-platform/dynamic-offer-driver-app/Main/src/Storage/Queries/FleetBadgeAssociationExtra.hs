@@ -56,8 +56,9 @@ findActiveFleetBadgeAssociationById (Id fleetBadge) badgeType = do
     Nothing
     <&> listToMaybe
 
-findAllActiveFleetBadgeAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Maybe Text -> Maybe DFBT.FleetBadgeType -> m [(FleetBadgeAssociation, FleetBadge)]
-findAllActiveFleetBadgeAssociation Nothing Nothing mbSearchString mbBadgeType = do
+-- | With fleet ids given, only the badges of those fleets.
+findAllActiveFleetBadgeAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe [Text] -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe DFBT.FleetBadgeType -> m [(FleetBadgeAssociation, FleetBadge)]
+findAllActiveFleetBadgeAssociation mbFleetOwnerIds Nothing Nothing mbSearchString mbBadgeType = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
@@ -68,6 +69,7 @@ findAllActiveFleetBadgeAssociation Nothing Nothing mbSearchString mbBadgeType = 
               B.sqlBool_ (fba.associatedTill B.>=. B.val_ (Just now))
                 B.&&?. (fba.isActive B.==?. B.val_ True)
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\badgeType -> badge.badgeType B.==?. B.val_ badgeType) mbBadgeType
+                B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerIds -> B.sqlBool_ (badge.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))) mbFleetOwnerIds
                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badge.badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchString
           )
           $ do
@@ -77,7 +79,7 @@ findAllActiveFleetBadgeAssociation Nothing Nothing mbSearchString mbBadgeType = 
   case res of
     Right res' -> catMaybes <$> mapM (\(fba, badge) -> liftA2 (,) <$> fromTType' fba <*> fromTType' badge) res'
     Left _ -> pure []
-findAllActiveFleetBadgeAssociation mbLimit mbOffset mbSearchString mbBadgeType = do
+findAllActiveFleetBadgeAssociation mbFleetOwnerIds mbLimit mbOffset mbSearchString mbBadgeType = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   let limit = fromMaybe 10 mbLimit
@@ -92,6 +94,7 @@ findAllActiveFleetBadgeAssociation mbLimit mbOffset mbSearchString mbBadgeType =
                   B.sqlBool_ (fba.associatedTill B.>=. B.val_ (Just now))
                     B.&&?. (fba.isActive B.==?. B.val_ True)
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\badgeType -> badge.badgeType B.==?. B.val_ badgeType) mbBadgeType
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerIds -> B.sqlBool_ (badge.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))) mbFleetOwnerIds
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badge.badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchString
               )
               $ do
@@ -102,9 +105,9 @@ findAllActiveFleetBadgeAssociation mbLimit mbOffset mbSearchString mbBadgeType =
     Right res' -> catMaybes <$> mapM (\(fba, badge) -> liftA2 (,) <$> fromTType' fba <*> fromTType' badge) res'
     Left _ -> pure []
 
-findAllInactiveFleetBadgeAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> Maybe Int -> Maybe Text -> Maybe DFBT.FleetBadgeType -> m [(FleetBadgeAssociation, FleetBadge)]
-findAllInactiveFleetBadgeAssociation mbLimit mbOffset mbSearchString mbBadgeType = do
-  allActive <- findAllActiveFleetBadgeAssociation Nothing Nothing mbSearchString mbBadgeType
+findAllInactiveFleetBadgeAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe [Text] -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe DFBT.FleetBadgeType -> m [(FleetBadgeAssociation, FleetBadge)]
+findAllInactiveFleetBadgeAssociation mbFleetOwnerIds mbLimit mbOffset mbSearchString mbBadgeType = do
+  allActive <- findAllActiveFleetBadgeAssociation mbFleetOwnerIds Nothing Nothing mbSearchString mbBadgeType
   let activeIds = map (getId . badgeId . fst) allActive
   dbConf <- getReplicaBeamConfig
   let limit = fromMaybe 10 mbLimit
@@ -118,6 +121,7 @@ findAllInactiveFleetBadgeAssociation mbLimit mbOffset mbSearchString mbBadgeType
               ( \(fba, badge) ->
                   B.sqlBool_ (B.not_ (fba.badgeId `B.in_` (B.val_ <$> activeIds)))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\badgeType -> badge.badgeType B.==?. B.val_ badgeType) mbBadgeType
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerIds -> B.sqlBool_ (badge.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))) mbFleetOwnerIds
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (B.upper_ badge.badgeName `B.like_` B.val_ ("%" <> T.toUpper searchStr <> "%"))) mbSearchString
               )
               $ do

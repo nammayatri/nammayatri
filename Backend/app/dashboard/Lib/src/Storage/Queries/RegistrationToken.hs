@@ -36,6 +36,18 @@ findByToken :: BeamFlow m r => RegToken -> m (Maybe RegistrationToken)
 findByToken token =
   findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 
+markOtpSession :: BeamFlow m r => RegToken -> m ()
+markOtpSession token =
+  updateOneWithKV
+    [Se.Set BeamRT.isOtpSession True]
+    [Se.Is BeamRT.token $ Se.Eq token]
+
+updateSelectedFleetIds :: BeamFlow m r => RegToken -> Maybe [Text] -> m ()
+updateSelectedFleetIds token fleetIds =
+  updateOneWithKV
+    [Se.Set BeamRT.selectedFleetIds fleetIds]
+    [Se.Is BeamRT.token $ Se.Eq token]
+
 findAllByPersonId :: BeamFlow m r => Id Person -> m [RegistrationToken]
 findAllByPersonId personId =
   findAllWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]

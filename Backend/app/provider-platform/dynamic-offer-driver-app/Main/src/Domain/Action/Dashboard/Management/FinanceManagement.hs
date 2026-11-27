@@ -111,6 +111,7 @@ import qualified SharedLogic.Finance.LedgerAdjustment as LedgerAdjustment
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as WalletService
+import qualified SharedLogic.FleetContact as SFleetContact
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.SchedulerJob ()
@@ -1458,7 +1459,7 @@ getFinanceManagementFinancePaymentGatewayTransactionList merchantShortId opCity 
             )
         DSP.FLEET_OWNER -> do
           mbFleetOwner <- QPerson.findById (Id subscription.ownerId)
-          fleetOwnerMobile <- maybe (pure Nothing) (\fleetOwner -> decryptWithDefault fleetOwner.mobileNumber Nothing) mbFleetOwner
+          fleetOwnerMobile <- maybe (pure Nothing) (fmap (.mobileNumber) . SFleetContact.contactOf) mbFleetOwner
           pure
             ( Just "FO",
               mkFullName <$> mbFleetOwner,

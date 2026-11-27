@@ -1,14 +1,22 @@
 module SharedLogic.Fleet where
 
 import qualified Domain.Types.FleetMemberAssociation as DFMA
+import qualified "lib-dashboard" Domain.Types.FleetScopeMode as DFSM
+import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import "lib-dashboard" Storage.Beam.SchemaInstances ()
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAExtra
 import qualified Storage.Queries.FleetMemberAssociation as FMA
+import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOAExtra
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified "lib-dashboard" Storage.Queries.Merchant as QDashMerchant
 import qualified Storage.Queries.Person as QP
+import qualified "lib-dashboard" Storage.Queries.Person as QDashPerson
 
 --------------------------------------- Single Fleet Owners Access --------------------------------------
 getFleetOwnerId :: Text -> Maybe Text -> Flow Text
@@ -42,12 +50,35 @@ getFleetOwnerIds memberPersonId mbFleetOwnerId = do
     )
     identity
     ( ( \fleetOwnerId -> do
-          fleetMemberAssociation <- FMA.findOneByFleetOwnerId fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetOwnerId)
-          person <- QP.findById (Id fleetMemberAssociation.fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetOwnerId)
+          -- A fleet made as a scope has no member association: it is its own NO_LOGIN person. Outside ENFORCE
+          -- every other fleet still needs the association.
+          mbFleetMemberAssociation <- FMA.findOneByFleetOwnerId fleetOwnerId True
+          person <- QP.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
+          unless (isJust mbFleetMemberAssociation || person.identifierType == DP.NO_LOGIN) $ do
+            allowed <- mayBeNamedWithoutAssociation memberPersonId fleetOwnerId
+            unless allowed $ throwError (PersonNotFound fleetOwnerId)
           return [(fleetOwnerId, person.firstName <> maybe "" (" " <>) person.lastName)]
       )
         <$> mbFleetOwnerId
     )
+
+-- | Whether a fleet with no member association may still be named. Only once the fleet's merchant enforces
+-- fleet scope, where new fleets have no such row: then an operator has to operate the fleet, a fleet owner
+-- may name only their own, and anyone else is held by their capabilities, as on a fleet that has the row.
+mayBeNamedWithoutAssociation :: Text -> Text -> Flow Bool
+mayBeNamedWithoutAssociation memberPersonId fleetOwnerId = do
+  enforced <- runInDashboardDb $ do
+    mbDashboardFleet <- QDashPerson.findById (Id fleetOwnerId)
+    mbMerchant <- maybe (pure Nothing) QDashMerchant.findById (mbDashboardFleet >>= (.merchantId))
+    pure $ ((.fleetScopeMode) <$> mbMerchant) == Just DFSM.ENFORCE
+  if not enforced
+    then pure False
+    else
+      QP.findById (Id memberPersonId) >>= \case
+        Just member
+          | member.role == DP.OPERATOR -> isJust <$> QFOAExtra.findByFleetOwnerIdAndOperatorId (Id fleetOwnerId) member.id True
+          | member.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] -> pure (memberPersonId == fleetOwnerId)
+        _ -> pure True
 
 ------------------------------------- Verify Fleet Owners Access --------------------------------------
 verifyFleetOwnerAccess :: Text -> Text -> Flow Text
@@ -135,3 +166,22 @@ getFleetOwnerAndRequestorIdMerchantBased hasFleetMemberHierarchy isRequestorFlee
   (mbFleetOwnerId', requestorId') <- getMbFleetOwnerAndRequestorIdMerchantBased hasFleetMemberHierarchy isRequestorFleetOwner requestorId mbFleetOwnerId
   fleetOwnerId <- mbFleetOwnerId' & fromMaybeM (InvalidRequest "fleetOwnerId required")
   return (fleetOwnerId, requestorId')
+
+------------------------------------- Who a fleet caller may act on --------------------------------------
+
+-- | A fleet owner or member may act on a subject, a driver or the fleet itself, only when it is a fleet
+-- of theirs or a driver in one. The plan and subscription endpoints take the subject as an id in the
+-- URL, which nothing otherwise ties to the caller. Callers that are not fleet owners, such as admins,
+-- are authorised by capability and are not narrowed here.
+assertRequestorMaySeeSubject :: Maybe Text -> Text -> Flow ()
+assertRequestorMaySeeSubject Nothing _ = pure ()
+assertRequestorMaySeeSubject (Just requestorId) subjectId =
+  QP.findById (Id requestorId) >>= \case
+    Just requestor | requestor.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS],
+                     subjectId /= requestorId -> do
+      fleetIds <- map fst <$> getFleetOwnerIds requestorId Nothing
+      unless (subjectId `elem` fleetIds) $ do
+        mbAssociation <- QFDAExtra.findByDriverId (Id subjectId) True
+        unless (maybe False (\association -> association.fleetOwnerId `elem` fleetIds) mbAssociation) $
+          throwError AccessDenied
+    _ -> pure ()

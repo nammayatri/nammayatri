@@ -76,6 +76,7 @@ where
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Management.Driver as Common
 import Data.Time.Calendar (Day)
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -195,6 +196,7 @@ deleteDriverPermanentlyDelete merchantShortId opCity apiTokenInfo driverId = do
     whenJust mbPerson $ \_ -> do
       QMerchantAccess.deleteAllByPersonId personId
       QRegistrationToken.deleteAllByPersonId personId
+      AssignSync.removePersonAssignments personId
       QP.deletePerson personId
       logTagInfo "PermanentlyDelete - successfully removed person and associated data for personId: " (show personId)
     pure result

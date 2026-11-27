@@ -93,6 +93,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
     SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD identifier is not supported for profile update"
     SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD identifier is not supported for profile update"
+    SP.NO_LOGIN -> throwError $ InvalidRequest "NO_LOGIN identifier is not supported for profile update"
 
   pure APISuccess.Success
   where
@@ -187,6 +188,7 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
     SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD identifier is not supported for profile update"
     SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD identifier is not supported for profile update"
+    SP.NO_LOGIN -> throwError $ InvalidRequest "NO_LOGIN identifier is not supported for profile update"
 
   void $ Redis.del redisKey
 

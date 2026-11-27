@@ -92,6 +92,7 @@ import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
+import qualified SharedLogic.FleetContact as SFleetContact
 import qualified SharedLogic.PersonBankAccount as SPBA
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -1582,7 +1583,8 @@ getRecentFleetDriverAssociationInfo driverId = do
       case mbFleetPerson of
         Nothing -> pure Nothing
         Just fleetPerson -> do
-          fleetPhoneNumber <- decrypt `mapM` fleetPerson.mobileNumber
+          -- The fleet is reached on its own contact; the owner's phone is only the fallback.
+          fleetPhoneNumber <- (.mobileNumber) <$> SFleetContact.contactOf fleetPerson
           fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
           now <- getCurrentTime
           pure $

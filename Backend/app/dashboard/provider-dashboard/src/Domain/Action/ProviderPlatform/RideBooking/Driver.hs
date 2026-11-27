@@ -116,8 +116,11 @@ getDriverInfo ::
   Maybe Text ->
   Maybe (Id Common.Driver) ->
   Maybe Text ->
+  Maybe Text ->
   Flow Common.DriverInfoRes
-getDriverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId mbWalletId = do
+getDriverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail mbPersonId mbWalletId mbCities = do
+  -- Only the driver backend's own routes search several cities; refuse the list rather than ignore it.
+  when (isJust mbCities) $ throwError $ InvalidRequest "\"cities\" is supported only on the driver backend's direct routes"
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (length (catMaybes [mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail, getId <$> mbPersonId, mbWalletId]) == 1) $
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\", \"email\", \"personId\", \"walletId\" is required"

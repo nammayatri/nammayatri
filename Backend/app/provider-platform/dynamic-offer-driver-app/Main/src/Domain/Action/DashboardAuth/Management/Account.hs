@@ -11,6 +11,7 @@
 -- the spec, so this logic lives here and is never overwritten by the generator.
 module Domain.Action.DashboardAuth.Management.Account
   ( getAccountFetchUnverifiedAccounts,
+    postAccountVerifyAccount,
     putAccountUpdateRole,
   )
 where
@@ -27,9 +28,20 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.FleetScope
 import Tools.Auth
 import qualified Tools.Auth.DashboardRegistration
 import Tools.Auth.DashboardUserAuth
+
+-- | Approve or reject a fleet. The application server records the decision; the dashboard's own rows
+-- (verified flag, sessions, role assignments) are updated after it accepted, in every mode, as
+-- provider-dashboard does.
+postAccountVerifyAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Account.VerifyAccountReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postAccountVerifyAccount a4 a3 a2 a1 = do
+  SharedLogic.FleetScope.assertFleetInScope a2 (Kernel.Types.Id.getId a1.fleetOwnerId)
+  res <- Domain.Action.Dashboard.Management.Account.postAccountVerifyAccount a4 a3 a1
+  Tools.Auth.DashboardUserAuth.reviewFleetOwnerAccount a2 a1.fleetOwnerId.getId (a1.status == API.Types.ProviderPlatform.Management.Account.Approved) a1.reason
+  Kernel.Prelude.pure res
 
 putAccountUpdateRole :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Person -> Kernel.Types.Id.Id Dashboard.Common.Role -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 putAccountUpdateRole _a5 _a4 _a3 a2 a1 = do

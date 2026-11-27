@@ -198,6 +198,7 @@ data IdentifierType
   | EMAIL
   | GIMS_EMAIL_PASSWORD
   | GIMS_EMPLOYEE_ID_PASSWORD
+  | NO_LOGIN
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data Role

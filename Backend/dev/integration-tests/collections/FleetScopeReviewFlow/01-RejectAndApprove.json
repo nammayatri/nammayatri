@@ -1,0 +1,912 @@
+{
+  "info": {
+    "name": "FleetScopeReview - rejecting and approving a fleet",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 A - login OTP (direct tree)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_a_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login otp 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const rnd = () => '9' + String(Math.floor(Math.random() * 900000000) + 100000000).slice(0, 8);",
+              "pm.environment.set('fleet_a_mobile', rnd());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 A - verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_a_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"otp\": \"{{login_otp}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify otp 200', () => pm.response.to.have.status(200));",
+              "const t = pm.response.json().authToken;",
+              "pm.test('session token issued', () => pm.expect(t).to.be.a('string').and.not.empty);",
+              "pm.environment.set('fleet_a_token', t);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - A's fleet id (the person the session belongs to)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"registration_token\", \"select\": [\"token\", \"person_id\"], \"where_clause\": [{\"column_name\": \"token\", \"val\": \"{{fleet_a_token}}\", \"op\": \"=\"}], \"limit\": 5}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('found the session', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('fleet_a_id', rows[0].person_id);"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 15000); // the app writes through a key-value store and the drainer copies to Postgres; the DB read below must wait for it"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - The admin's own person id",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"registration_token\", \"select\": [\"token\", \"person_id\"], \"where_clause\": [{\"column_name\": \"token\", \"val\": \"{{dashboard_token}}\", \"op\": \"=\"}], \"limit\": 5}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('found the admin session', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('admin_id', rows[0].person_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - The FLEET role",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"role\", \"select\": [\"id\", \"name\"], \"where_clause\": [{\"column_name\": \"name\", \"val\": \"FLEET\", \"op\": \"=\"}], \"limit\": 5}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('found the role', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('fleet_role_id', rows[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - The dashboard merchant row",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"merchant\", \"select\": [\"id\", \"short_id\", \"fleet_scope_mode\"], \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}], \"limit\": 5}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('found the merchant', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('dashboard_merchant_row_id', rows[0].id);",
+              "pm.environment.set('orig_fleet_scope_mode', rows[0].fleet_scope_mode);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Give the admin a role on A's fleet, so the closing of access can be seen",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/insert",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"person_role_assignment\", \"values\": {\"id\": \"{{run_stamp}}-review-assignment\", \"person_id\": \"{{admin_id}}\", \"role_id\": \"{{fleet_role_id}}\", \"scope_type\": \"FLEET\", \"scope_id\": \"{{fleet_a_id}}\", \"merchant_id\": \"{{dashboard_merchant_row_id}}\", \"status\": \"ACTIVE\"}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('inserted', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('run_stamp', String(Date.now()));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - A's session works",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_dashboard_root}}/user/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('profile 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - A fleet owner cannot review fleets",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/account/verifyAccount",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"Rejected\", \"reason\": \"not allowed\", \"fleetOwnerId\": \"{{fleet_a_id}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('refused', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - A is untouched by that refusal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_dashboard_root}}/user/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('profile 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Switch the merchant to ENFORCE",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/update",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"merchant\", \"set\": {\"fleet_scope_mode\": \"ENFORCE\"}, \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('updated', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11b - Drop cached copies of the merchant",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/redis/del",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\": \"*{{dashboard_merchant_row_id}}*\", \"target\": \"cluster\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('ok', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - The admin rejects the fleet (direct tree)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/account/verifyAccount",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"Rejected\", \"reason\": \"review flow\", \"fleetOwnerId\": \"{{fleet_a_id}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('reject 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - A's old session is refused at once",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_dashboard_root}}/user/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('refused', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - A is marked unverified, with the reason and who rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"person\", \"select\": [\"id\", \"verified\", \"rejection_reason\", \"rejected_by\", \"rejected_at\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{fleet_a_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('the account is kept', () => pm.expect(rows.length).to.equal(1));",
+              "pm.test('unverified', () => pm.expect(rows[0].verified).to.equal(false));",
+              "pm.test('reason kept', () => pm.expect(rows[0].rejection_reason).to.equal('review flow'));",
+              "pm.test('rejecter kept', () => pm.expect(rows[0].rejected_by).to.equal(pm.environment.get('admin_id')));",
+              "pm.test('time kept', () => pm.expect(rows[0].rejected_at).to.not.equal(null));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 - No session of A is left",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"registration_token\", \"select\": [\"token\"], \"where_clause\": [{\"column_name\": \"person_id\", \"val\": \"{{fleet_a_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('none left', () => pm.expect(rows.length).to.equal(0));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 - Every role on A's fleet is revoked",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"person_role_assignment\", \"select\": [\"person_id\", \"status\"], \"where_clause\": [{\"column_name\": \"scope_id\", \"val\": \"{{fleet_a_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('there were assignments', () => pm.expect(rows.length).to.be.above(0));",
+              "pm.test('all revoked', () => rows.forEach(r => pm.expect(r.status).to.equal('REVOKED')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 - A logs in again - login OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_a_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login otp 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17b - A logs in again - verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_a_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"otp\": \"{{login_otp}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('a session is issued', () => { pm.response.to.have.status(200); pm.environment.set('fleet_a_token2', pm.response.json().authToken); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 - But the fleet's data is closed to them",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{fleet_a_token2}}"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/vehicleAssociation?Limit=10&Offset=0"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('forbidden', () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 - The admin approves the fleet again",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/account/verifyAccount",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"Approved\", \"fleetOwnerId\": \"{{fleet_a_id}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('approve 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 - A is verified again, and who approved is kept",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"person\", \"select\": [\"id\", \"verified\", \"approved_by\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{fleet_a_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('verified', () => pm.expect(rows[0].verified).to.equal(true));",
+              "pm.test('approver kept', () => pm.expect(rows[0].approved_by).to.equal(pm.environment.get('admin_id')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 - A has their own fleet back",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"person_role_assignment\", \"select\": [\"person_id\", \"scope_id\", \"status\"], \"where_clause\": [{\"column_name\": \"scope_id\", \"val\": \"{{fleet_a_id}}\", \"op\": \"=\"}, {\"column_name\": \"person_id\", \"val\": \"{{fleet_a_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('one assignment, active', () => { pm.expect(rows.length).to.equal(1); pm.expect(rows[0].status).to.equal('ACTIVE'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 - The admin's own role on the fleet stays revoked until they are invited again",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"person_role_assignment\", \"select\": [\"person_id\", \"status\"], \"where_clause\": [{\"column_name\": \"scope_id\", \"val\": \"{{fleet_a_id}}\", \"op\": \"=\"}, {\"column_name\": \"person_id\", \"val\": \"{{admin_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('still revoked', () => rows.forEach(r => pm.expect(r.status).to.equal('REVOKED')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 - A reaches their data again",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{fleet_a_token2}}"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/vehicleAssociation?Limit=10&Offset=0"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 - A person that does not exist is refused",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/account/verifyAccount",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"Rejected\", \"reason\": \"none\", \"fleetOwnerId\": \"00000000-0000-4000-8000-000000000000\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('refused', () => pm.expect(pm.response.code).to.be.oneOf([400, 404]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 - Restore the merchant's original mode",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/update",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"merchant\", \"set\": {\"fleet_scope_mode\": \"{{orig_fleet_scope_mode}}\"}, \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('updated', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25b - Drop cached copies of the merchant",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/redis/del",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\": \"*{{dashboard_merchant_row_id}}*\", \"target\": \"cluster\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('ok', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

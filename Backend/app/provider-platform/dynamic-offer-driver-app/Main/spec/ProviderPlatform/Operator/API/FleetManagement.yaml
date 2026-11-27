@@ -109,6 +109,7 @@ apis:
 
   - POST:
       endpoint: /fleet/member/association/create
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: FleetMemberAssociationCreateReq
@@ -135,6 +136,7 @@ types:
   FleetOwnerSendOtpReq:
     - mobileNumber: Text
     - mobileCountryCode: Text
+    - fleetId: Maybe (Id Person) # when set, the fleet is found by id and the phone fields are not used to find it
   FleetOwnerSendOtpRes:
     - fleetOwnerId: Id Person
     - name: Text

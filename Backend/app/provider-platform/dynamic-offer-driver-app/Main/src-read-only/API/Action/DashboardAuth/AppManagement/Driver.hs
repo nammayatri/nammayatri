@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.Driver
 import qualified Data.Time.Calendar
-import qualified Domain.Action.Dashboard.AppManagement.Driver
+import qualified Domain.Action.DashboardAuth.AppManagement.Driver
 import qualified "this" Domain.Action.UI.Ride
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
@@ -38,4 +38,4 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverFleetListRides merchantId city
 
 getDriverFleetListRides :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Ride.RideStatus -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler Domain.Action.UI.Ride.DriverRideListRes)
-getDriverFleetListRides a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.AppManagement.Driver.getDriverFleetListRides a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getDriverFleetListRides a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.DashboardAuth.AppManagement.Driver.getDriverFleetListRides a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1

@@ -30,6 +30,7 @@ helperApiPrefix: ""
 apis:
   - GET: # DocumentsListAPI
       endpoint: /{driverId}/documents/list
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver
@@ -40,6 +41,7 @@ apis:
         type: DocumentsListResponse
   - GET: # GetDocumentAPI
       endpoint: /getDocument/{entityId}
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         entityId: Text

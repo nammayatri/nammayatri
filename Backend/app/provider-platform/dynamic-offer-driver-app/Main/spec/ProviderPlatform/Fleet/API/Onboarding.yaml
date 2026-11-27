@@ -83,6 +83,7 @@ apis:
   # only on the driver-app UI endpoint). No helperApi / fleetOwnerId needed.
   - GET:
       endpoint: /register/vehicleStatus
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - registrationNo: Text
@@ -117,6 +118,7 @@ apis:
 
   - GET:
       endpoint: /vehicle/documents
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - rcNo: Text

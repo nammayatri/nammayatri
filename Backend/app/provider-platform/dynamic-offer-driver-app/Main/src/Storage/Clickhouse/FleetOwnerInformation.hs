@@ -31,11 +31,11 @@ type FleetOwnerInformation = FleetOwnerInformationT Identity
 
 $(TH.mkClickhouseInstances ''FleetOwnerInformationT 'SELECT_FINAL_MODIFIER)
 
-getStatusCountsByCityId ::
+getStatusCountsByCityIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Text ->
+  [Text] ->
   m [(Maybe DDVS.DocsVerificationStatus, Int)]
-getStatusCountsByCityId cityId =
+getStatusCountsByCityIds cityIds =
   CH.findAll $
     CH.select_
       ( \info -> do
@@ -44,16 +44,16 @@ getStatusCountsByCityId cityId =
           CH.groupBy status $ \s -> (s, countOwners)
       )
       $ CH.filter_
-        (\info -> info.merchantOperatingCityId CH.==. Just cityId)
+        (\info -> info.merchantOperatingCityId `CH.in_` (Just <$> cityIds))
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOwnerInformationTTable)
 
-getFleetOwnerIdsByCityId ::
+getFleetOwnerIdsByCityIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Text ->
+  [Text] ->
   m [Id DP.Person]
-getFleetOwnerIdsByCityId cityId =
+getFleetOwnerIdsByCityIds cityIds =
   CH.findAll $
     CH.select_ (\info -> CH.notGrouped info.fleetOwnerPersonId) $
       CH.filter_
-        (\info -> info.merchantOperatingCityId CH.==. Just cityId)
+        (\info -> info.merchantOperatingCityId `CH.in_` (Just <$> cityIds))
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOwnerInformationTTable)

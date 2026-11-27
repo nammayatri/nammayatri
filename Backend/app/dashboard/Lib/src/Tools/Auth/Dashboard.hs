@@ -32,6 +32,7 @@ import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Common
+import qualified Tools.Auth.FleetScope as FleetScope
 import Tools.Error
 import Tools.Servant.HeaderAuth
 
@@ -84,6 +85,7 @@ verifyDashboard requiredAccessType _pathSegments token = do
   logInfo "[Auth.verifyDashboard] START - Servant parsed request, beginning auth"
   (personId, merchantId, city) <- Common.verifyPerson token
   logInfo "[Auth.verifyDashboard] verifyPerson done"
+  FleetScope.assertOtpSessionStillAllowedByIds token personId merchantId
   void $ verifyDashboardAccess requiredAccessType personId
   pure TokenInfo {personId, merchantId, city}
 

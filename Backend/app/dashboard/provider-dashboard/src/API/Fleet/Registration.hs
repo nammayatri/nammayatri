@@ -34,7 +34,6 @@ import qualified ProviderPlatformClient.DynamicOfferDriver.Fleet as Client
 import Servant hiding (throwError)
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
-import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -77,14 +76,14 @@ fleetOwnerLogin req = withFlowHandlerAPI' $ do
 
 fleetOwnerVerfiy :: DP.FleetOwnerLoginReq -> FlowHandler DP.FleetOwnerVerifyRes
 fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
-  person <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  void $ Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
-  token <- DR.generateToken person.id merchant req.city
-  when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
+  -- The driver-app says which person the OTP was issued to; an older one does not, and then the
+  -- person is found by phone number as before.
+  verified <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
+  token <- DR.mintFleetOtpSession merchant req.city req.mobileNumber req.mobileCountryCode verified.personId
   pure $ DP.FleetOwnerVerifyRes {authToken = token}
 
 fleetOwnerRegister :: DP.FleetOwnerRegisterReq -> FlowHandler FleetOwnerRegisterResp
@@ -97,7 +96,7 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
       enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
   res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) (Just enabled) req
   void $ registerFleetOwner req' (Id res.personId)
-  token <- DR.generateToken (Id res.personId) merchant req.city
+  token <- DR.mintFleetRegisterSession merchant req.city (Id res.personId)
   pure $ FleetOwnerRegisterResp "Success" (Just token)
 
 buildFleetOwnerRegisterReq :: DP.FleetOwnerRegisterReq -> FleetRegisterReq

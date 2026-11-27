@@ -9,7 +9,6 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Account
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Management.Account
 import qualified Domain.Action.DashboardAuth.Management.Account
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -58,7 +57,7 @@ postAccountVerifyAccount a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/ACCOUNT/POST_ACCOUNT_VERIFY_ACCOUNT" a2 (Kernel.Prelude.Just a1)
-        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Account.postAccountVerifyAccount a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.Account.postAccountVerifyAccount a4 a3 a2 a1
     )
 
 putAccountUpdateRole :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Person -> Kernel.Types.Id.Id Dashboard.Common.Role -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

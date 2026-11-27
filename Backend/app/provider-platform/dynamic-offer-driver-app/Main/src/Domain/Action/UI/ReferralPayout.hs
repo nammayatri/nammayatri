@@ -17,7 +17,6 @@ import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payment.Types as PaymentTypes
@@ -39,6 +38,7 @@ import qualified Lib.Payment.Payout.Registration as Registration
 import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified SharedLogic.FleetContact as SFleetContact
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -217,8 +217,10 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
     throwError $ InvalidRequest "Use /payout/update/vpa to register your VPA"
 
   -- Get person details for creating the payment order
-  driverPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  let driverEmail = fromMaybe "test@juspay.in" person.email
+  -- A fleet owner is reached on the fleet's own contact, which falls back to their phone and email.
+  contact <- SFleetContact.contactOf person
+  driverPhone <- contact.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  let driverEmail = fromMaybe "test@juspay.in" contact.email
 
   -- Get Juspay createOrder call
   paymentServiceName <- TPayment.decidePaymentService (DEMSC.PaymentService PaymentTypes.Juspay) person.clientSdkVersion person.merchantOperatingCityId

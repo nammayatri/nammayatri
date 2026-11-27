@@ -46,6 +46,7 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
+import qualified SharedLogic.FleetContact as SFleetContact
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -149,7 +150,7 @@ endFleetAssociations ::
   Flow ()
 endFleetAssociations merchantOpCityId transporterConfig fleetOwner = do
   let fleetOwnerFullName = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName
-  fleetOwnerMobile <- maybe (pure "unknown") decrypt fleetOwner.mobileNumber
+  fleetOwnerMobile <- fromMaybe "unknown" . (.mobileNumber) <$> SFleetContact.contactOf fleetOwner
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
   -- Always end all existing fleet-operator associations before creating a new one.
   forM_ existingFOAssociations $ \existingAssociation -> do

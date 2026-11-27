@@ -35,6 +35,7 @@ import qualified "this" API.Types.ProviderPlatform.Management.Ride as MGMT
 import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -110,10 +111,14 @@ import qualified Storage.Queries.StopInformation as QSI
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified System.Environment as Se
+import qualified "lib-dashboard" Tools.Auth.FleetScope as LibFleetScope
 import Tools.Error
 
 ---------------------------------------------------------------------
 getRideList ::
+  Bool ->
+  Maybe Text ->
+  Bool ->
   ShortId DM.Merchant ->
   Context.City ->
   Maybe Common.BookingStatus ->
@@ -135,8 +140,8 @@ getRideList ::
   Maybe Text ->
   Text ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId mbCustomerCountryCode mbDriverCountryCode requestorId = do
-  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
+getRideList allCities mbCities ownDriverOnly merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId mbCustomerCountryCode mbDriverCountryCode requestorId = do
+  getRideListUtil allCities mbCities ownDriverOnly Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -153,7 +158,23 @@ getRideAgentList ::
   Maybe Text ->
   Flow Common.RideListRes
 getRideAgentList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbVehicleNo =
-  getRideListUtil (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset Nothing Nothing mbReqShortRideId mbto mbVehicleNo Nothing Nothing Nothing Nothing Nothing
+  getRideListUtil False Nothing False (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset Nothing Nothing mbReqShortRideId mbto mbVehicleNo Nothing Nothing Nothing Nothing Nothing
+
+-- | The cities a ride list covers: the ones the request names, else every city of the merchant when the list is
+-- scoped by fleet (a fleet owner once fleet scope is enforced), else the city in the URL.
+resolveRideCities :: DM.Merchant -> DMOC.MerchantOperatingCity -> Bool -> Maybe Text -> Flow [DMOC.MerchantOperatingCity]
+resolveRideCities merchant urlCity allCities mbNames =
+  case LibFleetScope.requestedCities mbNames of
+    [] -> if allCities then CQMOC.findAllByMerchantId merchant.id else pure [urlCity]
+    cities -> forM cities $ \city ->
+      CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchant.id.getId <> " ,city: " <> show city)
+
+-- | The cities the cached ride lookups must be held to: none while the list is for the URL's city alone, which
+-- leaves those lookups as they always were.
+narrowedCityIds :: DMOC.MerchantOperatingCity -> [DMOC.MerchantOperatingCity] -> Maybe [Id DMOC.MerchantOperatingCity]
+narrowedCityIds urlCity opCities =
+  let cityIds = map (.id) opCities
+   in if all (== urlCity.id) cityIds then Nothing else Just cityIds
 
 -- | Common parameters resolved during ride-list setup (shared by V1 and V2).
 data RideListCommonParams = RideListCommonParams
@@ -250,6 +271,9 @@ withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDri
     defaultLimit = 10
 
 getRideListUtil ::
+  Bool ->
+  Maybe Text ->
+  Bool ->
   Maybe Bool ->
   ShortId DM.Merchant ->
   Context.City ->
@@ -273,15 +297,23 @@ getRideListUtil ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   Flow Common.RideListRes
-getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset _mbPaymentMode mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
+getRideListUtil allCities mbCities ownDriverOnly isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset _mbPaymentMode mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
   withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode False $ \RideListCommonParams {..} -> do
-    (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbRequestorId mbFleetOwnerId
-    rideItems <-
+    (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility ownDriverOnly mbRequestorId mbFleetOwnerId
+    opCities <- resolveRideCities merchant merchantOpCity allCities mbCities
+    foundItems <-
       if useClickhouse
-        then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
-        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+        then BppT.findAllRideItems isDashboardRequest merchant opCities limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+        else QRide.findAllRideItems isDashboardRequest merchant opCities limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+    -- The cached lookups have no city condition. A lookup by short id finds that one ride wherever it is.
+    let rideItems = case (mbShortRideId, narrowedCityIds merchantOpCity opCities) of
+          (Nothing, Just cityIds) -> filter (\item -> item.merchantOperatingCityId `elem` cityIds) foundItems
+          _ -> foundItems
     logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
-    rideListItems <- traverse buildRideListItem rideItems
+    -- A fleet's rides can sit in several cities, so each row says which; every distinct city is looked up once.
+    cityNames <- forM (nub (map (.merchantOperatingCityId) rideItems)) $ \cityId ->
+      (cityId,) . maybe (getId cityId) (show . (.city)) <$> CQMOC.findById cityId
+    rideListItems <- forM rideItems $ \item -> buildRideListItem (lookup item.merchantOperatingCityId cityNames) item
     let rideListItems' :: [Common.RideListItem]
         rideListItems' =
           if shouldShowCustomerInfo
@@ -294,15 +326,17 @@ getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCur
     pure Common.RideListRes {totalItems = count, summary, rides = rideListItems'}
 
 -- Resolve (show customer info?, effective fleet filter) from requestor role + optional fleet filter. Fleet owner/operator: only their fleet, no customer info; other roles: any fleet, show customer info.
-resolveFleetAndCustomerVisibility :: Maybe Text -> Maybe Text -> Flow (Bool, Maybe Text)
-resolveFleetAndCustomerVisibility mbRequestorId (Just fleetOwnerId) = do
+-- @ownDriverOnly@: the caller has already checked that the list is filtered to a driver linked to the requesting operator, so it needs no fleet.
+resolveFleetAndCustomerVisibility :: Bool -> Maybe Text -> Maybe Text -> Flow (Bool, Maybe Text)
+resolveFleetAndCustomerVisibility _ mbRequestorId (Just fleetOwnerId) = do
   isFleetOrOp <- isRequestorFleetOwnerOrOperator mbRequestorId
   if isFleetOrOp
     then do
       void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
       pure (False, Just fleetOwnerId)
     else pure (True, Just fleetOwnerId)
-resolveFleetAndCustomerVisibility mbRequestorId Nothing = resolveRoleAndEffectiveFleet mbRequestorId
+resolveFleetAndCustomerVisibility True _ Nothing = pure (False, Nothing)
+resolveFleetAndCustomerVisibility False mbRequestorId Nothing = resolveRoleAndEffectiveFleet mbRequestorId
 
 isRequestorFleetOwnerOrOperator :: Maybe Text -> Flow Bool
 isRequestorFleetOwnerOrOperator mbRequestorId = case mbRequestorId of
@@ -326,24 +360,25 @@ resolveRoleAndEffectiveFleet mbRequestorId = case mbRequestorId of
           DP.OPERATOR -> throwError AccessDenied
           _ -> pure (True, Nothing)
 
-getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Text -> Flow Common.RideListResV2
-getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId requestorId = do
+getRideListV2 :: Bool -> Maybe Text -> Bool -> ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Text -> Flow Common.RideListResV2
+getRideListV2 allCities mbCities ownDriverOnly merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId requestorId = do
   let mbDriverIdText = getId <$> _mbDriverId
   withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId Nothing _mbPaymentMode (isJust mbRideStatus) $ \RideListCommonParams {..} -> do
     -- Role-scope: fleet owner => own fleet, admin => all city, operator => denied (mirrors V1 getRideList).
-    (_, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility (Just requestorId) mbFleetOwnerId
+    (_, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility ownDriverOnly (Just requestorId) mbFleetOwnerId
+    opCities <- resolveRideCities merchant merchantOpCity allCities mbCities
     rideItems <-
       if useClickhouse
-        then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount effectiveFleetOwnerId
-        else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId mbDriverPhone now mbfrom mbto mbFromAmount mbToAmount effectiveFleetOwnerId
+        then BppT.findAllRideItemsV2 merchant opCities limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount effectiveFleetOwnerId
+        else QRide.findAllRideItemsV2 (narrowedCityIds merchantOpCity opCities) merchant opCities limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId mbDriverPhone now mbfrom mbto mbFromAmount mbToAmount effectiveFleetOwnerId
     logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
     rideListItems <- traverse buildRideListItemV2 rideItems
     let count = length rideListItems
     let summary = Common.Summary {totalCount = 10000, count}
     pure Common.RideListResV2 {totalItems = count, summary, rides = rideListItems}
 
-buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
-buildRideListItem QRide.RideItem {..} = do
+buildRideListItem :: EncFlow m r => Maybe Text -> QRide.RideItem -> m Common.RideListItem
+buildRideListItem cityName' QRide.RideItem {..} = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   fleetNumber' <- mapM decrypt fleetNumber
@@ -351,6 +386,8 @@ buildRideListItem QRide.RideItem {..} = do
     Common.RideListItem
       { rideId = cast @DRide.Ride @Common.Ride rideDetails.id,
         rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        cityId = Just merchantOperatingCityId.getId,
+        cityName = cityName',
         displayBookingId = displayBookingId,
         customerName,
         customerPhoneNo,

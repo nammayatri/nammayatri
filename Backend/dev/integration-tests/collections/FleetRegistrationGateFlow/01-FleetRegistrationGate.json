@@ -64,6 +64,38 @@
       ]
     },
     {
+      "name": "01b - Resolve the driver-app merchant and operating city ids",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"merchant_operating_city\", \"select\": [\"id\", \"merchant_id\", \"merchant_short_id\", \"city\"], \"where_clause\": [{\"column_name\": \"merchant_short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}, {\"column_name\": \"city\", \"val\": \"{{city}}\", \"op\": \"=\"}], \"limit\": 5}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The ids differ between databases, so they are read rather than assumed.",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('found the merchant operating city', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('moc_id', rows[0].id);",
+              "pm.environment.set('driver_merchant_id', rows[0].merchant_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "02 - Seed FleetRegistration fleet-doc-config (FLEET_OWNER)",
       "request": {
         "method": "POST",
@@ -86,6 +118,34 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('seed config ok', () => pm.expect(pm.response.json().ok).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02b - Drop the cached fleet document config",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/redis/del",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\": \"*FleetOwnerDocumentVerificationConfig*\", \"target\": \"cluster\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('ok', () => pm.response.to.have.status(200));"
             ]
           }
         }
@@ -141,14 +201,15 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('verify otp 200', () => pm.response.to.have.status(200));"
+              "pm.test('verify otp 200', () => pm.response.to.have.status(200));",
+              "pm.environment.set('fleet_owner_dash_token', pm.response.json().authToken);"
             ]
           }
         }
       ]
     },
     {
-      "name": "05 - Resolve fleet_owner_id (latest FLEET_OWNER)",
+      "name": "05 - Resolve fleet_owner_id (the person the session belongs to)",
       "request": {
         "method": "POST",
         "header": [
@@ -159,7 +220,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"person\",\"select\":[\"id\",\"role\",\"created_at\"],\"where_clause\":[{\"column_name\":\"role\",\"val\":\"FLEET_OWNER\",\"op\":\"=\"}],\"limit\":50}"
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"registration_token\", \"select\": [\"token\", \"person_id\"], \"where_clause\": [{\"column_name\": \"token\", \"val\": \"{{fleet_owner_dash_token}}\", \"op\": \"=\"}], \"limit\": 5}"
         },
         "url": "{{mockServerUrl}}/mock/sql/select"
       },
@@ -169,11 +230,26 @@
           "script": {
             "type": "text/javascript",
             "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
               "const rows = (pm.response.json().rows) || [];",
-              "pm.test('found a fleet owner', () => pm.expect(rows.length).to.be.above(0));",
-              "rows.sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));",
-              "pm.environment.set('fleet_owner_id', rows[0].id);",
-              "console.log('fleet_owner_id =', rows[0].id);"
+              "pm.test('found the fleet owner session', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('fleet_owner_id', rows[0].person_id);"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 15000); // the app writes through a key-value store and the drainer copies to Postgres; the DB read below must wait for it"
             ]
           }
         }

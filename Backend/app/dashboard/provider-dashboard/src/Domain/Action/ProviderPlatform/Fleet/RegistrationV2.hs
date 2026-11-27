@@ -1,5 +1,9 @@
 module Domain.Action.ProviderPlatform.Fleet.RegistrationV2
-  ( postRegistrationV2LoginOtp,
+  ( postRegistrationV2CreateFleet,
+    postRegistrationV2AcceptFleetAssignment,
+    getRegistrationV2Contact,
+    postRegistrationV2Contact,
+    postRegistrationV2LoginOtp,
     postRegistrationV2VerifyOtp,
     postRegistrationV2Register,
     postRegistrationV2Register',
@@ -16,6 +20,7 @@ import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DDR
 import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "beckn-spec" Domain.Types.InitiatedBy as DIB
@@ -82,13 +87,13 @@ postRegistrationV2VerifyOtp ::
   Common.FleetOwnerVerifyReqV2 ->
   Flow Common.FleetOwnerVerifyResV2
 postRegistrationV2VerifyOtp merchantShortId opCity req = do
-  person <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
-  token <- DDR.generateToken person.id merchant opCity
-  when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
+  -- The driver-app says which person the OTP was issued to; an older one does not, and then the
+  -- person is found by phone number as before.
+  verified <- Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
+  token <- DDR.mintFleetOtpSession merchant opCity req.mobileNumber req.mobileCountryCode verified.personId
   pure $ Common.FleetOwnerVerifyResV2 {authToken = token}
 
 type RegisterClientCall = CheckedShortId DM.Merchant -> City.City -> Text -> Common.FleetOwnerRegisterReqV2 -> Flow Common.FleetOwnerRegisterResV2
@@ -154,6 +159,7 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
   QP.updatePerson updFleetOwner.id updFleetOwner
   unless (Just fleetRole == updFleetOwner.dashboardAccessType) $
     QP.updatePersonRole updFleetOwner.id fleetOwnerRole
+  AssignSync.syncPersonAssignments updFleetOwner.id
   pure Success
   where
     getFleetRole mbFleetType = case mbFleetType of
@@ -210,3 +216,57 @@ getRegistrationV2ProfileLanguage ::
 getRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2ProfileLanguage) apiTokenInfo.personId.getId
+
+-- | Create a fleet. The creator is made its admin by the application server, which has the dashboard
+-- database too, so this only authenticates and forwards.
+postRegistrationV2CreateFleet ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo UserActionType ->
+  Common.FleetCreateReqV2 ->
+  Flow Common.FleetCreateResV2
+postRegistrationV2CreateFleet merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2CreateFleet) requestorId req
+
+-- | Accept an offer to work on a fleet. The application server changes the assignment and, for a
+-- handover, the fleet's contact; this only authenticates and forwards.
+postRegistrationV2AcceptFleetAssignment ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo UserActionType ->
+  Common.AcceptFleetAssignmentReqV2 ->
+  Flow APISuccess
+postRegistrationV2AcceptFleetAssignment merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2AcceptFleetAssignment) requestorId req
+
+-- | The contact a fleet is reached on. The application server works out which fleet from the caller's scope; this
+-- only authenticates and forwards.
+getRegistrationV2Contact ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo UserActionType ->
+  Maybe Text ->
+  Flow Common.FleetContactRes
+getRegistrationV2Contact merchantShortId opCity apiTokenInfo fleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2Contact) fleetOwnerId requestorId
+
+-- | Set the contact a fleet is reached on. Authenticates and forwards, and records the action.
+postRegistrationV2Contact ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo UserActionType ->
+  Common.UpdateFleetContactReq ->
+  Flow APISuccess
+postRegistrationV2Contact merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2Contact) requestorId req

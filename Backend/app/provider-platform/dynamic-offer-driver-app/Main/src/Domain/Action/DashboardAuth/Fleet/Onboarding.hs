@@ -13,6 +13,8 @@ module Domain.Action.DashboardAuth.Fleet.Onboarding
   ( getOnboardingDocumentConfigs,
     getOnboardingRegisterStatus,
     postOnboardingVerify,
+    getOnboardingRegisterVehicleStatus,
+    getOnboardingVehicleDocuments,
   )
 where
 
@@ -32,23 +34,36 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.Fleet
+import qualified SharedLogic.FleetScope
 import Tools.Auth
 import qualified Tools.Auth.DashboardRegistration
 import Tools.Auth.DashboardUserAuth
 
 getOnboardingDocumentConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Onboarding.Role) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigList)
 getOnboardingDocumentConfigs a7 a6 a5 a4 a3 a2 a1 = do
-  fleetOwnerId <- SharedLogic.Fleet.getFleetOwnerId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a5) Kernel.Prelude.Nothing
+  fleetOwnerId <- SharedLogic.FleetScope.scopedFleetOwnerId a5 Kernel.Prelude.Nothing
   Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingDocumentConfigs a7 a6 fleetOwnerId a4 a3 a2 a1
 
 getOnboardingRegisterStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.VehicleCategory.VehicleCategory) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Dashboard.Common.DocsVerificationStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.StatusRes)
 getOnboardingRegisterStatus a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
-  fleetOwnerId <- SharedLogic.Fleet.getFleetOwnerId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a9) Kernel.Prelude.Nothing
+  fleetOwnerId <- SharedLogic.FleetScope.scopedFleetOwnerId a9 Kernel.Prelude.Nothing
   Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingRegisterStatus a11 a10 fleetOwnerId a8 a7 a6 a5 a4 a3 a2 a1
 
 postOnboardingVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyType -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postOnboardingVerify a5 a4 a3 a2 a1 = do
+  SharedLogic.FleetScope.assertSubjectInScope a3 a1.driverId
   adminApprovalRequired <- Tools.Auth.DashboardRegistration.adminApprovalRequiredForDriver a5.getShortId a1.driverId
   res <- Domain.Action.Dashboard.Fleet.Onboarding.postOnboardingVerify a5 a4 a2 (Tools.Auth.DashboardRegistration.requestorDashboardAccessType a3) (Kernel.Prelude.Just adminApprovalRequired) a1
   Kernel.Prelude.when res.enableFleetOwner $ Tools.Auth.DashboardRegistration.markDashboardPersonVerifiedOnOnboarding a1.driverId
   Kernel.Prelude.pure Kernel.Types.APISuccess.Success
+
+-- | A certificate a request names, by id or by number, has to belong to a fleet the caller's scope holds.
+getOnboardingRegisterVehicleStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.RcVerifyStatusResp)
+getOnboardingRegisterVehicleStatus a6 a5 a4 a3 a2 a1 = do
+  SharedLogic.FleetScope.assertRcInScope a4 a2 a3
+  Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingRegisterVehicleStatus a6 a5 a3 a2 a1
+
+getOnboardingVehicleDocuments :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.VehicleDocumentStatusRes)
+getOnboardingVehicleDocuments a6 a5 a4 a3 a2 a1 = do
+  SharedLogic.FleetScope.assertRcInScope a4 a2 a3
+  Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingVehicleDocuments a6 a5 a3 a2 a1

@@ -55,7 +55,7 @@ data FleetMemberAssociationCreateReq = FleetMemberAssociationCreateReq
 instance Kernel.Types.HideSecrets.HideSecrets FleetMemberAssociationCreateReq where
   hideSecrets = Kernel.Prelude.identity
 
-data FleetOwnerSendOtpReq = FleetOwnerSendOtpReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text}
+data FleetOwnerSendOtpReq = FleetOwnerSendOtpReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text, fleetId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person)}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

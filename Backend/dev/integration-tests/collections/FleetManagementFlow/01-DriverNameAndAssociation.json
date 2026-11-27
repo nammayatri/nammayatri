@@ -308,11 +308,23 @@
       "name": "09 - Get Driver Association (Verify Name Fields Set)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function () {}, 5000); // give the drainer time before each read"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('driverAssociation returns 200', function () { pm.response.to.have.status(200); });",
               "var d = pm.response.json();",
+              "// The association is written through Redis and a drainer copies it to Postgres, so the list can lag: ask again.",
+              "var retryKey = '_retry_' + pm.info.requestId; var attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (!(d.listItem || []).some(function (i) { return i.driverId === pm.environment.get('driver_id'); }) && attempts < 10) { pm.environment.set(retryKey, attempts + 1); postman.setNextRequest(pm.info.requestName); return; }",
               "pm.test('Response has listItem', function () { pm.expect(d).to.have.property('listItem'); });",
               "var driver = d.listItem.find(function(item) { return item.driverId === pm.environment.get('driver_id'); });",
               "pm.test('Driver found in association list', function () { pm.expect(driver).to.not.be.undefined; });",
@@ -387,11 +399,23 @@
       "name": "11 - Get Driver Association (Verify Null Preserves Fields)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function () {}, 5000); // give the drainer time before each read"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('driverAssociation returns 200', function () { pm.response.to.have.status(200); });",
               "var d = pm.response.json();",
+              "// The association is written through Redis and a drainer copies it to Postgres, so the list can lag: ask again.",
+              "var retryKey = '_retry_' + pm.info.requestId; var attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (!(d.listItem || []).some(function (i) { return i.driverId === pm.environment.get('driver_id'); }) && attempts < 10) { pm.environment.set(retryKey, attempts + 1); postman.setNextRequest(pm.info.requestName); return; }",
               "var driver = d.listItem.find(function(item) { return item.driverId === pm.environment.get('driver_id'); });",
               "pm.test('Driver found in association list', function () { pm.expect(driver).to.not.be.undefined; });",
               "if (driver) {",
@@ -462,11 +486,23 @@
       "name": "13 - Get Driver Association (Verify middleName Cleared, lastName Updated)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function () {}, 5000); // give the drainer time before each read"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('driverAssociation returns 200', function () { pm.response.to.have.status(200); });",
               "var d = pm.response.json();",
+              "// The association is written through Redis and a drainer copies it to Postgres, so the list can lag: ask again.",
+              "var retryKey = '_retry_' + pm.info.requestId; var attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (!(d.listItem || []).some(function (i) { return i.driverId === pm.environment.get('driver_id'); }) && attempts < 10) { pm.environment.set(retryKey, attempts + 1); postman.setNextRequest(pm.info.requestName); return; }",
               "var driver = d.listItem.find(function(item) { return item.driverId === pm.environment.get('driver_id'); });",
               "pm.test('Driver found in association list', function () { pm.expect(driver).to.not.be.undefined; });",
               "if (driver) {",

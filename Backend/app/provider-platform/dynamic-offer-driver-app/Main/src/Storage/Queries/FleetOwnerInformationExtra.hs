@@ -2,6 +2,7 @@ module Storage.Queries.FleetOwnerInformationExtra where
 
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.FleetOwnerInformation
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
@@ -193,6 +194,11 @@ updateFleetOwnerInfo fleetOwnerInfo = do
       Se.Set Beam.address fleetOwnerInfo.address,
       Se.Set Beam.addressState fleetOwnerInfo.addressState,
       Se.Set Beam.addressDocumentType fleetOwnerInfo.addressDocumentType,
+      Se.Set Beam.contactMobileCountryCode fleetOwnerInfo.contactMobileCountryCode,
+      Se.Set Beam.contactMobileNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted fleetOwnerInfo.contactMobileNumber),
+      Se.Set Beam.contactMobileNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash fleetOwnerInfo.contactMobileNumber),
+      Se.Set Beam.contactEmailEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted fleetOwnerInfo.contactEmail),
+      Se.Set Beam.contactEmailHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash fleetOwnerInfo.contactEmail),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerInfo.fleetOwnerPersonId)]
@@ -426,6 +432,62 @@ updateBusinessLicenseNumberById businessLicenseNumber fleetOwnerPersonId = do
     [ Se.Set Beam.businessLicenseNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted businessLicenseNumber),
       Se.Set Beam.businessLicenseNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash businessLicenseNumber),
       Se.Set Beam.businessLicenseNumber Nothing,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+-- | A page of a merchant's fleet owners in a stable order, read straight from the database rather
+-- than the key-value store. The fleet scope backfill pages through them with this.
+findAllByMerchantIdPaged ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Int ->
+  Int ->
+  m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+findAllByMerchantIdPaged merchantId limit offset =
+  findAllWithOptionsDb [Se.Is Beam.merchantId (Se.Eq (getId merchantId))] (Se.Asc Beam.fleetOwnerPersonId) (Just limit) (Just offset)
+
+-- | Set the contact a fleet is reached on and nothing else. A handover uses it to move the contact to the
+-- new admin when they ask for that.
+updateContact ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Maybe (EncryptedHashed Text) ->
+  Maybe (EncryptedHashed Text) ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateContact contactMobileCountryCode contactMobileNumber contactEmail fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.contactMobileCountryCode contactMobileCountryCode,
+      Se.Set Beam.contactMobileNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted contactMobileNumber),
+      Se.Set Beam.contactMobileNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash contactMobileNumber),
+      Se.Set Beam.contactEmailEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted contactEmail),
+      Se.Set Beam.contactEmailHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash contactEmail),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+-- | Name a fleet and set the contact it is reached on, which is what payments, payouts and alerts read
+-- ('SharedLogic.FleetContact'). The phone and the e-mail are optional; an empty one falls back to the
+-- owner's own.
+updateFleetNameAndContact ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  Maybe Text ->
+  Maybe (EncryptedHashed Text) ->
+  Maybe (EncryptedHashed Text) ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateFleetNameAndContact fleetName contactMobileCountryCode contactMobileNumber contactEmail fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.fleetName fleetName,
+      Se.Set Beam.contactMobileCountryCode contactMobileCountryCode,
+      Se.Set Beam.contactMobileNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted contactMobileNumber),
+      Se.Set Beam.contactMobileNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash contactMobileNumber),
+      Se.Set Beam.contactEmailEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted contactEmail),
+      Se.Set Beam.contactEmailHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash contactEmail),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]

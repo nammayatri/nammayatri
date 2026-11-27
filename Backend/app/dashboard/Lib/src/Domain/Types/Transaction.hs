@@ -65,6 +65,8 @@ data Endpoint uat
   | DashboardUserEmailChangeByAdmin
   | DashboardUserMobileChangeByAdmin
   | DashboardUserRoleAssign
+  | DashboardUserRoleGrant
+  | DashboardUserRoleRevoke
   | DashboardTwoFactorExemptChange
   | UnknownEndpoint
   deriving (Eq, Ord, Generic)
@@ -92,5 +94,7 @@ instance Show uat => Text.Show.Show (Endpoint uat) where
     DashboardUserEmailChangeByAdmin -> "DASHBOARD_USER/EMAIL_CHANGE_BY_ADMIN"
     DashboardUserMobileChangeByAdmin -> "DASHBOARD_USER/MOBILE_CHANGE_BY_ADMIN"
     DashboardUserRoleAssign -> "DASHBOARD_USER/ROLE_ASSIGN"
+    DashboardUserRoleGrant -> "DASHBOARD_USER/ROLE_GRANT"
+    DashboardUserRoleRevoke -> "DASHBOARD_USER/ROLE_REVOKE"
     DashboardTwoFactorExemptChange -> "DASHBOARD_USER/TWO_FACTOR_EXEMPT_CHANGE"
     UnknownEndpoint -> "UNKNOWN_ENDPOINT"

@@ -72,6 +72,7 @@ library
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.FleetBookingInformation
+      API.Internal.FleetScopeBackfill
       API.Internal.FleetVehiclesAssociation
       API.Internal.GeometryList
       API.Internal.GeometryUpdate
@@ -288,19 +289,24 @@ library
       Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
       Domain.Action.Dashboard.RideFlowDebug
+      Domain.Action.DashboardAuth.AppManagement.Driver
+      Domain.Action.DashboardAuth.AppManagement.Subscription
       Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction
       Domain.Action.DashboardAuth.Fleet.Driver
       Domain.Action.DashboardAuth.Fleet.LiveMap
       Domain.Action.DashboardAuth.Fleet.Onboarding
+      Domain.Action.DashboardAuth.Fleet.PayoutAccount
       Domain.Action.DashboardAuth.Fleet.RegistrationV2
       Domain.Action.DashboardAuth.IssueManagement.Issue
       Domain.Action.DashboardAuth.Management.Account
       Domain.Action.DashboardAuth.Management.Driver
       Domain.Action.DashboardAuth.Management.DriverRegistration
       Domain.Action.DashboardAuth.Management.FarePolicyV2
+      Domain.Action.DashboardAuth.Management.FinanceManagement
       Domain.Action.DashboardAuth.Management.Merchant
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
+      Domain.Action.DashboardAuth.Management.Ride
       Domain.Action.DashboardAuth.Operator.FleetManagement
       Domain.Action.DashboardAuth.Operator.Registration
       Domain.Action.DashboardAuth.RideBooking.Driver
@@ -324,6 +330,7 @@ library
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.FleetBookingInformation
+      Domain.Action.Internal.FleetScopeBackfill
       Domain.Action.Internal.FleetVehiclesAssociation
       Domain.Action.Internal.KnowYourDriver
       Domain.Action.Internal.NotificationWebhook
@@ -703,8 +710,10 @@ library
       SharedLogic.Finance.WalletAccount
       SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
+      SharedLogic.FleetContact
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
+      SharedLogic.FleetScope
       SharedLogic.FleetVehicleStats
       SharedLogic.GatewayDispatch
       SharedLogic.GeohashAreaUpsert

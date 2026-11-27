@@ -1,6 +1,11 @@
 module Domain.Action.Dashboard.Fleet.RegistrationV2
   ( postRegistrationV2LoginOtp,
     postRegistrationV2VerifyOtp,
+    fleetOwnerVerifyBoundPerson,
+    postRegistrationV2CreateFleet,
+    createFleetAsPerson,
+    postRegistrationV2AcceptFleetAssignment,
+    acceptFleetAssignmentAsPerson,
     postRegistrationV2Register,
     castFleetTypeToDomain,
     buildFleetOwnerAuthReq,
@@ -17,6 +22,10 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     sendFleetOnboardingSms,
     putRegistrationV2ProfileLanguage,
     getRegistrationV2ProfileLanguage,
+    getFleetContact,
+    updateFleetContact,
+    getRegistrationV2Contact,
+    postRegistrationV2Contact,
   )
 where
 
@@ -26,6 +35,7 @@ import qualified Domain.Action.Dashboard.Common.AddressDocumentType as AddrCast
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
+import qualified "lib-dashboard" Domain.Action.Dashboard.FleetAssignment as DFleetAssignment
 import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
@@ -37,9 +47,13 @@ import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.InitiatedBy as DIB
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Merchant as DMerchant
+import qualified "lib-dashboard" Domain.Types.Merchant as DDashMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
+import qualified "lib-dashboard" Domain.Types.Person as DDashPerson
+import qualified "lib-dashboard" Domain.Types.PersonRoleAssignment as DPRA
+import qualified "lib-dashboard" Domain.Types.Role as DDashRole
 import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -63,9 +77,11 @@ import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.FleetContact as FleetContact
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.PersonBankAccount as SPBA
+import "lib-dashboard" Storage.Beam.SchemaInstances ()
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -78,8 +94,13 @@ import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified "lib-dashboard" Storage.Queries.Merchant as QDashMerchant
 import qualified Storage.Queries.Person as QP
+import qualified "lib-dashboard" Storage.Queries.Person as QDashPerson
 import qualified Storage.Queries.PersonExtra as QPExtra
+import qualified "lib-dashboard" Storage.Queries.PersonRoleAssignment as QDashAssignment
+import qualified "lib-dashboard" Storage.Queries.Role as QDashRole
+import qualified "lib-dashboard" Tools.Auth.Dashboard as DashAuth
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 import Tools.Utils (emailBasedonEmailVerificationMandate)
@@ -98,9 +119,10 @@ postRegistrationV2VerifyOtp ::
   ShortId DMerchant.Merchant ->
   City.City ->
   Common.FleetOwnerVerifyReqV2 ->
-  Flow Kernel.Types.APISuccess.APISuccess
+  Flow Common.FleetOwnerVerifiedRes
 postRegistrationV2VerifyOtp merchantShortId opCity req = do
-  fleetOwnerVerify merchantShortId opCity req
+  mbBoundPersonId <- fleetOwnerVerifyBoundPerson merchantShortId opCity req
+  pure Common.FleetOwnerVerifiedRes {result = "Success", personId = mbBoundPersonId}
 
 postRegistrationV2Register ::
   ShortId DMerchant.Merchant ->
@@ -184,15 +206,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
       void $ SStatus.runRefreshOnboardingFlagsFleet (Just updPerson) (Just transporterConfig) fleetOwnerId
 
     mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-    whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
-      fleetAssocs <- QFOA.findAllFleetAssociations fleetOwnerId.getId
-      when (null fleetAssocs) $ do
-        fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId fleetOwnerId.getId referredOperatorId DomainRC.defaultAssociationEnd
-        QFOA.create fleetOperatorAssocData
-        let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-        when allowCacheDriverFlowStatus $ do
-          DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId fleetOwnerId.getId
-        DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
+    whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ linkOnboardedFleet transporterConfig person
     when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
       fleetReferral <- QDR.findById person.id
       when (isNothing fleetReferral) $ void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (fleetOwnerId, person.merchantId, person.merchantOperatingCityId)
@@ -218,8 +232,10 @@ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
     fork "sending sms - fleet onboarding" $ do
       fleetOwner <- B.runInReplica $ QP.findById fleetOwnerId >>= fromMaybeM (PersonNotFound fleetOwnerId.getId)
       smsCfg <- asks (.smsCfg)
-      mobileNumber <- mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      let countryCode = fromMaybe "+91" fleetOwner.mobileCountryCode
+      -- The fleet is told on its own contact, which a fleet made the new way has instead of an owner's phone.
+      contact <- FleetContact.contactOf fleetOwner
+      mobileNumber <- contact.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      let countryCode = fromMaybe "+91" contact.mobileCountryCode
           phoneNumber = countryCode <> mobileNumber
           sender = smsCfg.sender
       (mbSender, message, templateId, messageType) <-
@@ -330,6 +346,17 @@ castFleetTypeToRole = \case
   FOI.BUSINESS_FLEET -> DP.FLEET_BUSINESS
   FOI.RENTAL_FLEET -> DP.FLEET_OWNER
 
+-- | Link a newly onboarded fleet to the operator who brought it on, unless the fleet has had an operator before.
+linkOnboardedFleet :: DTC.TransporterConfig -> DP.Person -> Text -> Flow ()
+linkOnboardedFleet transporterConfig fleet operatorId = do
+  fleetAssocs <- QFOA.findAllFleetAssociations fleet.id.getId
+  when (null fleetAssocs) $ do
+    fleetOperatorAssocData <- SA.makeFleetOperatorAssociation fleet.merchantId fleet.merchantOperatingCityId fleet.id.getId operatorId DomainRC.defaultAssociationEnd
+    QFOA.create fleetOperatorAssocData
+    when transporterConfig.analyticsConfig.allowCacheDriverFlowStatus $
+      DriverMode.incrementOperatorStatusKeyForFleetOwner operatorId fleet.id.getId
+    DOR.incrementOnboardedCount DOR.FleetReferral (Id operatorId) transporterConfig
+
 castFleetTypeToDomain :: FOI.FleetType -> Common.FleetType
 castFleetTypeToDomain = \case
   FOI.RENTAL_FLEET -> Common.RENTAL_FLEET
@@ -431,7 +458,11 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
             approved = Nothing,
             disabledReasonFlag = Nothing,
             initiatedBy = Nothing,
-            latestScheduledCommissionAggregationPeriodEnd = Nothing
+            latestScheduledCommissionAggregationPeriodEnd = Nothing,
+            -- No contact of its own yet: until one is set the fleet is reached on the owner's phone and email.
+            contactMobileCountryCode = Nothing,
+            contactMobileNumber = Nothing,
+            contactEmail = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
@@ -488,6 +519,8 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonI
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   void $ Redis.setExp key otp expTime
+  -- The OTP is only good for the person it was sent to.
+  void $ Redis.setExp (DRegistration.otpPersonIdKey key) personId.getId expTime
   -- A freshly issued OTP gets a fresh attempt budget.
   Redis.del $ DRegistration.otpAttemptsKey key
   pure $ Common.FleetOwnerLoginResV2 {personId = cast @DP.Person @Common.Person personId}
@@ -546,14 +579,15 @@ mkFleetOwnerVerifyReq merchantShortId opCity Common.FleetOwnerVerifyReqV2 {..} =
       ..
     }
 
-fleetOwnerVerify ::
+-- | The V2 verify, which also says which person the OTP was issued to.
+fleetOwnerVerifyBoundPerson ::
   ShortId DMerchant.Merchant ->
   City.City ->
   Common.FleetOwnerVerifyReqV2 ->
-  Flow APISuccess
-fleetOwnerVerify merchantShortId opCity req = do
+  Flow (Maybe Text)
+fleetOwnerVerifyBoundPerson merchantShortId opCity req = do
   let h = DRegistration.FleetOwnerVerifyHandle {mkMobileNumberOtpKey = makeMobileNumberOtpKey}
-  DRegistration.fleetOwnerVerifyHandler h $ mkFleetOwnerVerifyReq merchantShortId opCity req
+  DRegistration.fleetOwnerVerifyBound h $ mkFleetOwnerVerifyReq merchantShortId opCity req
 
 makeMobileNumberOtpKey :: Text -> Text
 makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:V2:mobileNumber-" <> mobileNumber
@@ -659,3 +693,168 @@ getRegistrationV2ProfileLanguage ::
 getRegistrationV2ProfileLanguage _merchantShortId _opCity requestorId = do
   mbPerson <- QP.findById (Id requestorId)
   pure $ Common.FleetOwnerLanguageRes {language = mbPerson >>= (.language)}
+
+-- | The proxied route: provider-dashboard has authenticated the requestor and passes their id.
+postRegistrationV2CreateFleet :: ShortId DMerchant.Merchant -> City.City -> Text -> Common.FleetCreateReqV2 -> Flow Common.FleetCreateResV2
+postRegistrationV2CreateFleet merchantShortId opCity requestorId req = do
+  (creator, dashboardMerchant) <- runInDashboardDb $ do
+    creator <- QDashPerson.findById (Id requestorId) >>= fromMaybeM (InvalidRequest "Unknown requestor")
+    dashboardMerchant <- QDashMerchant.findByShortId (ShortId merchantShortId.getShortId) >>= fromMaybeM (InvalidRequest "Unknown merchant")
+    pure (creator, dashboardMerchant)
+  createFleetAsPerson merchantShortId opCity creator dashboardMerchant req
+
+-- | Create a fleet for a signed-in person. The fleet is a scope, not a login: it gets a driver-app
+-- record with no phone of its own, and the person who creates it is made its admin by an assignment on
+-- that fleet. Everyone else who works on it is invited later; an admin or operator onboarding a fleet for
+-- someone invites them and hands it over. The fleet's contact is the one on the
+-- form, and any part left blank is the creator's, so a fleet always has one.
+--
+-- Both the direct-dashboard route and the proxied one end here.
+createFleetAsPerson ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  DDashPerson.Person ->
+  DDashMerchant.Merchant ->
+  Common.FleetCreateReqV2 ->
+  Flow Common.FleetCreateResV2
+createFleetAsPerson merchantShortId opCity creator dashboardMerchant req = do
+  when (null (words req.fleetName)) $ throwError (InvalidRequest "A fleet needs a name")
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  deploymentVersion <- asks (.version)
+  let enabled = not $ fromMaybe False dashboardMerchant.requireAdminApprovalForFleetOnboarding
+      fleetType = castFleetType <$> req.fleetType
+      -- A placeholder person with no phone and no e-mail (NO_LOGIN): the fleet cannot be logged into, and nothing
+      -- looks it up by phone. The row exists only because the existing code treats a fleet as a person: tables
+      -- reference it by foreign key (payment_order, driver_fee, vehicle_registration_certificate, ...), and role
+      -- checks and name, phone and e-mail reads go through it. Its contact lives on fleet_owner_information.
+      -- Version 2 of the fleet scope plan (fleets without a person row) removes it.
+      authReq =
+        Registration.AuthReq
+          { mobileNumber = Nothing,
+            mobileCountryCode = Nothing,
+            merchantId = merchant.id.getId,
+            merchantOperatingCity = Just opCity,
+            email = Nothing,
+            employeeId = Nothing,
+            password = Nothing,
+            name = Just req.fleetName,
+            identifierType = Just DP.NO_LOGIN,
+            registrationLat = Nothing,
+            registrationLon = Nothing,
+            otpChannel = Nothing
+          }
+  fleet <- createFleetOwnerDetails authReq merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion (Just enabled) Nothing fleetType
+  decCreator <- decrypt creator
+  let contactMobileNumber = req.contactMobileNumber <|> Just decCreator.mobileNumber
+      contactMobileCountryCode = if isJust req.contactMobileNumber then req.contactMobileCountryCode else Just decCreator.mobileCountryCode
+      contactEmail = req.contactEmail <|> decCreator.email
+  encMobileNumber <- mapM encrypt contactMobileNumber
+  encEmail <- mapM encrypt contactEmail
+  QFOI.updateFleetNameAndContact (Just req.fleetName) contactMobileCountryCode encMobileNumber encEmail fleet.id
+  -- An operator reaches a fleet through the operator link, never through a role on it. So a fleet an operator
+  -- onboards is linked to them, as one they register is. The role below is what lets them invite its owner.
+  when (creator.dashboardAccessType == Just DDashRole.DASHBOARD_OPERATOR) $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner fleet.id) $
+      linkOnboardedFleet transporterConfig fleet creator.id.getId
+  -- The creator is the fleet's first admin.
+  let fleetRoleType = case fleetType of
+        Just RENTAL_FLEET -> DDashRole.RENTAL_FLEET_OWNER
+        _ -> DDashRole.FLEET_OWNER
+  assignmentId <- generateGUID
+  now <- getCurrentTime
+  runInDashboardDb $ do
+    role <- QDashRole.findByDashboardAccessType fleetRoleType >>= fromMaybeM (InvalidRequest "No role for this kind of fleet")
+    QDashAssignment.create
+      DPRA.PersonRoleAssignment
+        { id = assignmentId,
+          personId = creator.id,
+          roleId = role.id,
+          scopeType = DPRA.FLEET,
+          scopeId = fleet.id.getId,
+          merchantId = dashboardMerchant.id,
+          status = DPRA.ACTIVE,
+          grantedBy = Just creator.id,
+          manuallyGranted = False,
+          handoverFrom = Nothing,
+          createdAt = now,
+          updatedAt = now
+        }
+  pure Common.FleetCreateResV2 {fleetId = fleet.id.getId}
+
+-- | The proxied route: provider-dashboard has authenticated the requestor and passes their id.
+postRegistrationV2AcceptFleetAssignment :: ShortId DMerchant.Merchant -> City.City -> Text -> Common.AcceptFleetAssignmentReqV2 -> Flow APISuccess
+postRegistrationV2AcceptFleetAssignment merchantShortId opCity requestorId req = do
+  (accepter, dashboardMerchant) <- runInDashboardDb $ do
+    accepter <- QDashPerson.findById (Id requestorId) >>= fromMaybeM (InvalidRequest "Unknown requestor")
+    dashboardMerchant <- QDashMerchant.findByShortId (ShortId merchantShortId.getShortId) >>= fromMaybeM (InvalidRequest "Unknown merchant")
+    pure (accepter, dashboardMerchant)
+  acceptFleetAssignmentAsPerson opCity accepter dashboardMerchant req
+
+-- | Accept an offer to work on a fleet. When the offer is a handover and the person asks for it, the
+-- fleet's contact becomes theirs, so payments, payouts and alerts follow the new admin and not the one
+-- who left. The assignment itself lives in the dashboard database and is changed there.
+--
+-- Both the direct-dashboard route and the proxied one end here.
+acceptFleetAssignmentAsPerson ::
+  City.City ->
+  DDashPerson.Person ->
+  DDashMerchant.Merchant ->
+  Common.AcceptFleetAssignmentReqV2 ->
+  Flow APISuccess
+acceptFleetAssignmentAsPerson opCity accepter dashboardMerchant req = do
+  let assignmentId = Id req.assignmentId
+  assignment <- runInDashboardDb $ QDashAssignment.findById assignmentId >>= fromMaybeM (InvalidRequest "No such offer")
+  void . runInDashboardDb $ DFleetAssignment.acceptFleetAssignment (DashAuth.TokenInfo accepter.id dashboardMerchant.id opCity) assignmentId
+  when (isJust assignment.handoverFrom && req.useMyContact == Just True) $ do
+    decAccepter <- decrypt accepter
+    encMobileNumber <- encrypt decAccepter.mobileNumber
+    encEmail <- mapM encrypt decAccepter.email
+    QFOI.updateContact (Just decAccepter.mobileCountryCode) (Just encMobileNumber) encEmail (Id assignment.scopeId)
+  pure Success
+
+-- | The contact a fleet is reached on: its own when one is set, else the owner's phone and e-mail.
+getFleetContact :: Text -> Flow Common.FleetContactRes
+getFleetContact fleetOwnerId = do
+  fleet <- QFOI.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (InvalidRequest "No such fleet")
+  person <- QP.findById fleet.fleetOwnerPersonId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
+  contact <- FleetContact.contactOf person
+  pure
+    Common.FleetContactRes
+      { contactMobileCountryCode = contact.mobileCountryCode,
+        contactMobileNumber = contact.mobileNumber,
+        contactEmail = contact.email,
+        contactSetOnFleet = isJust fleet.contactMobileNumber || isJust fleet.contactEmail,
+        fleetName = fleet.fleetName
+      }
+
+-- | Set the fleet's own contact, which payments, payouts and alerts read. What the request leaves out is cleared,
+-- and a fleet with no contact of its own falls back to the owner's.
+updateFleetContact :: Text -> Common.UpdateFleetContactReq -> Flow APISuccess
+updateFleetContact fleetOwnerId req = do
+  fleet <- QFOI.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (InvalidRequest "No such fleet")
+  when (isJust req.contactMobileNumber && isNothing req.contactMobileCountryCode) $
+    throwError $ InvalidRequest "contactMobileCountryCode is required with contactMobileNumber"
+  -- A fleet is reached on a phone: the one given, or else its owner's own. A fleet made the new way has an owner with
+  -- none, so for it a request without a phone would leave nobody to call.
+  owner <- QP.findById fleet.fleetOwnerPersonId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
+  when (isNothing req.contactMobileNumber && isNothing owner.mobileNumber) $
+    throwError $ InvalidRequest "A fleet needs a phone number to be reached on"
+  encMobileNumber <- mapM encrypt req.contactMobileNumber
+  encEmail <- mapM encrypt req.contactEmail
+  QFOI.updateContact req.contactMobileCountryCode encMobileNumber encEmail fleet.fleetOwnerPersonId
+  pure Success
+
+-- | The contact a fleet is reached on, for the proxied (provider-dashboard) route: the caller's own fleet, or the
+-- one an admin names.
+getRegistrationV2Contact :: ShortId DMerchant.Merchant -> City.City -> Maybe Text -> Text -> Flow Common.FleetContactRes
+getRegistrationV2Contact _merchantShortId _opCity mbFleetOwnerId requestorId = do
+  fleetOwner <- checkRequestorAccessToFleet mbFleetOwnerId requestorId
+  getFleetContact fleetOwner.id.getId
+
+-- | Set the contact a fleet is reached on, for the proxied route; same access rule as the read.
+postRegistrationV2Contact :: ShortId DMerchant.Merchant -> City.City -> Text -> Common.UpdateFleetContactReq -> Flow APISuccess
+postRegistrationV2Contact _merchantShortId _opCity requestorId req = do
+  fleetOwner <- checkRequestorAccessToFleet req.fleetOwnerId requestorId
+  updateFleetContact fleetOwner.id.getId req

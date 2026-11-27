@@ -354,6 +354,9 @@ type GetDriverInfo =
       :> QueryParam
            "walletId"
            Kernel.Prelude.Text
+      :> QueryParam
+           "cities"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            DriverInfoRes

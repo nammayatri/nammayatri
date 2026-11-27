@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Roles where
 
 import Dashboard.Common
+import qualified Domain.Action.Dashboard.AssignmentSync as AssignSync
 import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions as B
@@ -111,7 +112,9 @@ disableRole _ roleId req = do
   unless (roleToDisable.dashboardAccessType == replacementRole.dashboardAccessType) $
     throwError RoleAccessTypeMismatch
   persons <- QP.findAllByRole roleId
-  forM_ persons $ \person -> QP.updatePersonRole person.id replacementRole
+  forM_ persons $ \person -> do
+    QP.updatePersonRole person.id replacementRole
+    AssignSync.syncPersonAssignments person.id
   QRole.markRoleAsDisabled roleId
   pure Success
 

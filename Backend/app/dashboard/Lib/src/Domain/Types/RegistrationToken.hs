@@ -27,6 +27,10 @@ data RegistrationToken = RegistrationToken
     createdAt :: UTCTime,
     merchantId :: Id DMerchant.Merchant,
     operatingCity :: City.City,
-    enabled :: Bool
+    enabled :: Bool,
+    -- | A phone OTP opened this session.
+    isOtpSession :: Bool,
+    -- | The fleets this session works on. Nothing means all the person holds.
+    selectedFleetIds :: Maybe [Text]
   }
   deriving (Generic, Show)

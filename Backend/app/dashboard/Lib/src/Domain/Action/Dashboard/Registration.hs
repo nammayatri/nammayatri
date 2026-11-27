@@ -15,8 +15,9 @@
 module Domain.Action.Dashboard.Registration where
 
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy, sort, sortOn)
+import Data.List (groupBy, nub, sort, sortOn)
 import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.AssignmentSync as AssignSync
 import qualified Domain.Action.Dashboard.Person as DP
 import qualified Domain.Types.DashboardActionType as DashAuth
 import qualified Domain.Types.Entity as Entity
@@ -24,6 +25,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import Domain.Types.Person as DP
 import qualified Domain.Types.Person.Type as PT
+import qualified Domain.Types.PersonRoleAssignment as DPRA
 import qualified Domain.Types.RegistrationToken as DR
 import Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
@@ -51,12 +53,14 @@ import qualified Storage.Queries.EntityAccess as QEntityAccess
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonRoleAssignment as QPRA
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
+import qualified Tools.Auth.FleetScope as FleetScope
 import Tools.Auth.Merchant
 import Tools.Error
 import qualified Tools.InternalClient as InternalClient
@@ -278,13 +282,42 @@ switchMerchant ::
     EncFlow m r
   ) =>
   TokenInfo ->
+  RegToken ->
   SwitchMerchantReq ->
   m LoginRes
-switchMerchant authToken req = do
+switchMerchant authToken sessionToken req = do
   merchant <- QMerchant.findByShortId req.merchantId >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  generateLoginResWithoutOtp person merchant merchant.defaultOperatingCity
+  switchSession sessionToken person merchant merchant.defaultOperatingCity
+
+-- | The fleets to work on in this session. Empty means all of the person's fleets.
+newtype SwitchScopeReq = SwitchScopeReq
+  { fleetIds :: [Text]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+-- | The fleets the session now works on, empty meaning all of them.
+newtype SwitchScopeRes = SwitchScopeRes
+  { fleetIds :: [Text]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+-- | Choose which of the caller's fleets this session works on. Only fleets the caller holds an
+-- active assignment on can be chosen. The choice lives with the session's token, so another session
+-- of the same person is not affected.
+switchScope ::
+  (BeamFlow m r, Redis.HedisFlow m r) =>
+  TokenInfo ->
+  RegToken ->
+  SwitchScopeReq ->
+  m SwitchScopeRes
+switchScope tokenInfo token req = do
+  assignments <- QPRA.findAllActiveByPersonIdAndMerchantId tokenInfo.personId tokenInfo.merchantId
+  let held = [a.scopeId | a <- assignments, a.scopeType == DPRA.FLEET]
+  unless (all (`elem` held) req.fleetIds) $ throwError AccessDenied
+  FleetScope.selectFleets token req.fleetIds
+  pure SwitchScopeRes {fleetIds = req.fleetIds}
 
 switchMerchantAndCity ::
   ( BeamFlow m r,
@@ -296,13 +329,14 @@ switchMerchantAndCity ::
     EncFlow m r
   ) =>
   TokenInfo ->
+  RegToken ->
   SwitchMerchantAndCityReq ->
   m LoginRes
-switchMerchantAndCity authToken req = do
+switchMerchantAndCity authToken sessionToken req = do
   merchant <- QMerchant.findByShortId req.merchantId >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
   person <- QP.findById authToken.personId >>= fromMaybeM (PersonDoesNotExist authToken.personId.getId)
-  generateLoginResWithoutOtp person merchant req.city
+  switchSession sessionToken person merchant req.city
 
 generateLoginRes ::
   ( BeamFlow m r,
@@ -326,7 +360,7 @@ generateLoginRes person merchant otp city = do
   (isToken, msg) <- check2FA person twoFaRequired otp
   token <-
     if isToken
-      then generateToken person.id merchant city
+      then generateUsableToken person merchant city
       else pure ""
   (mbRoleName, personEntities) <- lookupRoleAndEntities person merchant.id
   pure
@@ -359,7 +393,7 @@ generateLoginResWithoutOtp ::
   m LoginRes
 generateLoginResWithoutOtp person merchant city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
-  token <- generateToken person.id merchant city
+  token <- generateUsableToken person merchant city
   twoFaRequired <- is2FARequired person
   deadline <- asks (.twoFaEnforcementDeadline)
   (mbRoleName, personEntities) <- lookupRoleAndEntities person merchant.id
@@ -395,9 +429,10 @@ lookupRoleAndEntities person merchantId = do
         <> T.intercalate ", " (missingEntityIds <&> (.getId))
   pure (mbRole <&> (.name), filter (not . (.deleted)) personEntities)
 
--- 2FA is required for a person when the deployment enforces it (is2faMandatory)
--- AND neither the person (person.twoFaExempt) nor their role (role.twoFaExempt)
--- is exempt. Both are flipped through POST /user/twoFaExempt, SUPER_ADMIN only.
+-- 2FA is required for a person when the deployment enforces it (is2faMandatory),
+-- the person is not exempt (person.twoFaExempt), and their own role, or the role of an
+-- active assignment on a merchant in ENFORCE, is not exempt (role.twoFaExempt). Both
+-- flags are flipped through POST /user/twoFaExempt, SUPER_ADMIN only.
 is2FARequired ::
   ( BeamFlow m r,
     HasFlowEnv m r '["is2faMandatory" ::: Bool]
@@ -408,9 +443,7 @@ is2FARequired person = do
   mandatory <- asks (.is2faMandatory)
   if not mandatory || person.twoFaExempt
     then pure False
-    else do
-      mbRole <- QRole.findById person.roleId
-      pure $ maybe True (not . (.twoFaExempt)) mbRole
+    else not <$> FleetScope.everyRoleSkipsTwoFa person
 
 check2FA ::
   ( EncFlow m r,
@@ -549,6 +582,7 @@ initiate2FASetup Initiate2FASetupReq {..} = do
   (person, tokenMerchantId, tokenCity) <- case token of
     Just authToken -> do
       (personId, tokMerchId, tokCity) <- Auth.verifyPerson authToken
+      FleetScope.assertOtpSessionStillAllowedByIds authToken personId tokMerchId
       p <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       pure (p, Just tokMerchId, Just tokCity)
     Nothing -> do
@@ -681,6 +715,130 @@ generateToken personId merchant city = do
         Just token -> pure token.token
         Nothing -> generateNewToken personId merchant.id city
 
+-- | 'generateToken' for the fleet OTP verify flows. The OTP only proves control of a phone number,
+-- and the person is found by that number, so without this check anyone holding an admin's phone
+-- could take over the admin session ('generateToken' hands back an existing session token).
+generateFleetOtpToken ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
+  ) =>
+  DP.Person ->
+  DMerchant.Merchant ->
+  City.City ->
+  m Text
+generateFleetOtpToken person merchant city = do
+  -- An OTP is a single factor, so it is refused as soon as any role the person holds needs two:
+  -- the weakest login would otherwise open the strongest role they hold. This applies even where
+  -- is2faMandatory is off or the person is exempt, neither of which makes an OTP enough on its own.
+  allowed <- FleetScope.mayOpenByOtp merchant person
+  unless allowed $
+    throwError $ InvalidRequest "This account must log in with email, password and 2FA"
+  token <- generateToken person.id merchant city
+  FleetScope.markOtpSession token
+  pure token
+
+-- | The one place a fleet OTP login becomes a session. The OTP has already been verified by the
+-- application server. The session goes to the person the OTP was issued to when that is known, and
+-- otherwise to the person the phone number matches in the dashboard; it is refused for a role an OTP
+-- must not open ('generateFleetOtpToken'), and clears the pending-verification flag when the merchant
+-- verifies fleets on login.
+mintFleetOtpSession ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
+  ) =>
+  DMerchant.Merchant ->
+  City.City ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  m Text
+mintFleetOtpSession merchant city mobileNumber mobileCountryCode mbBoundPersonId = do
+  unless (city `elem` merchant.supportedOperatingCities) $
+    throwError (InvalidRequest "Invalid request city is not supported by Merchant")
+  mbBoundPerson <- maybe (pure Nothing) (QP.findById . Id) mbBoundPersonId
+  person <-
+    maybe
+      (QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonDoesNotExist mobileNumber))
+      pure
+      mbBoundPerson
+  token <- generateFleetOtpToken person merchant city
+  when
+    ( person.verified /= Just True
+        && merchant.verifyFleetWhileLogin == Just True
+        && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)
+    )
+    $ QP.updatePersonVerifiedStatus person.id True
+  pure token
+
+-- | The session a newly registered fleet owner starts with: the same way a fleet OTP login becomes a session
+-- ('generateFleetOtpToken': the role check, and the session marked as one an OTP opened), for the person that was
+-- just created. Registration decides the person's verified flag itself, so unlike 'mintFleetOtpSession' this
+-- leaves it alone.
+mintFleetRegisterSession ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
+  ) =>
+  DMerchant.Merchant ->
+  City.City ->
+  Id DP.Person ->
+  m Text
+mintFleetRegisterSession merchant city personId = do
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  generateFleetOtpToken person merchant city
+
+-- | 'generateToken' for a login that did not come from an OTP. 'generateToken' hands back the session
+-- already open for this merchant and city. If an OTP opened it and its holder may no longer keep it, every
+-- request on it is refused, so it is replaced with a new one.
+generateUsableToken ::
+  ( BeamFlow m r,
+    MonadFlow m,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  DP.Person ->
+  DMerchant.Merchant ->
+  City.City ->
+  m Text
+generateUsableToken person merchant city = do
+  token <- generateToken person.id merchant city
+  session <- FleetScope.sessionState token
+  refused <- FleetScope.isRefusedOtpSession session merchant person
+  if refused then generateNewToken person.id merchant.id city else pure token
+
+-- | The session a switch of merchant or city hands out. A switch asks for no new proof of who the caller
+-- is, so a switch from a session an OTP opened gives another one: the merchant switched to has to allow an
+-- OTP session for this person, and the session handed out is marked.
+switchSession ::
+  ( BeamFlow m r,
+    MonadFlow m,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["is2faMandatory" ::: Bool],
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
+    EncFlow m r
+  ) =>
+  RegToken ->
+  DP.Person ->
+  DMerchant.Merchant ->
+  City.City ->
+  m LoginRes
+switchSession sessionToken person merchant city = do
+  fromOtp <- (.openedByOtp) <$> FleetScope.sessionState sessionToken
+  when fromOtp $ do
+    allowed <- FleetScope.mayOpenByOtp merchant person
+    unless allowed $
+      throwError $ InvalidRequest "This account must log in with email, password and 2FA"
+  res <- generateLoginResWithoutOtp person merchant city
+  when fromOtp $ FleetScope.markOtpSession res.authToken
+  pure res
+
 generateNewToken ::
   ( BeamFlow m r,
     Redis.HedisFlow m r,
@@ -744,7 +902,9 @@ buildRegistrationToken personId merchantId city = do
         merchantId = merchantId,
         createdAt = now,
         operatingCity = city,
-        enabled = True
+        enabled = True,
+        isOtpSession = False,
+        selectedFleetIds = Nothing
       }
 
 buildAndCreateAuthTransaction ::
@@ -872,6 +1032,7 @@ createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
   let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True))
   QP.create fleetOwner{verified = mbBoolVerified}
   QAccess.create merchantAccess
+  AssignSync.syncPersonAssignments fleetOwner.id
 
 -- | Create the dashboard-side operator.
 
@@ -1033,17 +1194,20 @@ setTwoFaExempt tokenInfo req = do
       person <- QP.findByEmail email >>= fromMaybeM (PersonDoesNotExist email)
       QP.updatePersonTwoFaExempt person.id req.exempt
       recordExemptChange TwoFaExemptAudit {personId = Just person.id, roleId = Nothing, exempt = req.exempt}
-      pure [person]
+      pure [person.id]
     (Nothing, Just roleName) -> do
       role <- QRole.findByName roleName >>= fromMaybeM (RoleNotFound roleName)
       QRole.updateRoleTwoFaExempt role.id req.exempt
       recordExemptChange TwoFaExemptAudit {personId = Nothing, roleId = Just role.id, exempt = req.exempt}
-      QP.findAllByRole role.id
+      ownHolders <- QP.findAllByRole role.id
+      -- Someone holding the role through an assignment that counts needs two-factor now as well.
+      assignmentHolders <- FleetScope.enforcedAssignmentHoldersOf role.id
+      pure $ nub (map (.id) ownHolders <> assignmentHolders)
     _ -> throwError $ InvalidRequest "Exactly one of email or roleName must be provided"
   unless req.exempt $
-    forM_ affected $ \person -> do
-      Auth.cleanCachedTokens person.id
-      QR.deleteAllByPersonId person.id
+    forM_ affected $ \affectedPersonId -> do
+      Auth.cleanCachedTokens affectedPersonId
+      QR.deleteAllByPersonId affectedPersonId
   pure Success
   where
     recordExemptChange audit = do

@@ -236,3 +236,13 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN latest_sch
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN enable_cash_ride boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN contact_mobile_number_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN contact_mobile_number_encrypted character varying (255) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN contact_mobile_country_code character varying (8) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN contact_email_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN contact_email_encrypted character varying (255) ;

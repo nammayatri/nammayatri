@@ -22,7 +22,6 @@ import Domain.Action.UI.Call
 import qualified Domain.Types.Alert as DA
 import qualified Domain.Types.CallStatus as SCS
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -30,6 +29,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.FleetContact as SFleetContact
 import Storage.Beam.DashboardAlert ()
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
@@ -56,8 +56,9 @@ sendFleetAlert Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   unless (driverRequest.status == DA.AWAITING_APPROVAL) $ do
     callStatusId <- generateGUID
     fleetOwner <- B.runInReplica $ QPerson.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
-    mobileNumber <- mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-    let countryCode = fromMaybe "+91" fleetOwner.mobileCountryCode
+    contact <- SFleetContact.contactOf fleetOwner
+    mobileNumber <- contact.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+    let countryCode = fromMaybe "+91" contact.mobileCountryCode
         callReq =
           InitiateCallReq
             { fromPhoneNum = countryCode <> mobileNumber,

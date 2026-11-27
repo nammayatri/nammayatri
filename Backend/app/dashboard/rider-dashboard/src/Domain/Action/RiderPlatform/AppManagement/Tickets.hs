@@ -37,6 +37,7 @@ import qualified API.Client.RiderPlatform.AppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Tickets
 import qualified "rider-app" API.Types.UI.TicketService
 import qualified Data.Time.Calendar
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import qualified "lib-dashboard" Domain.Action.Dashboard.Person as DP
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DR
 import Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding (getDashboardAccessType)
@@ -220,6 +221,7 @@ registerTicketDashboard req mbPersonId merchant = do
   merchantAccess <- DP.buildMerchantAccess ticketUser.id merchant.id merchant.shortId city'
   QP.create ticketUser
   QAccess.create merchantAccess
+  AssignSync.syncPersonAssignments ticketUser.id
   return $ API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp {id = Nothing, success = True, message = Just "Ticket dashboard user registered successfully"}
 
 postTicketsTicketdashboardLoginAuth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)

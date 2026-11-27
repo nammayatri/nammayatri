@@ -25,7 +25,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("fleet" :> (PostRegistrationV2LoginOtp :<|> PostRegistrationV2VerifyOtp :<|> PostRegistrationV2Register :<|> PostRegistrationV2RegisterBankAccountLink :<|> GetRegistrationV2RegisterBankAccountStatus :<|> PutRegistrationV2ProfileLanguage :<|> GetRegistrationV2ProfileLanguage))
+type API = ("fleet" :> (PostRegistrationV2LoginOtp :<|> PostRegistrationV2VerifyOtp :<|> PostRegistrationV2Register :<|> PostRegistrationV2CreateFleet :<|> GetRegistrationV2Contact :<|> PostRegistrationV2Contact :<|> PostRegistrationV2AcceptFleetAssignment :<|> PostRegistrationV2RegisterBankAccountLink :<|> GetRegistrationV2RegisterBankAccountStatus :<|> PutRegistrationV2ProfileLanguage :<|> GetRegistrationV2ProfileLanguage))
 
 type PostRegistrationV2LoginOtp = API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2LoginOtp
 
@@ -36,6 +36,34 @@ type PostRegistrationV2Register =
       'DRIVER_OFFER_BPP_MANAGEMENT
       "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER"
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2Register
+  )
+
+type PostRegistrationV2CreateFleet =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_CREATE_FLEET"
+      :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2CreateFleet
+  )
+
+type GetRegistrationV2Contact =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_FLEET/REGISTRATION_V2/GET_REGISTRATION_V2_CONTACT"
+      :> API.Types.ProviderPlatform.Fleet.RegistrationV2.GetRegistrationV2Contact
+  )
+
+type PostRegistrationV2Contact =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_CONTACT"
+      :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2Contact
+  )
+
+type PostRegistrationV2AcceptFleetAssignment =
+  ( DashboardUserAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_ACCEPT_FLEET_ASSIGNMENT"
+      :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2AcceptFleetAssignment
   )
 
 type PostRegistrationV2RegisterBankAccountLink =
@@ -67,7 +95,7 @@ type GetRegistrationV2ProfileLanguage =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postRegistrationV2LoginOtp merchantId city :<|> postRegistrationV2VerifyOtp merchantId city :<|> postRegistrationV2Register merchantId city :<|> postRegistrationV2RegisterBankAccountLink merchantId city :<|> getRegistrationV2RegisterBankAccountStatus merchantId city :<|> putRegistrationV2ProfileLanguage merchantId city :<|> getRegistrationV2ProfileLanguage merchantId city
+handler merchantId city = postRegistrationV2LoginOtp merchantId city :<|> postRegistrationV2VerifyOtp merchantId city :<|> postRegistrationV2Register merchantId city :<|> postRegistrationV2CreateFleet merchantId city :<|> getRegistrationV2Contact merchantId city :<|> postRegistrationV2Contact merchantId city :<|> postRegistrationV2AcceptFleetAssignment merchantId city :<|> postRegistrationV2RegisterBankAccountLink merchantId city :<|> getRegistrationV2RegisterBankAccountStatus merchantId city :<|> putRegistrationV2ProfileLanguage merchantId city :<|> getRegistrationV2ProfileLanguage merchantId city
 
 postRegistrationV2LoginOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLoginReqV2 -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRegistrationV2LoginOtp a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.postRegistrationV2LoginOtp a3 a2 a1
@@ -81,6 +109,33 @@ postRegistrationV2Register a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.postRegistrationV2Register a4 a3 a2 a1
+    )
+
+postRegistrationV2CreateFleet :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetCreateReqV2 -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetCreateResV2)
+postRegistrationV2CreateFleet a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_CREATE_FLEET" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.postRegistrationV2CreateFleet a4 a3 a2 a1
+    )
+
+getRegistrationV2Contact :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetContactRes)
+getRegistrationV2Contact a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.getRegistrationV2Contact a4 a3 a2 a1
+
+postRegistrationV2Contact :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.RegistrationV2.UpdateFleetContactReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRegistrationV2Contact a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_CONTACT" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.postRegistrationV2Contact a4 a3 a2 a1
+    )
+
+postRegistrationV2AcceptFleetAssignment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.RegistrationV2.AcceptFleetAssignmentReqV2 -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRegistrationV2AcceptFleetAssignment a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_ACCEPT_FLEET_ASSIGNMENT" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.postRegistrationV2AcceptFleetAssignment a4 a3 a2 a1
     )
 
 postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountLinkResp)

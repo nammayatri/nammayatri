@@ -675,14 +675,11 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
-        SA.endDriverAssociations merchantOpCityId transporterConfig person
-        when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
-
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
-      _ <-
+      -- The code is checked before anything changes: only a caller who has the code this driver was sent may end
+      -- the driver's current links.
+      verified <-
         DReg.verify
           regId
           DReg.AuthVerifyReq
@@ -691,8 +688,13 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
               whatsappNotificationEnroll = Nothing
             }
           Nothing
+      unless (verified.person.id == person.id) $ throwError (InvalidRequest "This code was not sent to this mobile number")
 
-      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToOperator (SGuard.TargetDriver person.id) $ do
+        SA.endDriverAssociations merchantOpCityId transporterConfig person
+        when (merchant.overwriteAssociation == Just True) $
+          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
+        verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
       DOR.makeDriverReferredByOperator merchantOpCityId person.id operator.id
 

@@ -37,6 +37,7 @@ module Tools.Auth.DashboardUser
 where
 
 import "lib-dashboard" Dashboard.Common ()
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
@@ -60,6 +61,7 @@ import qualified "lib-dashboard" Storage.Queries.Person as QDashboardPerson
 import qualified "lib-dashboard" Storage.Queries.Role as QDashboardRole
 import "lib-dashboard" Tools.Auth.ApiAuth (dashboardApiHitsCountKey)
 import qualified "lib-dashboard" Tools.Auth.Common as DashboardCommon
+import qualified "lib-dashboard" Tools.Auth.FleetScope as FleetScope
 import qualified "lib-dashboard" Tools.Auth.Verify as Verify
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
 
@@ -79,7 +81,10 @@ data DashboardUser = DashboardUser
   { personId :: Id DDashboardPerson.Person,
     merchant :: DDashboardMerchant.Merchant,
     city :: City.City,
-    person :: DDashboardPerson.Person
+    person :: DDashboardPerson.Person,
+    -- | The cities and fleets the caller's active assignments hold. Empty unless the merchant has
+    -- scoped assignments switched on.
+    scope :: FleetScope.AuthorizedScope
   }
 
 -- | @verifyDashboardUser serverName endpointId token@ resolves the session,
@@ -111,7 +116,8 @@ verifyDashboardUser serverName endpointId pathSegments token = do
       { personId = verified.personId,
         merchant = verified.merchant,
         city = verified.city,
-        person = verified.person
+        person = verified.person,
+        scope = verified.scope
       }
 
 -- | Record a direct-dashboard action in the shared audit trail, with the request
@@ -203,6 +209,7 @@ assignDashboardRoleByAccessType personId accessType = runInDashboardDb $ do
     QDashboardRole.findByDashboardAccessType accessType
       >>= fromMaybeM (InvalidRequest $ "No role for access type " <> show accessType)
   QDashboardPerson.updatePersonRole person.id role
+  AssignSync.syncPersonAssignments person.id
 
 -- | Which of @cities@ the caller may act on for the merchant with this short
 -- id, as @merchant_access@ records it. 'Nothing' when no such merchant exists.

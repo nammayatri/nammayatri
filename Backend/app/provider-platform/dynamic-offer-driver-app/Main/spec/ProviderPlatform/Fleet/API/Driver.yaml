@@ -45,6 +45,7 @@ module: Driver
 apis:
   - GET:
       endpoint: /fleet/access/list
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         fleetMemberId: Text
@@ -53,6 +54,7 @@ apis:
 
   - GET:
       endpoint: /fleetOwner/list
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         blocked: Bool
@@ -73,6 +75,7 @@ apis:
 
   - POST:
       endpoint: /fleet/access/{fleetOwnerId}/select
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         fleetOwnerId: Text
@@ -86,6 +89,7 @@ apis:
 
   - POST:
       endpoint: /fleet/v2/access/select
+      appServerHandler: custom
       auth: ApiAuthV2
       mandatoryQuery:
         enable: Bool
@@ -99,6 +103,7 @@ apis:
 
   - POST:
       endpoint: /fleet/v2/access/multiOwnerId/select
+      appServerHandler: custom
       auditRequestBody: false
       auth: ApiAuthV2
       mandatoryQuery:
@@ -132,6 +137,7 @@ apis:
 
   - POST:
       endpoint: addRidePayoutAccountNumber
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: AddRidePayoutAccountNumberReq
@@ -171,6 +177,7 @@ apis:
 
   - GET: # GetAllDriverRequestsAPI
       endpoint: /fleet/getDriverRequests
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - mbFrom: UTCTime
@@ -260,6 +267,7 @@ apis:
         - verified: Bool
         - approvalStatus: ApprovalStatusFilter
         - isRcActive: Bool
+        - cities: Text # comma-separated city names; narrows the list to those cities (default: all in ENFORCE, the URL city otherwise)
       response:
         type: ListVehicleResT
       # helperApi:
@@ -296,6 +304,7 @@ apis:
         - blocked: Bool
         - onboardingAs: OnboardingAs
         - fleetDriverAssociationConsent: Bool
+        - cities: Text # comma-separated city names; narrows the list to those cities (default: all the caller holds in ENFORCE, no city filter otherwise)
       response:
         type: FleetListDriverResT
       # helperApi:
@@ -316,6 +325,7 @@ apis:
 
   - GET: # GetAllBadgeForFleetAPI
       endpoint: /fleet/getAllBadge
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - mblimit: Int
@@ -390,6 +400,7 @@ apis:
 
   - POST: # FleetCashRideUpdateAPI
       endpoint: /fleet/cashRideUpdate
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - fleetOwnerId: Text
@@ -519,6 +530,7 @@ apis:
 
   - GET: # FleetTicketBookingsAPI
       endpoint: /fleet/bookings
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - limit: Int
@@ -551,6 +563,7 @@ apis:
 
   - GET: # FleetTicketAssignmentsAPI
       endpoint: /fleet/assignments
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - limit: Int
@@ -678,6 +691,7 @@ apis:
         - driverDocsVerificationStatus: DocsVerificationStatus
         - driverId: Text
         - pickLatestDoc: Bool
+        - cities: Text # comma-separated city names; narrows the list to those cities (default: all in ENFORCE, the URL city otherwise)
       response:
         type: DrivertoVehicleAssociationResT
       # helperApi:
@@ -723,6 +737,7 @@ apis:
         - approved: Bool
         - vehicleDocsVerificationStatus: DocsVerificationStatus
         - pickLatestDoc: Bool
+        - cities: Text # comma-separated city names; narrows the list to those cities (default: all in ENFORCE, the URL city otherwise)
       response:
         type: DrivertoVehicleAssociationResT
       # helperApi:
@@ -826,6 +841,7 @@ apis:
 
   - GET: # GetFleetOwnerInfoAPI
       endpoint: /{driverId}/fleetOwnerInfo
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver
@@ -965,6 +981,7 @@ apis:
 
   - GET:
       endpoint: /fleet/trip/transactions/{driverId}
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver
@@ -1084,6 +1101,7 @@ apis:
 
   - GET:
       endpoint: /dashboard/fleet/trip/{tripTransactionId}/{fleetOwnerId}/waypoints
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         tripTransactionId: Id TripTransaction
@@ -1168,6 +1186,7 @@ apis:
               type: TrackDriverLocationsRes
   - GET:
       endpoint: /dashboard/internal/helper/getFleetOwnerId
+      appServerHandler: custom
       auth: NoAuth
       mandatoryQuery:
         - memberPersonId: Text
@@ -1177,6 +1196,7 @@ apis:
         type: Text
   - GET:
       endpoint: /dashboard/internal/helper/getFleetOwnerIds
+      appServerHandler: custom
       auth: NoAuth
       mandatoryQuery:
         - memberPersonId: Text
@@ -1305,6 +1325,7 @@ apis:
               type: FleetAnalyticsRes
   - POST:
       endpoint: /fleet/dashboard/analytics/cache
+      appServerHandler: custom
       auditRequestBody: false
       auth: ApiAuthV2
       request:
@@ -1400,6 +1421,7 @@ apis:
 
   - POST: # ChangeDriverFleetOwnerAPI
       endpoint: /fleet/driver/{driverId}/changeFleetOwner
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver
@@ -1422,6 +1444,7 @@ apis:
 
   - GET: # GetDriverDetailsAPI
       endpoint: /fleet/driver/details
+      appServerHandler: custom
       auth: ApiAuthV2
       mandatoryQuery:
         - driverId: Id Driver
@@ -1439,6 +1462,7 @@ apis:
               type: DriverDetailsRes
   - POST:
       endpoint: /fleet/trip/transactions/v2
+      appServerHandler: custom
       auth: ApiAuthV2
       mandatoryQuery:
         - limit: Int
@@ -1515,11 +1539,13 @@ apis:
         entityOperationType: EntityOperationType
       query:
         - fleetOwnerId: Text
+        - cities: Text # comma-separated city names; counts those cities (default: all in ENFORCE, the URL city otherwise)
       response:
         type: StatusSummaryResponse
 
   - GET: # ListScheduledBookingsForFleetOwnerAPI
       endpoint: /fleet/scheduledBooking/list
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - limit: Int
@@ -1548,6 +1574,7 @@ apis:
 
   - POST: # AssignScheduledBookingToDriverAPI
       endpoint: /fleet/scheduledBooking/assign
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: AssignScheduledBookingReq
@@ -1566,6 +1593,7 @@ apis:
 
   - POST: # CancelScheduledBookingAPI
       endpoint: /fleet/scheduledBooking/cancel
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: CancelScheduledBookingReq
@@ -1584,6 +1612,7 @@ apis:
 
   - POST: # ReassignScheduledBookingAPI
       endpoint: /fleet/scheduledBooking/reassign
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: ReassignScheduledBookingReq
@@ -1603,6 +1632,7 @@ apis:
 
   - GET:
       endpoint: /vehicle/info
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - vehicleNo: Text
@@ -1773,6 +1803,7 @@ types:
   FleetOwnerListAPIEntity:
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - fleetName: Maybe Text # the fleet's own name, from the fleet record
     - fleetGroup: Maybe FleetGroup
     - groups: "[FleetGroup]"
     - order: Maybe Int
@@ -1868,6 +1899,8 @@ types:
     - driverName: Maybe Text
     - vehicleBalance: Maybe Double
     - vehicleBalanceAdjustmentPercentage: Maybe Centesimal
+    - cityId: Maybe Text
+    - cityName: Maybe Text
   FleetBadgeRes:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntity]
@@ -1907,6 +1940,8 @@ types:
     - isActive: Maybe Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - cityId: Maybe Text
+    - cityName: Maybe Text
   FleetTotalEarningResponse:
     - totalRides: Int
     - totalEarning: Int
@@ -2079,6 +2114,8 @@ types:
     - driverDocsVerificationStatus: Maybe DocsVerificationStatus
     - vehicleDocsVerificationStatus: Maybe DocsVerificationStatus
     - verificationDocsStatus: Maybe VerificationDocsStatus
+    - cityId: Maybe Text
+    - cityName: Maybe Text
     - upcomingRouteCode: Maybe Text
     - fleetOwnerId: Text
     - fleetOwnerName: Text
@@ -2142,6 +2179,9 @@ types:
     - fleetName: Maybe Text
     - fleetType: Maybe FleetType
     - businessLicenseNumber: Maybe Text
+    - contactMobileNo: Maybe Text # who the fleet itself can be reached on; empty leaves it as it is
+    - contactMobileCountryCode: Maybe Text
+    - contactEmail: Maybe Text
     - derive: "'HideSecrets"
   CreateDriversReq:
     - file: FilePath
@@ -2161,6 +2201,9 @@ types:
     - mobileNo: Maybe Text
     - mobileCountryCode: Maybe Text
     - email: Maybe Text
+    - contactMobileNo: Maybe Text # the fleet's own contact, as set on the fleet; mobileNo and email above are the owner's
+    - contactMobileCountryCode: Maybe Text
+    - contactEmail: Maybe Text
     - blocked: Bool
     - enabled: Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag

@@ -366,6 +366,7 @@ apis:
         type: APISuccess
   - POST:
       endpoint: /clearFee
+      appServerHandler: custom
       auth: ApiAuthV2
       mandatoryQuery:
         driverId: Id Driver
@@ -436,6 +437,7 @@ apis:
 
   - POST:
       endpoint: /{driverId}/refundByPayout
+      appServerHandler: custom
       params:
         driverId: Id Driver
       request:
@@ -474,6 +476,7 @@ apis:
 
   - GET: # DriverStatsAPI
       endpoint: /stats
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - entityId: Id Driver
@@ -487,6 +490,7 @@ apis:
 
   - GET: # DriverEarningsArrayAPI
       endpoint: /earnings
+      appServerHandler: custom
       auth: ApiAuthV2
       mandatoryQuery:
         - from: Day
@@ -505,6 +509,7 @@ apis:
   # dashboard calls through Client.callManagementAPI, carrying requestorId.
   - GET: # DriverFyEarningsAPI
       endpoint: /fyEarnings
+      appServerHandler: custom
       auth: ApiAuthV2
       mandatoryQuery:
         - financialYear: Int
@@ -521,6 +526,7 @@ apis:
 
   - POST: # UpdateTdsRateAPI
       endpoint: /tdsRate/update
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: UpdateTdsRateReq
@@ -570,6 +576,7 @@ apis:
 
   - GET: # GetDriverIdentityInfoAPI
       endpoint: /{driverId}/identityInfo
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver
@@ -587,6 +594,7 @@ apis:
 
   - POST: # UpdateDriverIdentityInfoAPI
       endpoint: /{driverId}/identityInfo/update
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Driver
@@ -608,6 +616,7 @@ apis:
 
   - POST: # postDriverAssociationChange
       endpoint: /{subjectId}/association/change
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         subjectId: Text

@@ -550,6 +550,7 @@ updateDestinationArrival rideId now = do
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
     rideCreatedAt :: UTCTime,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     vehicleServiceTierName :: Maybe Text,
@@ -650,7 +651,7 @@ findAllRideItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Bool ->
   Merchant ->
-  DMOC.MerchantOperatingCity ->
+  [DMOC.MerchantOperatingCity] ->
   Int ->
   Int ->
   Maybe Common.BookingStatus ->
@@ -670,7 +671,7 @@ findAllRideItems ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   m [RideItem]
-findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems isDashboardRequest merchant opCities limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
@@ -765,7 +766,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 B.filter_'
                   ( \(booking, ride, rideDetails, riderDetails) ->
                       booking.providerId B.==?. B.val_ (getId merchant.id)
-                        B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                        B.&&?. (B.sqlBool_ (booking.merchantOperatingCityId `B.in_` map (B.val_ . Just . getId . (.id)) opCities) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city `elem` map (.city) opCities))))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\dr -> booking.isDashboardRequest B.==?. B.val_ (Just dr)) isDashboardRequest
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
@@ -900,6 +901,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
        in RideItem
             { rideShortId = ride.shortId,
               rideCreatedAt = ride.createdAt,
+              merchantOperatingCityId = booking.merchantOperatingCityId,
               rideDetails = rideDetails,
               riderDetails = riderDetails,
               vehicleServiceTierName = ride.vehicleServiceTierName,
@@ -939,8 +941,10 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
 
 findAllRideItemsV2 ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  -- | Holds the cached lookups to these cities.
+  Maybe [Id DMOC.MerchantOperatingCity] ->
   Merchant ->
-  DMOC.MerchantOperatingCity ->
+  [DMOC.MerchantOperatingCity] ->
   Int ->
   Int ->
   Maybe DRide.RideStatus ->
@@ -958,7 +962,7 @@ findAllRideItemsV2 ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   m [RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverIdParam mbDriverPhoneNo now mbFrom mbTo mbFromAmount mbToAmount mbFleetOwnerId = do
+findAllRideItemsV2 mbCacheCityIds merchant opCities limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverIdParam mbDriverPhoneNo now mbFrom mbTo mbFromAmount mbToAmount mbFleetOwnerId = do
   mbDriver <- case mbDriverPhoneDBHash of
     Just _driverPhoneDBHash ->
       findOneWithKV
@@ -993,6 +997,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                         <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
                         <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
                         <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq (Just foid)]) mbFleetOwnerId
+                        <> cacheCityCond
                     )
                 ]
                 (Se.Desc BeamR.createdAt)
@@ -1018,6 +1023,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                         ( [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)]
                             <> [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
                             <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq (Just foid)]) mbFleetOwnerId
+                            <> cacheCityCond
                         )
                     ]
                     Nothing
@@ -1038,7 +1044,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                     B.filter_'
                       ( \(ride, rideDetails, booking, riderDetails) ->
                           booking.providerId B.==?. B.val_ (getId merchant.id)
-                            B.&&?. (ride.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ ride.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                            B.&&?. (B.sqlBool_ (ride.merchantOperatingCityId `B.in_` map (B.val_ . Just . getId . (.id)) opCities) B.||?. (B.sqlBool_ (B.isNothing_ ride.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city `elem` map (.city) opCities))))
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
@@ -1078,6 +1084,8 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
 
       pure $ zippedRides <> uniqueResults
   where
+    cacheCityCond = maybe [] (\cityIds -> [Se.Is BeamR.merchantOperatingCityId $ Se.In (Just . getId <$> cityIds)]) mbCacheCityIds
+
     mkRideItemV2 :: (ShortId Ride, Id Ride, UTCTime, Text, Maybe (EncryptedHashed Text), DRide.RideStatus) -> RideItemV2
     mkRideItemV2 (rideShortId, rideId, rideCreatedAt, driverName, driverPhoneNo, rideStatus) = do
       RideItemV2 {rideShortId, rideId, rideCreatedAt, driverName, driverPhoneNo, rideStatus}

@@ -228,7 +228,7 @@ findAllRideItems ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Maybe Bool ->
   Merchant ->
-  MerchantOperatingCity ->
+  [MerchantOperatingCity] ->
   Int ->
   Int ->
   Maybe Common.BookingStatus ->
@@ -248,7 +248,7 @@ findAllRideItems ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems _isDashboardRequest merchant opCities limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -260,7 +260,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     bppTransaction.rideCreatedAt >=. from
                     CH.&&. bppTransaction.rideCreatedAt <=. to
                     CH.&&. bppTransaction.bookingProviderId CH.==. merchant.id
-                    CH.&&. (bppTransaction.bookingMerchantOperatingCityId CH.==. opCity.id)
+                    CH.&&. (bppTransaction.bookingMerchantOperatingCityId `CH.in_` map (.id) opCities)
                     CH.&&. CH.whenJust_ mbRideShortId (\rsid -> bppTransaction.rideShortId CH.==. rsid)
                     CH.&&. CH.whenJust_ mbRideId (\rid -> bppTransaction.rideDetailsId CH.==. rid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
@@ -302,6 +302,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
       QRE.RideItem
         { rideShortId = bppTxn.rideShortId,
           rideCreatedAt = bppTxn.rideCreatedAt,
+          merchantOperatingCityId = bppTxn.bookingMerchantOperatingCityId,
           rideDetails =
             RideDetails.RideDetails
               { RideDetails.createdAt = bppTxn.rideDetailsCreatedAt,
@@ -319,7 +320,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                 RideDetails.vehicleNumber = bppTxn.rideDetailsVehicleNumber,
                 RideDetails.vehicleVariant = bppTxn.rideDetailsVehicleVariant,
                 RideDetails.merchantId = Just merchant.id,
-                RideDetails.merchantOperatingCityId = Just opCity.id
+                RideDetails.merchantOperatingCityId = Just bppTxn.bookingMerchantOperatingCityId
               },
           riderDetails =
             RiderDetails.RiderDetails
@@ -343,7 +344,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                 RiderDetails.referredAt = bppTxn.riderDetailsReferredAt,
                 RiderDetails.referredByDriver = bppTxn.riderDetailsReferredByDriver,
                 RiderDetails.updatedAt = bppTxn.riderDetailsUpdatedAt,
-                RiderDetails.merchantOperatingCityId = Just opCity.id,
+                RiderDetails.merchantOperatingCityId = Just bppTxn.bookingMerchantOperatingCityId,
                 RiderDetails.cancellationDuesPaid = bppTxn.riderDetailsCancellationDuesPaid,
                 RiderDetails.noOfTimesCanellationDuesPaid = bppTxn.riderDetailsNoOfTimesCanellationDuesPaid,
                 RiderDetails.noOfTimesWaiveOffUsed = bppTxn.riderDetailsNoOfTimesWaiveOffUsed,
@@ -391,7 +392,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
 findAllRideItemsV2 ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Merchant ->
-  MerchantOperatingCity ->
+  [MerchantOperatingCity] ->
   Int ->
   Int ->
   Maybe Ride.RideStatus ->
@@ -407,7 +408,7 @@ findAllRideItemsV2 ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   m [QRE.RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount mbFleetOwnerId = do
+findAllRideItemsV2 merchant opCities limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount mbFleetOwnerId = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -419,7 +420,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                     bppTransaction.rideCreatedAt >=. from
                     CH.&&. bppTransaction.rideCreatedAt <=. to
                     CH.&&. bppTransaction.bookingProviderId CH.==. merchant.id
-                    CH.&&. (bppTransaction.bookingMerchantOperatingCityId CH.==. opCity.id)
+                    CH.&&. (bppTransaction.bookingMerchantOperatingCityId `CH.in_` map (.id) opCities)
                     CH.&&. CH.whenJust_ mbRideShortId (\rsid -> bppTransaction.rideShortId CH.==. rsid)
                     CH.&&. CH.whenJust_ mbRideId (\rid -> bppTransaction.rideDetailsId CH.==. rid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)

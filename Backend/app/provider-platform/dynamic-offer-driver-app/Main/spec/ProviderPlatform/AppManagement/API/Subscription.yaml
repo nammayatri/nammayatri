@@ -37,6 +37,7 @@ default:
 apis:
   - GET: # ListPlan
       endpoint: /{driverId}/list
+      appServerHandler: custom
       name: GetSubscriptionListPlan
       auth: ApiAuthV2
       params:
@@ -45,6 +46,7 @@ apis:
         type: PlanListAPIRes
   - PUT: # SelectPlan
       endpoint: /{driverId}/{planId}/select
+      appServerHandler: custom
       name: PutSubscriptionSelectPlan
       auth: ApiAuthV2
       params:
@@ -54,6 +56,7 @@ apis:
         type: APISuccess
   - PUT: # SuspendPlan
       endpoint: /{driverId}/suspend
+      appServerHandler: custom
       name: PutSubscriptionSuspendPlan
       auth: ApiAuthV2
       params:
@@ -62,6 +65,7 @@ apis:
         type: APISuccess
   - POST: # SubscribePlan
       endpoint: /{driverId}/{planId}/subscribe
+      appServerHandler: custom
       name: PostSubscriptionSubscribePlan
       auth: ApiAuthV2
       params:
@@ -71,6 +75,7 @@ apis:
         type: PlanSubscribeRes
   - GET: # CurrentPlan
       endpoint: /{driverId}
+      appServerHandler: custom
       name: GetSubscriptionCurrentPlan
       auth: ApiAuthV2
       params:
@@ -79,6 +84,7 @@ apis:
         type: CurrentPlanRes
   - GET: # ListPlanV2
       endpoint: /{driverId}/{serviceName}/v2/list
+      appServerHandler: custom
       name: GetSubscriptionListPlanV2
       auth: ApiAuthV2
       params:
@@ -88,6 +94,7 @@ apis:
         type: PlanListAPIRes
   - PUT: # SelectPlanV2
       endpoint: /{driverId}/{planId}/{serviceName}/v2/select
+      appServerHandler: custom
       name: PutSubscriptionSelectPlanV2
       auth: ApiAuthV2
       params:
@@ -98,6 +105,7 @@ apis:
         type: APISuccess
   - PUT: # SuspendPlanV2
       endpoint: /{driverId}/{serviceName}/v2/suspend
+      appServerHandler: custom
       name: PutSubscriptionSuspendPlanV2
       auth: ApiAuthV2
       params:
@@ -107,6 +115,7 @@ apis:
         type: APISuccess
   - POST: # SubscribePlanV2
       endpoint: /{driverId}/{planId}/{serviceName}/v2/subscribe
+      appServerHandler: custom
       name: PostSubscriptionSubscribePlanV2
       auth: ApiAuthV2
       params:
@@ -119,6 +128,7 @@ apis:
         type: PlanSubscribeRes
   - GET: # CurrentPlanV2
       endpoint: /{driverId}/{serviceName}
+      appServerHandler: custom
       name: GetSubscriptionCurrentPlanV2
       auth: ApiAuthV2
       params:
@@ -128,6 +138,7 @@ apis:
         type: CurrentPlanRes
   - GET: # OrderStatus = (PaymentStatus)
       endpoint: /{driverId}/{orderId}/status
+      appServerHandler: custom
       name: GetSubscriptionOrderStatus
       auth: ApiAuthV2
       params:
@@ -137,6 +148,7 @@ apis:
         type: PaymentStatusResp
   - GET: # DriverPaymentHistoryAPIV2
       endpoint: /{driverId}/payments/history/v2/{serviceName}
+      appServerHandler: custom
       name: GetSubscriptionDriverPaymentHistoryAPIV2
       auth: ApiAuthV2
       params:
@@ -150,6 +162,7 @@ apis:
         type: HistoryEntityV2
   - GET: # DriverPaymentHistoryEntityDetailsAPIV2
       endpoint: /{driverId}/payments/history/v2/{serviceName}/{invoiceId}/entity
+      appServerHandler: custom
       name: GetSubscriptionDriverPaymentHistoryEntityDetailsV2
       auth: ApiAuthV2
       params:
@@ -160,6 +173,7 @@ apis:
         type: HistoryEntryDetailsEntityV2
   - GET: # CancellationChargeHistory
       endpoint: /{driverId}/cancellationChargeHistory/{serviceName}
+      appServerHandler: custom
       name: GetSubscriptionCancellationChargeHistory
       auth: ApiAuthV2
       params:
@@ -174,6 +188,7 @@ apis:
         capability: city-operations.subscription.read
   - POST: # CollectManualPayments
       endpoint: /{driverId}/{serviceName}/collect
+      appServerHandler: custom
       name: PostSubscriptionCollectManualPayments
       auth: ApiAuthV2
       params:
@@ -193,6 +208,7 @@ apis:
         type: APISuccess
   - GET: # ListSubscriptionPurchases
       endpoint: /{driverId}/subscriptionPurchases
+      appServerHandler: custom
       name: GetSubscriptionPurchaseList
       auth: ApiAuthV2
       params:

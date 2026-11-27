@@ -41,6 +41,7 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Fleet as SFleet
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
@@ -52,7 +53,8 @@ getSubscriptionListPlan ::
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Plan.PlanListAPIRes
-getSubscriptionListPlan merchantShortId opCity driverId _mbRequestorId = do
+getSubscriptionListPlan merchantShortId opCity driverId mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.planList (Kernel.Types.Id.cast driverId, m.id, mOCityId) Domain.Types.Plan.YATRI_SUBSCRIPTION (Just 0) (Just 50) Nothing
@@ -64,7 +66,8 @@ putSubscriptionSelectPlan ::
   Kernel.Types.Id.Id Domain.Types.Plan.Plan ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-putSubscriptionSelectPlan merchantShortId opCity driverId planId _mbRequestorId = do
+putSubscriptionSelectPlan merchantShortId opCity driverId planId mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.planSwitch Domain.Types.Plan.YATRI_SUBSCRIPTION planId (Kernel.Types.Id.cast driverId, m.id, mOCityId)
@@ -75,7 +78,8 @@ putSubscriptionSuspendPlan ::
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-putSubscriptionSuspendPlan merchantShortId opCity driverId _mbRequestorId = do
+putSubscriptionSuspendPlan merchantShortId opCity driverId mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.planSuspend Domain.Types.Plan.YATRI_SUBSCRIPTION True (Kernel.Types.Id.cast driverId, m.id, mOCityId)
@@ -87,7 +91,8 @@ postSubscriptionSubscribePlan ::
   Kernel.Types.Id.Id Domain.Types.Plan.Plan ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Plan.PlanSubscribeRes
-postSubscriptionSubscribePlan merchantShortId opCity driverId planId _mbRequestorId = do
+postSubscriptionSubscribePlan merchantShortId opCity driverId planId mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.planSubscribe
@@ -103,7 +108,8 @@ getSubscriptionCurrentPlan ::
   Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Plan.CurrentPlanRes
-getSubscriptionCurrentPlan merchantShortId opCity driverId _mbRequestorId = do
+getSubscriptionCurrentPlan merchantShortId opCity driverId mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.currentPlan Domain.Types.Plan.YATRI_SUBSCRIPTION (Kernel.Types.Id.cast driverId, m.id, mOCityId)
@@ -115,7 +121,8 @@ getSubscriptionListPlanV2 ::
   Domain.Types.Plan.ServiceNames ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Plan.PlanListAPIRes
-getSubscriptionListPlanV2 merchantShortId opCity driverId serviceName _mbRequestorId = do
+getSubscriptionListPlanV2 merchantShortId opCity driverId serviceName mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.planList (Kernel.Types.Id.cast driverId, m.id, mOCityId) serviceName (Just 0) (Just 50) Nothing
@@ -128,7 +135,8 @@ putSubscriptionSelectPlanV2 ::
   Domain.Types.Plan.ServiceNames ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-putSubscriptionSelectPlanV2 merchantShortId opCity driverId planId serviceName _mbRequestorId = do
+putSubscriptionSelectPlanV2 merchantShortId opCity driverId planId serviceName mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.planSwitch serviceName planId (Kernel.Types.Id.cast driverId, m.id, mOCityId)
@@ -140,7 +148,8 @@ putSubscriptionSuspendPlanV2 ::
   Domain.Types.Plan.ServiceNames ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-putSubscriptionSuspendPlanV2 merchantShortId opCity driverId serviceName _mbRequestorId = do
+putSubscriptionSuspendPlanV2 merchantShortId opCity driverId serviceName mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.planSuspend serviceName True (Kernel.Types.Id.cast driverId, m.id, mOCityId)
@@ -154,7 +163,8 @@ postSubscriptionSubscribePlanV2 ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   API.Types.Dashboard.AppManagement.Subscription.PlanSubscribeReq ->
   Environment.Flow Domain.Action.UI.Plan.PlanSubscribeRes
-postSubscriptionSubscribePlanV2 merchantShortId opCity driverId planId serviceName _mbRequestorId req = do
+postSubscriptionSubscribePlanV2 merchantShortId opCity driverId planId serviceName mbRequestorId req = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   subscriptionRelatedData <- case req.vehicleNumber of
@@ -174,7 +184,8 @@ getSubscriptionCurrentPlanV2 ::
   Domain.Types.Plan.ServiceNames ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Plan.CurrentPlanRes
-getSubscriptionCurrentPlanV2 merchantShortId opCity driverId serviceName _mbRequestorId = do
+getSubscriptionCurrentPlanV2 merchantShortId opCity driverId serviceName mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.currentPlan serviceName (Kernel.Types.Id.cast driverId, m.id, mOCityId)
@@ -186,7 +197,8 @@ getSubscriptionOrderStatus ::
   Kernel.Types.Id.Id Domain.Types.Invoice.Invoice ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Payment.PaymentStatusResp
-getSubscriptionOrderStatus merchantShortId opCity driverId invoiceId _mbRequestorId = do
+getSubscriptionOrderStatus merchantShortId opCity driverId invoiceId mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   moCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Payment.getStatus (Kernel.Types.Id.cast driverId, m.id, moCityId) (Kernel.Types.Id.cast invoiceId)
@@ -201,7 +213,8 @@ getSubscriptionDriverPaymentHistoryAPIV2 ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Driver.HistoryEntityV2
-getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset _mbRequestorId = do
+getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -217,7 +230,8 @@ getSubscriptionDriverPaymentHistoryEntityDetailsV2 ::
   Kernel.Types.Id.Id Domain.Types.Invoice.Invoice ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2
-getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity driverId serviceName invoiceId _mbRequestorId = do
+getSubscriptionDriverPaymentHistoryEntityDetailsV2 merchantShortId opCity driverId serviceName invoiceId mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -234,7 +248,8 @@ getSubscriptionCancellationChargeHistory ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Plan.CancellationChargeHistoryRes
-getSubscriptionCancellationChargeHistory merchantShortId opCity driverId serviceName limit offset _mbRequestorId = do
+getSubscriptionCancellationChargeHistory merchantShortId opCity driverId serviceName limit offset mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -250,7 +265,8 @@ postSubscriptionCollectManualPayments ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   API.Types.Dashboard.AppManagement.Subscription.CollectManualPaymentsReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postSubscriptionCollectManualPayments merchantShortId opCity driverId serviceName _mbRequestorId req = do
+postSubscriptionCollectManualPayments merchantShortId opCity driverId serviceName mbRequestorId req = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   let dataClearManualSelectedDues = Domain.Action.UI.Driver.ClearManualSelectedDues {driverFeeIds = fromMaybe [] req.paymentIds}
@@ -278,7 +294,8 @@ getSubscriptionPurchaseList ::
   Kernel.Prelude.Maybe DSP.SubscriptionPurchaseStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Action.UI.Plan.SubscriptionPurchaseListRes
-getSubscriptionPurchaseList merchantShortId opCity driverId limit offset status _mbRequestorId = do
+getSubscriptionPurchaseList merchantShortId opCity driverId limit offset status mbRequestorId = do
+  SFleet.assertRequestorMaySeeSubject mbRequestorId (Kernel.Types.Id.getId driverId)
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   Domain.Action.UI.Plan.subscriptionPurchaseList (Kernel.Types.Id.cast driverId, m.id, mOCityId) limit offset status

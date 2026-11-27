@@ -82,11 +82,13 @@ exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI' $ do
         affectedPhonesChanged = Just (getAffectedPhoneNumberSids req) /= (getAffectedPhoneNumberSids <$> mbLastReq)
         needToCallApp = if req.statusType /= Common.OK then lastStatusWasOk || affectedPhonesChanged else lastStatusWasNotOk
     when needToCallApp $
-      fork ("exotelHeartbeat:" <> show serverName) $
+      fork ("exotelHeartbeat:" <> show serverName) $ do
+        -- The call itself runs outside the dashboard scope: on this server it updates the application's own
+        -- tables. Only its outcome is recorded in the dashboard database.
+        outcome <- try @_ @SomeException (callExotelHeartbeat serverName)
         runInDashboardDb $
           QAudit.withAuditTransactionStoring (auditEntry serverName) $
-            void $
-              callExotelHeartbeat serverName
+            either throwM (const $ pure ()) outcome
     pure needToCallApp
 
   when (or needToCallApps) $

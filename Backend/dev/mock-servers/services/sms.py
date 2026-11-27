@@ -63,6 +63,11 @@ def handle(handler, path, body):
     with _LOCK:
         _MESSAGES[recipient].append(payload)
 
+    # Pinbix sends with a GET and reads a flat reply whose `status` has to be "success".
+    if path.lower().endswith("/smsapi/send"):
+        mobile = qp.get("mobile", [""])[0]
+        return handler._json({"status": "success", "statusCode": "200", "mobile": mobile, "msgId": f"mock-{mobile}"})
+
     return handler._json({
         "data": {"message": [{"id": f"mock-{recipient}-{len(_MESSAGES[recipient])}", "status": "SUCCESS"}]},
     })

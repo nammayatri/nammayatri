@@ -54,6 +54,7 @@ import qualified "rider-app" API.Types.RiderPlatform.Management.Merchant as Comm
 import Dashboard.Common.Merchant
 import qualified Data.Text as T
 import "rider-app" Domain.Types.AccessMatrix
+import qualified "lib-dashboard" Domain.Types.FleetScopeMode as DFSM
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -302,7 +303,9 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
           trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
-          adminEmailDomains = baseMerchant.adminEmailDomains
+          adminEmailDomains = baseMerchant.adminEmailDomains,
+          -- A new merchant starts with assignments switched off, whatever its base merchant has.
+          fleetScopeMode = DFSM.OFF
         }
 
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)

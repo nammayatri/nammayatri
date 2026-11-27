@@ -10,6 +10,7 @@ import qualified API.Client.ProviderPlatform.Management
 import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Person.Type as DP
@@ -40,6 +41,7 @@ import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Auth
+import qualified "lib-dashboard" Tools.Auth.FleetScope as FleetScope
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
   ( PersonError (PersonDoesNotExist),
@@ -114,18 +116,30 @@ postAccountVerifyAccount ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
   runRequestValidation validateVerifyAccountReq req
+  -- Check the caller's merchant and city, and that the account is theirs, before anything is written.
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let personId = Kernel.Types.Id.cast req.fleetOwnerId
+  -- A fleet created as a scope has no dashboard person; only a fleet that was someone's login does.
+  mbPerson <- findById personId
+  -- Older accounts have no merchant; the driver-app side checks the fleet's own merchant.
+  whenJust mbPerson $ \person ->
+    whenJust person.merchantId $ \personMerchantId ->
+      unless (personMerchantId == apiTokenInfo.merchant.id) $ throwError (PersonDoesNotExist personId.getId)
   case req.status of
     Common.Rejected -> do
-      Auth.cleanCachedTokens personId
-      QR.deleteAllByPersonId personId
-      softDeletePerson personId req.reason
-      updatePersonRejectedBy personId apiTokenInfo.personId
+      whenJust mbPerson $ \_ -> do
+        Auth.cleanCachedTokens personId
+        QR.deleteAllByPersonId personId
+        softDeletePerson personId req.reason
+      -- Rejecting a fleet also closes the access others hold on it through role assignments.
+      AssignSync.revokeAllOnFleet apiTokenInfo.merchant.id personId
+      whenJust mbPerson $ \_ -> updatePersonRejectedBy personId apiTokenInfo.personId
     Common.Approved -> do
-      person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
-      updatePersonApprovedBy personId apiTokenInfo.personId
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+      whenJust mbPerson $ \person -> do
+        unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
+        updatePersonApprovedBy personId apiTokenInfo.personId
+      -- Bring back the owner's own access to the fleet, which a rejection closed.
+      AssignSync.syncPersonAssignments personId
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.ProviderPlatform.Management.callManagementAPI
@@ -157,5 +171,8 @@ putAccountUpdateRole merchantShortId opCity apiTokenInfo personId' roleId' = do
   when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
     throwError RoleConversionNotAllowed
   _ <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  rolesBefore <- FleetScope.rolesHeldBy person
   QP.updatePersonRole personId newRole
+  FleetScope.endSessionsOnTwoFaRoleGrant personId rolesBefore newRole
+  AssignSync.syncPersonAssignments personId
   pure Kernel.Types.APISuccess.Success

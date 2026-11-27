@@ -580,8 +580,8 @@ findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId (Id merchantId') limitV
 
 -------------------------------------------- Queries for multi fleet owner ids --------------------------------------------
 
-findAllValidRcByFleetOwnerIdsAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> [Text] -> Maybe Text -> Maybe DbHash -> Maybe Bool -> Maybe (Maybe Bool) -> m [VehicleRegistrationCertificate]
-findAllValidRcByFleetOwnerIdsAndSearchString limit offset (Id merchantId') merchantOperatingCityId fleetOwnerIds mbSearchString mbSearchStringHash mbVerified mbApprovalFilter = do
+findAllValidRcByFleetOwnerIdsAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> [Text] -> [Text] -> Maybe Text -> Maybe DbHash -> Maybe Bool -> Maybe (Maybe Bool) -> m [VehicleRegistrationCertificate]
+findAllValidRcByFleetOwnerIdsAndSearchString limit offset (Id merchantId') merchantOperatingCityIds fleetOwnerIds mbSearchString mbSearchStringHash mbVerified mbApprovalFilter = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -593,7 +593,7 @@ findAllValidRcByFleetOwnerIdsAndSearchString limit offset (Id merchantId') merch
                 B.filter_'
                   ( \rc ->
                       rc.merchantId B.==?. B.val_ (Just merchantId')
-                        B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                        B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                         B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                         B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> rc.verified B.==?. B.val_ (Just verified)) mbVerified
@@ -648,8 +648,8 @@ findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF limit of
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
-findAllRCByStatusForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe DDVS.DocsVerificationStatus -> m [VehicleRegistrationCertificate]
-findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchantId') merchantOperatingCityId statusAwareVehicleNo mbApproved mbFrom mbTo mbDocsVerificationStatus = do
+findAllRCByStatusForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> [Text] -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe DDVS.DocsVerificationStatus -> m [VehicleRegistrationCertificate]
+findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchantId') merchantOperatingCityIds statusAwareVehicleNo mbApproved mbFrom mbTo mbDocsVerificationStatus = do
   dbConf <- getReplicaBeamConfig
   statusAwareVehicleNoHash <- mapM getDbHash statusAwareVehicleNo
   res <-
@@ -662,7 +662,7 @@ findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchant
                 B.filter_'
                   ( \rc ->
                       rc.merchantId B.==?. B.val_ (Just merchantId')
-                        B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                        B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                         B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\s -> rc.verificationStatus B.==?. B.val_ s) status
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
@@ -681,8 +681,8 @@ findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchant
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
-findAllVehicleByStatusForFleetByLimitOffsetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Id Merchant.Merchant -> Text -> Integer -> Integer -> Maybe Text -> Maybe Text -> DTT.TripStatus -> Maybe Bool -> m [VehicleRegistrationCertificate]
-findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') merchantOperatingCityId limitVal offsetVal mbSearchString statusAwareVehicleNo tripStatus mbApproved = do
+findAllVehicleByStatusForFleetByLimitOffsetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Id Merchant.Merchant -> [Text] -> Integer -> Integer -> Maybe Text -> Maybe Text -> DTT.TripStatus -> Maybe Bool -> m [VehicleRegistrationCertificate]
+findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') merchantOperatingCityIds limitVal offsetVal mbSearchString statusAwareVehicleNo tripStatus mbApproved = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   mbSearchHash <- mapM getDbHash mbSearchString
@@ -698,7 +698,7 @@ findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') mer
                     B.filter_'
                       ( \(rc, driverRcAssociation, driver, tripTransaction) ->
                           rc.merchantId B.==?. B.val_ (Just merchantId')
-                            B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                             B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                             B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
@@ -733,7 +733,7 @@ findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') mer
                     B.filter_'
                       ( \(rc, driverRcAssociation, tripTransaction) ->
                           rc.merchantId B.==?. B.val_ (Just merchantId')
-                            B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                             B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                             B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
@@ -753,8 +753,8 @@ findAllVehicleByStatusForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') mer
           catMaybes <$> mapM fromTType' rcList
         Left _ -> pure []
 
-findAllActiveRCForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Id Merchant.Merchant -> Text -> Maybe Bool -> m [VehicleRegistrationCertificate]
-findAllActiveRCForFleetMF fleetOwnerIds (Id merchantId') merchantOperatingCityId mbApproved = do
+findAllActiveRCForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Id Merchant.Merchant -> [Text] -> Maybe Bool -> m [VehicleRegistrationCertificate]
+findAllActiveRCForFleetMF fleetOwnerIds (Id merchantId') merchantOperatingCityIds mbApproved = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   res <-
@@ -765,7 +765,7 @@ findAllActiveRCForFleetMF fleetOwnerIds (Id merchantId') merchantOperatingCityId
             B.filter_'
               ( \(rc, driverRcAssociation) ->
                   rc.merchantId B.==?. B.val_ (Just merchantId')
-                    B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                    B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                     B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                     B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
@@ -782,10 +782,10 @@ findAllActiveRCForFleetMF fleetOwnerIds (Id merchantId') merchantOperatingCityId
       catMaybes <$> mapM fromTType' rcList
     Left _ -> pure []
 
-findAllInactiveRCForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Integer -> Integer -> Id Merchant.Merchant -> Text -> Maybe Text -> Maybe Bool -> m [VehicleRegistrationCertificate]
-findAllInactiveRCForFleetMF fleetOwnerIds limitVal offsetVal merchantId merchantOperatingCityId statusAwareVehicleNo mbApproved = do
+findAllInactiveRCForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Integer -> Integer -> Id Merchant.Merchant -> [Text] -> Maybe Text -> Maybe Bool -> m [VehicleRegistrationCertificate]
+findAllInactiveRCForFleetMF fleetOwnerIds limitVal offsetVal merchantId merchantOperatingCityIds statusAwareVehicleNo mbApproved = do
   dbConf <- getReplicaBeamConfig
-  allActiveRCs <- findAllActiveRCForFleetMF fleetOwnerIds merchantId merchantOperatingCityId mbApproved
+  allActiveRCs <- findAllActiveRCForFleetMF fleetOwnerIds merchantId merchantOperatingCityIds mbApproved
   let allActiveRCIds = map (.id.getId) allActiveRCs
   statusAwareVehicleNoHash <- mapM getDbHash statusAwareVehicleNo
   res <-
@@ -798,7 +798,7 @@ findAllInactiveRCForFleetMF fleetOwnerIds limitVal offsetVal merchantId merchant
                 B.filter_'
                   ( \rc ->
                       rc.merchantId B.==?. B.val_ (Just merchantId.getId)
-                        B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                        B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                         B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                         B.&&?. B.sqlBool_ (B.not_ (rc.id `B.in_` (B.val_ <$> allActiveRCIds)))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
@@ -814,8 +814,8 @@ findAllInactiveRCForFleetMF fleetOwnerIds limitVal offsetVal merchantId merchant
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
-findAllActiveRCForFleetByLimitOffsetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Id Merchant.Merchant -> Text -> Integer -> Integer -> Maybe Text -> Maybe Text -> Maybe Bool -> m [VehicleRegistrationCertificate]
-findAllActiveRCForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') merchantOperatingCityId limitVal offsetVal mbSearchString statusAwareVehicleNo mbApproved = do
+findAllActiveRCForFleetByLimitOffsetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Id Merchant.Merchant -> [Text] -> Integer -> Integer -> Maybe Text -> Maybe Text -> Maybe Bool -> m [VehicleRegistrationCertificate]
+findAllActiveRCForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') merchantOperatingCityIds limitVal offsetVal mbSearchString statusAwareVehicleNo mbApproved = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   mbSearchHash <- mapM getDbHash mbSearchString
@@ -831,7 +831,7 @@ findAllActiveRCForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') merchantOp
                     B.filter_'
                       ( \(rc, driverRcAssociation, driver) ->
                           rc.merchantId B.==?. B.val_ (Just merchantId')
-                            B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                             B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                             B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
@@ -864,7 +864,7 @@ findAllActiveRCForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') merchantOp
                     B.filter_'
                       ( \(rc, driverRcAssociation) ->
                           rc.merchantId B.==?. B.val_ (Just merchantId')
-                            B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                            B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                             B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                             B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
@@ -882,8 +882,8 @@ findAllActiveRCForFleetByLimitOffsetMF fleetOwnerIds (Id merchantId') merchantOp
           catMaybes <$> mapM fromTType' rcList
         Left _ -> pure []
 
-partialFindLastVehicleRCFleetMF :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Text -> Id Merchant.Merchant -> Text -> [Text] -> Integer -> Integer -> Maybe Bool -> m [VehicleRegistrationCertificate]
-partialFindLastVehicleRCFleetMF certNumber (Id merchantId') merchantOperatingCityId fleetOwnerIds limit offset mbApproved = do
+partialFindLastVehicleRCFleetMF :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Text -> Id Merchant.Merchant -> [Text] -> [Text] -> Integer -> Integer -> Maybe Bool -> m [VehicleRegistrationCertificate]
+partialFindLastVehicleRCFleetMF certNumber (Id merchantId') merchantOperatingCityIds fleetOwnerIds limit offset mbApproved = do
   dbConf <- getReplicaBeamConfig
   certNumberHash <- getDbHash certNumber
   res <-
@@ -896,7 +896,7 @@ partialFindLastVehicleRCFleetMF certNumber (Id merchantId') merchantOperatingCit
                 B.filter_'
                   ( \rc ->
                       rc.merchantId B.==?. B.val_ (Just merchantId')
-                        B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                        B.&&?. (if null merchantOperatingCityIds then B.sqlBool_ (B.val_ True) else B.sqlBool_ (rc.merchantOperatingCityId `B.in_` (B.val_ . Just <$> merchantOperatingCityIds)))
                         B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
                         B.&&?. ( B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower certNumber <> "%")))

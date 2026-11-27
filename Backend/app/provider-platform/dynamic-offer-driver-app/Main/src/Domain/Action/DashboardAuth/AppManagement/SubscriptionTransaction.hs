@@ -25,8 +25,12 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Servant
+import qualified SharedLogic.FleetScope
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
 getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus) -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Environment.Flow API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)
-getSubscriptionTransactionSubscriptionTransactions a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = Domain.Action.Dashboard.AppManagement.SubscriptionTransaction.getSubscriptionTransactionSubscriptionTransactions a10 a9 (Kernel.Types.Id.Id (Tools.Auth.DashboardUserAuth.dashboardRequestorId a8)) a7 a6 a5 a4 a3 a2 a1
+getSubscriptionTransactionSubscriptionTransactions a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
+  -- Once fleet scope is enforced the transactions are the fleet's, whichever of its people is logged in.
+  fleetOwnerId <- SharedLogic.FleetScope.callerOrScopedFleetOwnerId a8
+  Domain.Action.Dashboard.AppManagement.SubscriptionTransaction.getSubscriptionTransactionSubscriptionTransactions a10 a9 (Kernel.Types.Id.Id fleetOwnerId) a7 a6 a5 a4 a3 a2 a1

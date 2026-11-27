@@ -24,6 +24,13 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
+data AcceptFleetAssignmentReqV2 = AcceptFleetAssignmentReqV2 {assignmentId :: Kernel.Prelude.Text, useMyContact :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets AcceptFleetAssignmentReqV2 where
+  hideSecrets = Kernel.Prelude.identity
+
 data FleetBankAccountLinkResp = FleetBankAccountLinkResp
   { chargesEnabled :: Kernel.Prelude.Bool,
     payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -44,6 +51,33 @@ data FleetBankAccountResp = FleetBankAccountResp
     futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     stripeLegalEntityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetContactRes = FleetContactRes
+  { contactMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactSetOnFleet :: Kernel.Prelude.Bool,
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetCreateReqV2 = FleetCreateReqV2
+  { fleetName :: Kernel.Prelude.Text,
+    fleetType :: Kernel.Prelude.Maybe FleetType,
+    contactMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets FleetCreateReqV2 where
+  hideSecrets = Kernel.Prelude.identity
+
+newtype FleetCreateResV2 = FleetCreateResV2 {fleetId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -104,6 +138,10 @@ data FleetOwnerUpdateLanguageReq = FleetOwnerUpdateLanguageReq {language :: Kern
 instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerUpdateLanguageReq where
   hideSecrets = Kernel.Prelude.identity
 
+data FleetOwnerVerifiedRes = FleetOwnerVerifiedRes {result :: Kernel.Prelude.Text, personId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FleetOwnerVerifyReqV2 = FleetOwnerVerifyReqV2 {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text, otp :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -119,7 +157,19 @@ data FleetType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-type API = ("fleet" :> (PostRegistrationV2V2LoginOtpHelper :<|> PostRegistrationV2V2VerifyOtpHelper :<|> PostRegistrationV2V2RegisterHelper :<|> PostRegistrationV2RegisterBankAccountLinkHelper :<|> GetRegistrationV2RegisterBankAccountStatusHelper :<|> PutRegistrationV2ProfileLanguageHelper :<|> GetRegistrationV2ProfileLanguageHelper))
+data UpdateFleetContactReq = UpdateFleetContactReq
+  { fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    contactEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpdateFleetContactReq where
+  hideSecrets = Kernel.Prelude.identity
+
+type API = ("fleet" :> (PostRegistrationV2V2LoginOtpHelper :<|> PostRegistrationV2V2VerifyOtpHelper :<|> PostRegistrationV2V2RegisterHelper :<|> PostRegistrationV2CreateFleetHelper :<|> GetRegistrationV2ContactHelper :<|> PostRegistrationV2ContactHelper :<|> PostRegistrationV2AcceptFleetAssignmentHelper :<|> PostRegistrationV2RegisterBankAccountLinkHelper :<|> GetRegistrationV2RegisterBankAccountStatusHelper :<|> PutRegistrationV2ProfileLanguageHelper :<|> GetRegistrationV2ProfileLanguageHelper))
 
 type PostRegistrationV2LoginOtp = ("v2" :> "login" :> "otp" :> ReqBody '[JSON] FleetOwnerLoginReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -133,7 +183,7 @@ type PostRegistrationV2V2LoginOtpHelper =
 
 type PostRegistrationV2VerifyOtp = ("v2" :> "verify" :> "otp" :> ReqBody '[JSON] FleetOwnerVerifyReqV2 :> Post '[JSON] FleetOwnerVerifyResV2)
 
-type PostRegistrationV2V2VerifyOtpHelper = ("v2" :> "verify" :> "otp" :> ReqBody '[JSON] FleetOwnerVerifyReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostRegistrationV2V2VerifyOtpHelper = ("v2" :> "verify" :> "otp" :> ReqBody '[JSON] FleetOwnerVerifyReqV2 :> Post '[JSON] FleetOwnerVerifiedRes)
 
 type PostRegistrationV2Register = ("v2" :> "register" :> ReqBody '[JSON] FleetOwnerRegisterReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -142,6 +192,33 @@ type PostRegistrationV2V2RegisterHelper =
       :> Post
            '[JSON]
            FleetOwnerRegisterResV2
+  )
+
+type PostRegistrationV2CreateFleet = ("v2" :> "create" :> ReqBody '[JSON] FleetCreateReqV2 :> Post '[JSON] FleetCreateResV2)
+
+type PostRegistrationV2CreateFleetHelper = ("v2" :> "create" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] FleetCreateReqV2 :> Post '[JSON] FleetCreateResV2)
+
+type GetRegistrationV2Contact = ("v2" :> "contact" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> Get '[JSON] FleetContactRes)
+
+type GetRegistrationV2ContactHelper = ("v2" :> "contact" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> Get '[JSON] FleetContactRes)
+
+type PostRegistrationV2Contact = ("v2" :> "contact" :> ReqBody '[JSON] UpdateFleetContactReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostRegistrationV2ContactHelper =
+  ( "v2" :> "contact" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] UpdateFleetContactReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostRegistrationV2AcceptFleetAssignment = ("v2" :> "assignment" :> "accept" :> ReqBody '[JSON] AcceptFleetAssignmentReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostRegistrationV2AcceptFleetAssignmentHelper =
+  ( "v2" :> "assignment" :> "accept" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           AcceptFleetAssignmentReqV2
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostRegistrationV2RegisterBankAccountLink =
@@ -199,8 +276,12 @@ type GetRegistrationV2ProfileLanguageHelper = ("profile" :> "language" :> Mandat
 
 data RegistrationV2APIs = RegistrationV2APIs
   { postRegistrationV2LoginOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Bool -> FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient FleetOwnerLoginResV2,
-    postRegistrationV2VerifyOtp :: FleetOwnerVerifyReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postRegistrationV2VerifyOtp :: FleetOwnerVerifyReqV2 -> EulerHS.Types.EulerClient FleetOwnerVerifiedRes,
     postRegistrationV2Register :: Kernel.Prelude.Text -> FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient FleetOwnerRegisterResV2,
+    postRegistrationV2CreateFleet :: Kernel.Prelude.Text -> FleetCreateReqV2 -> EulerHS.Types.EulerClient FleetCreateResV2,
+    getRegistrationV2Contact :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetContactRes,
+    postRegistrationV2Contact :: Kernel.Prelude.Text -> UpdateFleetContactReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postRegistrationV2AcceptFleetAssignment :: Kernel.Prelude.Text -> AcceptFleetAssignmentReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,
     getRegistrationV2RegisterBankAccountStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountResp,
     putRegistrationV2ProfileLanguage :: Kernel.Prelude.Text -> FleetOwnerUpdateLanguageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -210,12 +291,16 @@ data RegistrationV2APIs = RegistrationV2APIs
 mkRegistrationV2APIs :: (Client EulerHS.Types.EulerClient API -> RegistrationV2APIs)
 mkRegistrationV2APIs registrationV2Client = (RegistrationV2APIs {..})
   where
-    postRegistrationV2LoginOtp :<|> postRegistrationV2VerifyOtp :<|> postRegistrationV2Register :<|> postRegistrationV2RegisterBankAccountLink :<|> getRegistrationV2RegisterBankAccountStatus :<|> putRegistrationV2ProfileLanguage :<|> getRegistrationV2ProfileLanguage = registrationV2Client
+    postRegistrationV2LoginOtp :<|> postRegistrationV2VerifyOtp :<|> postRegistrationV2Register :<|> postRegistrationV2CreateFleet :<|> getRegistrationV2Contact :<|> postRegistrationV2Contact :<|> postRegistrationV2AcceptFleetAssignment :<|> postRegistrationV2RegisterBankAccountLink :<|> getRegistrationV2RegisterBankAccountStatus :<|> putRegistrationV2ProfileLanguage :<|> getRegistrationV2ProfileLanguage = registrationV2Client
 
 data RegistrationV2UserActionType
   = POST_REGISTRATION_V2_LOGIN_OTP
   | POST_REGISTRATION_V2_VERIFY_OTP
   | POST_REGISTRATION_V2_REGISTER
+  | POST_REGISTRATION_V2_CREATE_FLEET
+  | GET_REGISTRATION_V2_CONTACT
+  | POST_REGISTRATION_V2_CONTACT
+  | POST_REGISTRATION_V2_ACCEPT_FLEET_ASSIGNMENT
   | POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK
   | GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS
   | PUT_REGISTRATION_V2_PROFILE_LANGUAGE

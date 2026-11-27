@@ -2,7 +2,8 @@ module Domain.Action.Dashboard.RideBooking.DriverRegistration
   ( postDriverRegistrationAuth,
     postDriverRegistrationVerify,
     auth,
-    verify,
+    verifyDriverOtp,
+    linkDriverToFleet,
   )
 where
 
@@ -72,10 +73,17 @@ postDriverRegistrationVerify merchantShortId opCity authId mbFleet fleetOwnerId 
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  verify authId mbFleet fleetOwnerId Nothing transporterConfig req
+  driverId <- verifyDriverOtp authId mbFleet transporterConfig req
+  when mbFleet $ do
+    driver <- linkDriverToFleet driverId fleetOwnerId Nothing transporterConfig
+    SOnboardingComms.setOnboardingAs transporterConfig driver DDI.FLEET_DRIVER
+  pure Success
 
-verify :: Text -> Bool -> Text -> Maybe (Id SP.Person) -> TransporterConfig -> Common.AuthVerifyReq -> Flow APISuccess
-verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
+-- | Checks the code a joining driver was sent and signs them in, and refuses a driver who cannot join a fleet
+-- because of a live ride. A caller that ends the driver's current links has to call this first, so that a wrong
+-- or used code, or such a driver, leaves those links as they are.
+verifyDriverOtp :: Text -> Bool -> TransporterConfig -> Common.AuthVerifyReq -> Flow (Id SP.Person)
+verifyDriverOtp authId mbFleet transporterConfig req = do
   let regId = Id authId :: Id SR.RegistrationToken
   res <-
     DReg.verify
@@ -92,24 +100,29 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
       merchantOpCity <- CQMOC.findById transporterConfig.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound transporterConfig.merchantOperatingCityId.getId)
       SOnbCommon.sendOnboardingLinkSms merchantOpCity transporterConfig driver Nothing
   when mbFleet $ do
-    checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId res.person.id fleetOwnerId True
-    when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
     -- Check if driver has any active rides (not completed or cancelled)
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId res.person.id
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
-    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId DomainRC.defaultAssociationEnd (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId)
-    QFDV.create assoc
-    fleetLinkDriver <- QP.findById res.person.id >>= fromMaybeM (PersonNotFound res.person.id.getId)
-    SOnboardingComms.setOnboardingAs transporterConfig fleetLinkDriver DDI.FLEET_DRIVER
-    when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
-    Analytics.handleDriverAnalyticsAndFlowStatus
-      transporterConfig
-      res.person.id
-      Nothing
-      ( \_ -> do
-          Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) res.person.id
-      )
-      ( \driverInfo -> do
-          DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
-      )
-  pure Success
+  pure res.person.id
+
+-- | Links a driver whose code 'verifyDriverOtp' has accepted to a fleet. It does not set the driver's onboarding
+-- type: that takes the driver's onboarding lock, which the joining flow already holds here.
+linkDriverToFleet :: Id SP.Person -> Text -> Maybe (Id SP.Person) -> TransporterConfig -> Flow SP.Person
+linkDriverToFleet driverId fleetOwnerId mbOperatorId transporterConfig = do
+  checkAssoc <- runInReplica $ QFDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
+  when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
+  assoc <- FDV.makeFleetDriverAssociation driverId fleetOwnerId mbOperatorId DomainRC.defaultAssociationEnd (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId)
+  QFDV.create assoc
+  fleetLinkDriver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
+  Analytics.handleDriverAnalyticsAndFlowStatus
+    transporterConfig
+    driverId
+    Nothing
+    ( \_ -> do
+        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) driverId
+    )
+    ( \driverInfo -> do
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
+    )
+  pure fleetLinkDriver

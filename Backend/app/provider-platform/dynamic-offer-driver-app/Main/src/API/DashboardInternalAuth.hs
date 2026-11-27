@@ -28,7 +28,11 @@ module API.DashboardInternalAuth
 where
 
 import Data.Aeson as DA
+import Data.List (nub)
+import qualified "lib-dashboard" Domain.Types.FleetScopeMode as DFSM
+import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DP
+import qualified "lib-dashboard" Domain.Types.PersonRoleAssignment as DPRA
 import Environment
 import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.Prelude
@@ -38,7 +42,11 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.Fleet as SFleet
 import qualified "lib-dashboard" Storage.Beam.SchemaInstances ()
+import qualified "lib-dashboard" Storage.Queries.Merchant as QDashMerchant
+import qualified "lib-dashboard" Storage.Queries.Person as QDashPerson
+import qualified "lib-dashboard" Storage.Queries.PersonRoleAssignment as QDashAssignment
 import qualified "lib-dashboard" Tools.Auth.Common as Auth
+import qualified "lib-dashboard" Tools.Auth.FleetScope as LibFleetScope
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
 
 type API =
@@ -69,11 +77,30 @@ internalAuthHandler apiKey token = withFlowHandlerAPI' $ do
   internalAuthAPIKey <- asks (.internalAuthAPIKey)
   unless (apiKey == Just internalAuthAPIKey) $
     throwError $ InvalidRequest "Invalid API key"
-  (personId, _, _) <- runInDashboardDb $ Auth.verifyPerson (fromMaybe "" token)
-  (topic, fleetOwnerIds) <- runInDashboardDb $ DTopic.resolveTopicForPerson fleetOwnerLookup personId
+  (personId, merchantId, _) <- runInDashboardDb $ Auth.verifyPerson (fromMaybe "" token)
+  runInDashboardDb $ LibFleetScope.assertOtpSessionStillAllowedByIds (fromMaybe "" token) personId merchantId
+  -- Looked up before entering the dashboard scope: part of it reads this application's own tables. As
+  -- 'resolveTopicForPerson' does with its lookup, a failure leaves no fleets.
+  resolvedFleetOwnerIds <- try @_ @SomeException (fleetOwnerLookup merchantId (fromMaybe "" token) personId.getId)
+  (topic, fleetOwnerIds) <- runInDashboardDb $ DTopic.resolveTopicForPerson (const $ pure (either (const []) identity resolvedFleetOwnerIds)) personId
   pure $ InternalAuthResp {topic = topic.getTopic, personIds = Id <$> fleetOwnerIds}
 
--- | Fleet owners are driver-app rows, so this read must NOT inherit the
--- dashboard scope its caller runs in.
-fleetOwnerLookup :: Text -> Flow [Text]
-fleetOwnerLookup personId = map fst <$> SFleet.getFleetOwnerIds personId Nothing
+-- | The fleets of a person. Fleet owners are driver-app rows, so only the dashboard reads here run in the
+-- dashboard scope.
+--
+-- Once fleet scope is enforced a fleet owner's fleets are the ones their session has selected, out of those they
+-- hold by role assignment (all of them while nothing is selected); the fleet member association is not read.
+-- Otherwise the member association decides, as before.
+fleetOwnerLookup :: Id DMerchant.Merchant -> RegToken -> Text -> Flow [Text]
+fleetOwnerLookup merchantId token personId = do
+  mbEnforced <- runInDashboardDb $ do
+    mbMerchant <- QDashMerchant.findById merchantId
+    mbPerson <- QDashPerson.findById (Id personId)
+    case (mbMerchant, mbPerson) of
+      (Just merchant, Just person) | merchant.fleetScopeMode == DFSM.ENFORCE && DP.isFleetOwner person -> do
+        held <- QDashAssignment.findAllActiveByPersonIdAndMerchantId (Id personId) merchant.id
+        selection <- (.fleetSelection) <$> LibFleetScope.sessionState token
+        let fleetIds = nub [a.scopeId | a <- held, a.scopeType == DPRA.FLEET]
+        pure . Just $ if null selection then fleetIds else filter (`elem` selection) fleetIds
+      _ -> pure Nothing
+  maybe (map fst <$> SFleet.getFleetOwnerIds personId Nothing) pure mbEnforced

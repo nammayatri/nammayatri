@@ -19,16 +19,20 @@ module Domain.Action.Dashboard.Fleet.Registration
     FleetOwnerRegisterReq (..),
     FleetOwnerRegisterRes (..),
     fleetOwnerVerify,
+    fleetOwnerVerifyBoundPerson,
     FleetOwnerVerifyHandle (..),
     FleetOwnerVerifyRes (..),
     fleetOwnerVerifyHandler,
+    fleetOwnerVerifyBound,
     otpAttemptsKey,
+    otpPersonIdKey,
     constantTimeEqText,
     FleetOwnerUpdateLanguageReq (..),
     fleetOwnerUpdateLanguage,
   )
 where
 
+import API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 (FleetOwnerVerifiedRes (..))
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
@@ -260,7 +264,11 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             approved = Nothing,
             disabledReasonFlag = Nothing,
             initiatedBy = Nothing,
-            latestScheduledCommissionAggregationPeriodEnd = Nothing
+            latestScheduledCommissionAggregationPeriodEnd = Nothing,
+            -- No contact of its own yet: until one is set the fleet is reached on the owner's phone and email.
+            contactMobileCountryCode = Nothing,
+            contactMobileNumber = Nothing,
+            contactEmail = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
@@ -311,6 +319,8 @@ fleetOwnerLogin req = do
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Redis.setExp key otp expTime
+  -- The OTP is only good for the person it was sent to.
+  Redis.setExp (otpPersonIdKey key) person.id.getId expTime
   -- A freshly issued OTP gets a fresh attempt budget.
   Redis.del $ otpAttemptsKey key
   pure Success
@@ -337,10 +347,10 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
 
 fleetOwnerVerify ::
   FleetOwnerLoginReq ->
-  Flow APISuccess
+  Flow FleetOwnerVerifiedRes
 fleetOwnerVerify req = do
-  let h = FleetOwnerVerifyHandle {mkMobileNumberOtpKey = makeMobileNumberOtpKey}
-  fleetOwnerVerifyHandler h req
+  mbBoundPersonId <- fleetOwnerVerifyBoundPerson req
+  pure FleetOwnerVerifiedRes {result = "Success", personId = mbBoundPersonId}
 
 newtype FleetOwnerVerifyHandle = FleetOwnerVerifyHandle
   { mkMobileNumberOtpKey :: Text -> Text
@@ -351,11 +361,29 @@ fleetOwnerVerifyHandler ::
   FleetOwnerLoginReq ->
   Flow APISuccess
 fleetOwnerVerifyHandler h req = do
+  void $ fleetOwnerVerifyBound h req
+  pure Success
+
+-- | The V1 verify that also says which person the OTP was issued to. 'Nothing' for an OTP issued
+-- before the person id was stored; the caller then falls back to looking the person up by phone.
+fleetOwnerVerifyBoundPerson ::
+  FleetOwnerLoginReq ->
+  Flow (Maybe Text)
+fleetOwnerVerifyBoundPerson req = do
+  let h = FleetOwnerVerifyHandle {mkMobileNumberOtpKey = makeMobileNumberOtpKey}
+  fleetOwnerVerifyBound h req
+
+fleetOwnerVerifyBound ::
+  FleetOwnerVerifyHandle ->
+  FleetOwnerLoginReq ->
+  Flow (Maybe Text)
+fleetOwnerVerifyBound h req = do
   otp <- req.otp & fromMaybeM InvalidAuthData
   let otpKey = h.mkMobileNumberOtpKey req.mobileNumber
       attemptsKey = otpAttemptsKey otpKey
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   storedOtp :: Text <- Redis.safeGet otpKey >>= fromMaybeM InvalidAuthData
+  boundPersonId :: Maybe Text <- Redis.safeGet (otpPersonIdKey otpKey)
   -- Count the attempt with INCR rather than read-modify-write. INCR is atomic and returns the
   -- post-increment value, so a parallel burst of guesses observes distinct counts; a get-then-set
   -- counter loses updates under exactly the concurrency a brute-force attempt produces, which is
@@ -368,13 +396,15 @@ fleetOwnerVerifyHandler h req = do
   when (attempts > maxOtpVerifyAttempts) $ do
     -- Budget exhausted: burn the OTP so it cannot be guessed by requesting a fresh window.
     Redis.del otpKey
+    Redis.del (otpPersonIdKey otpKey)
     Redis.del attemptsKey
     throwError $ AuthBlocked "Too many incorrect OTP attempts. Please request a new OTP."
   unless (constantTimeEqText storedOtp otp) $ throwError InvalidAuthData
   -- OTP is single use: drop it so the same verified request cannot be replayed.
   Redis.del otpKey
+  Redis.del (otpPersonIdKey otpKey)
   Redis.del attemptsKey
-  pure Success
+  pure boundPersonId
 
 -- | Incorrect OTP submissions allowed per issued OTP before it is invalidated.
 maxOtpVerifyAttempts :: Integer
@@ -385,6 +415,10 @@ maxOtpVerifyAttempts = 5
 -- flows use different OTP namespaces; deriving keeps their budgets independent.
 otpAttemptsKey :: Text -> Text
 otpAttemptsKey otpKey = otpKey <> ":verifyAttempts"
+
+-- | The id of the person an OTP was issued to, stored beside the OTP itself.
+otpPersonIdKey :: Text -> Text
+otpPersonIdKey otpKey = otpKey <> ":personId"
 
 -- | Compare in time independent of how many leading characters match. Length is not secret for a
 -- fixed-width OTP, so an early length check is fine.

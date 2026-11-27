@@ -138,6 +138,8 @@ apis:
         - email: Text
         - personId: Id Driver
         - walletId: Text
+        # Comma-separated cities to look in. Without it, the city in the URL.
+        - cities: Text
       response:
         type: DriverInfoRes
       helperApi:

@@ -31,12 +31,14 @@ module Tools.Auth.DashboardUser
     dashboardRequestorId,
     requestorHasFleetMemberHierarchy,
     requestorIsFleetOwner,
+    requestorIsFleetSide,
     checkFleetOwnerVerification,
     resolveRequestorTopic,
     updateDashboardPersonRole,
     dashboardRequestorIdForDriver,
     dashboardRequestorName,
     updateDashboardPersonVerified,
+    reviewFleetOwnerAccount,
     FleetOwnerRegistration (..),
     beginFleetOwnerRegistration,
     completeFleetOwnerRegistration,
@@ -46,6 +48,8 @@ where
 
 import "lib-dashboard" Dashboard.Common ()
 import qualified Data.Text as T
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
+import qualified "lib-dashboard" Domain.Types.FleetScopeMode as DFSM
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
@@ -67,9 +71,11 @@ import qualified "lib-dashboard" Storage.Queries.AuditTransaction as QAudit
 import qualified "lib-dashboard" Storage.Queries.Merchant as QDashboardMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QDashboardAccess
 import qualified "lib-dashboard" Storage.Queries.Person as QDashboardPerson
+import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QDashboardRegToken
 import qualified "lib-dashboard" Storage.Queries.Role as QDashboardRole
 import "lib-dashboard" Tools.Auth.ApiAuth (dashboardApiHitsCountKey)
 import qualified "lib-dashboard" Tools.Auth.Common as DashboardCommon
+import qualified "lib-dashboard" Tools.Auth.FleetScope as FleetScope
 import qualified "lib-dashboard" Tools.Auth.Verify as Verify
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
 import qualified "lib-dashboard" Tools.Error as DashboardError
@@ -90,7 +96,12 @@ data DashboardUser = DashboardUser
   { personId :: Id DDashboardPerson.Person,
     merchant :: DDashboardMerchant.Merchant,
     city :: City.City,
-    person :: DDashboardPerson.Person
+    person :: DDashboardPerson.Person,
+    -- | The cities and fleets the caller's active assignments hold. Empty unless the merchant has
+    -- scoped assignments switched on.
+    scope :: FleetScope.AuthorizedScope,
+    -- | The session this request came in on. A fleet selection belongs to the session.
+    sessionToken :: RegToken
   }
 
 -- | @verifyDashboardUser serverName endpointId token@ resolves the session,
@@ -122,7 +133,9 @@ verifyDashboardUser serverName endpointId pathSegments token = do
       { personId = verified.personId,
         merchant = verified.merchant,
         city = verified.city,
-        person = verified.person
+        person = verified.person,
+        scope = verified.scope,
+        sessionToken = token
       }
 
 -- | Record a direct-dashboard action in the shared audit trail, with the request
@@ -196,17 +209,29 @@ requestorHasFleetMemberHierarchy dashboardUser = dashboardUser.merchant.hasFleet
 requestorIsFleetOwner :: DashboardUser -> Bool
 requestorIsFleetOwner dashboardUser = DDashboardPerson.isFleetOwner dashboardUser.person
 
+-- | Whether the caller's dashboard role is a fleet owner's or an operator's: the roles that act on
+-- fleets they own, belong to or operate. Every other role is authorised by capability instead.
+requestorIsFleetSide :: DashboardUser -> Bool
+requestorIsFleetSide dashboardUser =
+  DDashboardPerson.isFleetOwner dashboardUser.person
+    || dashboardUser.person.dashboardAccessType == Just DDashboardRole.DASHBOARD_OPERATOR
+
 -- | Refuse an unverified fleet owner.
 --
 -- provider-dashboard ran this guard (@Domain.Action.ProviderPlatform.CheckVerification@)
 -- before forwarding the fleet write endpoints. Both the role and the verified
 -- flag live in the dashboard database, so the check has to happen here rather
 -- than in driver-app's own domain layer.
+--
+-- Once a merchant enforces scoped assignments this gate steps aside: the person's @verified@ flag was
+-- only ever a copy of the fleet's own, so the fleet's status is checked instead, for the fleet the
+-- request is about ('SharedLogic.FleetScope.authorizeFleetIds').
 checkFleetOwnerVerification :: DashboardAuthFlow m r => DashboardUser -> m ()
-checkFleetOwnerVerification dashboardUser = do
-  isFleetOwner <- requestorFleetFlag dashboardUser
-  when (isFleetOwner && dashboardUser.person.verified == Just False) $
-    throwError (InvalidRequest "Fleet owner is not verified")
+checkFleetOwnerVerification dashboardUser =
+  unless (dashboardUser.merchant.fleetScopeMode == DFSM.ENFORCE) $ do
+    isFleetOwner <- requestorFleetFlag dashboardUser
+    when (isFleetOwner && dashboardUser.person.verified == Just False) $
+      throwError (InvalidRequest "Fleet owner is not verified")
 
 -- | The alert topic the calling operator subscribes to.
 --
@@ -238,7 +263,10 @@ updateDashboardPersonRole personId roleId = runInDashboardDb $ do
   newRole <- QDashboardRole.findById (Id roleId) >>= fromMaybeM (DashboardError.RoleDoesNotExist roleId)
   when (DDashboardRole.isBppSyncRole oldRole || DDashboardRole.isBppSyncRole newRole) $
     throwError DashboardError.RoleConversionNotAllowed
+  rolesBefore <- FleetScope.rolesHeldBy person
   QDashboardPerson.updatePersonRole (Id personId) newRole
+  AssignSync.syncPersonAssignments (Id personId)
+  FleetScope.endSessionsOnTwoFaRoleGrant (Id personId) rolesBefore newRole
 
 -- | The requestor id these driver-document endpoints expect, which is NOT
 -- simply the caller.
@@ -263,6 +291,34 @@ dashboardRequestorIdForDriver dashboardUser driverId =
 updateDashboardPersonVerified :: (DashboardAuthFlow m r, BeamFlow m r) => Text -> Bool -> m ()
 updateDashboardPersonVerified personId verified =
   runInDashboardDb $ QDashboardPerson.updatePersonVerifiedStatus (Id personId) verified
+
+-- | The dashboard-database writes provider-dashboard made when a fleet was approved or rejected, once the
+-- application server had accepted the decision. Approving marks the account verified. Rejecting ends every
+-- session the account holds, marks it unverified with the reason, and closes the access others hold on the
+-- fleet through role assignments. Approving a fleet that was rejected gives the owner back their own access;
+-- anyone else who had a role on it has to be invited again. The account must belong to the caller's merchant.
+reviewFleetOwnerAccount :: (DashboardAuthFlow m r, BeamFlow m r) => DashboardUser -> Text -> Bool -> Maybe Text -> m ()
+reviewFleetOwnerAccount reviewer fleetOwnerId approved mbReason = runInDashboardDb $ do
+  let personId = Id fleetOwnerId
+  -- A fleet created as a scope has no dashboard person; only a fleet that was someone's login does.
+  mbPerson <- QDashboardPerson.findById personId
+  whenJust mbPerson $ \person ->
+    whenJust person.merchantId $ \personMerchantId ->
+      unless (personMerchantId == reviewer.merchant.id) $ throwError (PersonDoesNotExist fleetOwnerId)
+  if approved
+    then do
+      whenJust mbPerson $ \person -> do
+        unless (person.verified == Just True) $ QDashboardPerson.updatePersonVerifiedStatus personId True
+        QDashboardPerson.updatePersonApprovedBy personId reviewer.personId
+      -- Bring back the owner's own access to the fleet, which a rejection closed.
+      AssignSync.syncPersonAssignments personId
+    else do
+      whenJust mbPerson $ \_ -> do
+        DashboardCommon.cleanCachedTokens personId
+        QDashboardRegToken.deleteAllByPersonId personId
+        QDashboardPerson.softDeletePerson personId mbReason
+      AssignSync.revokeAllOnFleet reviewer.merchant.id personId
+      whenJust mbPerson $ \_ -> QDashboardPerson.updatePersonRejectedBy personId reviewer.personId
 
 -- | What the dashboard resolved before forwarding a fleet-owner registration.
 data FleetOwnerRegistration = FleetOwnerRegistration
@@ -347,6 +403,7 @@ completeFleetOwnerRegistration fleetOwnerId mbNormalizedEmail firstName lastName
     QDashboardPerson.updatePerson updFleetOwner.id updFleetOwner
     unless (Just fleetRole == updFleetOwner.dashboardAccessType) $
       QDashboardPerson.updatePersonRole updFleetOwner.id fleetOwnerRole
+    AssignSync.syncPersonAssignments updFleetOwner.id
 
 -- | The caller's display name, as the joining-OTP endpoints expect it.
 --
@@ -362,12 +419,17 @@ dashboardRequestorName dashboardUser =
 -- provider-dashboard checked this per merchant and city before forwarding a
 -- bulk rollout; the application server has no view of either table, so a route
 -- served directly has to check it here.
+--
+-- When only a role held beside the caller's own allows the call, they may act only on the cities that
+-- role covers, in the session's merchant.
 requestorCityAccess :: DashboardAuthFlow m r => DashboardUser -> Text -> [City.City] -> m (Maybe ([City.City], [City.City]))
 requestorCityAccess dashboardUser merchantShortId cities = runInDashboardDb $ do
   mbMerchant <- QDashboardMerchant.findByShortId (ShortId merchantShortId)
   forM mbMerchant $ \merchant -> do
-    allowed <-
+    reachable <-
       filterM
         (fmap isJust . QDashboardAccess.findByPersonIdAndMerchantIdAndCity dashboardUser.personId merchant.id)
         cities
+    let coveredByRole city = maybe True (\limit -> merchant.id == dashboardUser.merchant.id && city `elem` limit) dashboardUser.scope.limitedToCities
+        allowed = filter coveredByRole reachable
     pure (allowed, filter (`notElem` allowed) cities)

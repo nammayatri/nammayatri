@@ -31,6 +31,7 @@ where
 import qualified API.Dashboard.Capability as Capability
 import qualified API.Dashboard.EmailVerification as EmailVerification
 import qualified API.Dashboard.Entity as Entity
+import qualified API.Dashboard.FleetAssignment as FleetAssignment
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Person as Person
 import qualified API.Dashboard.PersonBulk as PersonBulk
@@ -55,6 +56,7 @@ type API =
     :<|> Entity.API
     :<|> PersonBulk.API
     :<|> SpecialZone.API
+    :<|> FleetAssignment.API
 
 handler :: DashboardLoginFlow r => FlowServerR r API
 handler =
@@ -69,3 +71,4 @@ handler =
     :<|> Entity.handler
     :<|> PersonBulk.handler
     :<|> SpecialZone.handler
+    :<|> FleetAssignment.handler

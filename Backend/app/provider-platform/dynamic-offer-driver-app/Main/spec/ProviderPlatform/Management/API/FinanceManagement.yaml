@@ -62,6 +62,7 @@ apis:
   # ----- Invoice PDF -----
   - GET: # InvoiceDownloadPdfAPI
       endpoint: /finance/invoice/pdf
+      appServerHandler: custom
       query:
         limit: Int
         offset: Int
@@ -83,6 +84,7 @@ apis:
   # ----- Invoice -----
   - GET: # InvoiceListAPI
       endpoint: /finance/invoice/list
+      appServerHandler: custom
       query:
         limit: Int
         offset: Int
@@ -308,6 +310,7 @@ apis:
 
   - POST: # TdsReimbursementRequestSubmitAPI
       endpoint: /tdsReimbursement/request/submit
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: TdsReimbursementRequestSubmitReq
@@ -321,6 +324,7 @@ apis:
 
   - GET: # TdsReimbursementStatusAPI
       endpoint: /tdsReimbursement/status
+      appServerHandler: custom
       mandatoryQuery:
         - quarter: TdsReimbursementQuarter
         - assessmentYear: Text

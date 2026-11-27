@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Management.DriverRegistration
   ( getDriverRegistrationDocumentsList,
     getDriverRegistrationGetDocument,
+    getDriverRegistrationGetDocumentChecked,
     postDriverRegistrationDocumentUpload,
     postDriverRegistrationDocumentsCommon,
     postDriverRegistrationRegisterDl,
@@ -494,13 +495,28 @@ getDriverRegistrationDocumentsCommonList =
   getDriverRegistrationCommonDocumentsList
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Common.DocumentType -> Maybe Common.EntityType -> Flow Common.GetDocumentResponse
-getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityType = do
+getDriverRegistrationGetDocument = getDriverRegistrationGetDocumentChecked (\_ _ -> pure ())
+
+-- | 'getDriverRegistrationGetDocument' for a caller who may not read every document in the merchant. @checkOwner@
+-- is given the person and the vehicle the document is of, where it has them, and runs before anything is returned.
+getDriverRegistrationGetDocumentChecked ::
+  (Maybe Text -> Maybe Text -> Flow ()) ->
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Common.DocumentType ->
+  Maybe Common.EntityType ->
+  Flow Common.GetDocumentResponse
+getDriverRegistrationGetDocumentChecked checkOwner merchantShortId _ entityId mbDocType mbEntityType = do
   merchant <- findMerchantByShortId merchantShortId
   case fromMaybe Common.ImageEntity mbEntityType of
     Common.ImageEntity -> do
       let imageId = Id entityId
+      mbFound <- QImage.findById imageId
+      -- Before the file is read, so nothing is fetched for a caller who may not see it.
+      whenJust mbFound checkImageOwner
       img <- getImage merchant.id imageId
-      image <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      image <- mbFound & fromMaybeM (InternalError "Image not found by image id")
       let docType = maybe image.imageType mapDocumentType mbDocType
       mbMeta <- metadataByImageId docType image
       let mbFinalMeta = mbMeta <|> (VDocs.imageMetadataToDocumentMetadata docType (Just imageId.getId) =<< image.metadata)
@@ -510,13 +526,20 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       (mbImgId, mbCommonDocData, mbRejectReason, mbDocStatus, mbMeta) <- resolveDocumentDetails (mapDocumentType docType) entityId
       (mbImg, mbImage) <- case mbImgId of
         Just imgId -> do
-          img <- getImage merchant.id imgId
           mbImage <- QImage.findById imgId
+          maybe (checkOwner Nothing Nothing) checkImageOwner mbImage
+          img <- getImage merchant.id imgId
           pure (Just img, mbImage)
-        Nothing -> pure (Nothing, Nothing)
+        Nothing -> do
+          mbCommonDoc <- QCommonDriverOnboardingDocuments.findById (Id entityId)
+          checkOwner (mbCommonDoc >>= (.driverId) <&> (.getId)) (mbCommonDoc >>= (.rcId) <&> (.getId))
+          pure (Nothing, Nothing)
       let mbFinalMeta = mbMeta <|> (mbImage >>= \image -> VDocs.imageMetadataToDocumentMetadata (mapDocumentType docType) (Just image.id.getId) =<< image.metadata)
       pure Common.GetDocumentResponse {imageBase64 = mbImg, status = castVerificationStatus <$> mbDocStatus, createdAt = mbImage <&> (.createdAt), commonDocumentData = mbCommonDocData, rejectReason = mbRejectReason, metadata = A.toJSON <$> mbFinalMeta}
   where
+    checkImageOwner :: DImage.Image -> Flow ()
+    checkImageOwner image = checkOwner (Just image.personId.getId) image.rcId
+
     withRc :: (DRC.VehicleRegistrationCertificate -> Maybe a -> Flow (Maybe VDocs.DocumentMetadata)) -> Maybe a -> Id DRC.VehicleRegistrationCertificate -> Flow (Maybe VDocs.DocumentMetadata)
     withRc mk mbDoc rcId = QRC.findById rcId >>= maybe (pure Nothing) (\rc -> mk rc mbDoc)
 
@@ -3276,7 +3299,10 @@ postDriverRegistrationGenerateTempAppCode ::
   Text ->
   Flow Common.TempAppCodeRes
 postDriverRegistrationGenerateTempAppCode merchantShortId opCity driverId requestorId = do
-  (_, personId) <- checkRequestorDriverAccess merchantShortId opCity driverId requestorId
+  (_, driver) <- checkRequestorDriverAccessWithDriver merchantShortId opCity driverId requestorId
+  -- The code redeems into an app session for whoever it was made for, so it may only be made for a driver.
+  unless (driver.role == DP.DRIVER) $ throwError (InvalidRequest "A temp app code can only be generated for a driver")
+  let personId = driver.id
   res <- DRegistration.generateTempAppCode DRegistration.operatorLinkTempAppCodeCfg personId
   pure $ Common.TempAppCodeRes {code = res.code, expiresAt = res.expiresAt}
 
@@ -3299,6 +3325,11 @@ postDriverRegistrationOnboardingLink merchantShortId opCity driverId requestorId
 
 checkRequestorDriverAccess :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow (Id DMOC.MerchantOperatingCity, Id DP.Person)
 checkRequestorDriverAccess merchantShortId opCity driverId requestorId = do
+  (merchantOpCityId, driver) <- checkRequestorDriverAccessWithDriver merchantShortId opCity driverId requestorId
+  pure (merchantOpCityId, driver.id)
+
+checkRequestorDriverAccessWithDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow (Id DMOC.MerchantOperatingCity, DP.Person)
+checkRequestorDriverAccessWithDriver merchantShortId opCity driverId requestorId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -3307,7 +3338,7 @@ checkRequestorDriverAccess merchantShortId opCity driverId requestorId = do
   whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
     isValid <- isAssociationWithDriver requestor driver
     unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
-  pure (merchantOpCityId, personId)
+  pure (merchantOpCityId, driver)
   where
     isAssociationWithDriver requestor driver =
       case (requestor.role, driver.role) of

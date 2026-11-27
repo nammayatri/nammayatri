@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Tools.Auth.Common as Auth
+import qualified "lib-dashboard" Tools.Auth.FleetScope as FleetScope
 import qualified "lib-dashboard" Tools.DashboardTopic as DTopic
 import "lib-dashboard" Tools.Error
 
@@ -60,7 +61,8 @@ internalAuthHandler apiKey token = withFlowHandlerAPI' $ do
   internalAuthAPIKey <- asks (.internalAuthAPIKey)
   unless (apiKey == Just internalAuthAPIKey) $ do
     throwError $ InvalidRequest "Invalid API key"
-  (personId, _, _) <- Auth.verifyPerson (fromMaybe "" token)
+  (personId, merchantId, _) <- Auth.verifyPerson (fromMaybe "" token)
+  FleetScope.assertOtpSessionStillAllowedByIds (fromMaybe "" token) personId merchantId
   (topic, fleetOwnerIds) <- DTopic.resolveTopicForPerson fleetOwnerLookup personId
   pure $
     InternalAuthResp

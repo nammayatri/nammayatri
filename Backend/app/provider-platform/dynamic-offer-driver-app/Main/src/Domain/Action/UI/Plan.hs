@@ -44,7 +44,6 @@ import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -62,6 +61,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
+import qualified SharedLogic.FleetContact as SFleetContact
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
@@ -1207,13 +1207,14 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  contact <- SFleetContact.contactOf driver
+  driverPhone <- contact.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
   effectivePlanFee <- resolvePrepaidPlanFee driverId merchantId merchantOpCityId plan subscriptionConfig driver
   orderId <- generateGUIDText
   orderShortId <- generateShortId
   nwAddress <- asks (.nwAddress)
   offerBasket <- Payment.mkOfferBasket merchantOpCityId (Just subscriptionConfig.paymentServiceName) effectivePlanFee
-  let driverEmail = fromMaybe "test@juspay.in" driver.email
+  let driverEmail = fromMaybe "test@juspay.in" contact.email
       amount = effectivePlanFee
       createOrderReq =
         Payment.CreateOrderReq

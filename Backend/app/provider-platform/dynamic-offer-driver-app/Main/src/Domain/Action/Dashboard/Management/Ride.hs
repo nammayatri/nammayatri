@@ -15,11 +15,14 @@
 
 module Domain.Action.Dashboard.Management.Ride
   ( getRideList,
+    getRideListInCities,
     getRideAgentList,
     getRideListV2,
+    getRideListV2InCities,
     postRideEndMultiple,
     postRideCancelMultiple,
     getRideInfo,
+    getRideInfoInRideCity,
     postRideSync,
     postRideSyncMultiple,
     postRideRoute,
@@ -65,6 +68,7 @@ getRideList ::
   Context.City ->
   Text ->
   Maybe Common.BookingStatus ->
+  Maybe Text ->
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
@@ -82,11 +86,43 @@ getRideList ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
+getRideList merchantShortId opCity requestorId mbBookingStatus _mbCities mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount =
+  getRideListInCities False Nothing False merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount
+
+-- | As 'getRideList', for a caller whose lists are scoped by fleet (a fleet owner once fleet scope is enforced): the
+-- ride list covers the cities the request names, else every city when @allCities@, else the city in the URL.
+-- @ownDriverOnly@ lets an operator list one of their own drivers' rides without naming a fleet; the caller checks the
+-- driver is theirs.
+getRideListInCities ::
+  Bool ->
+  Maybe Text ->
+  Bool ->
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Common.BookingStatus ->
+  Maybe Currency ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe (Id Common.Driver) ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe HighPrecMoney ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Common.PaymentMode ->
+  Maybe (Id Common.Ride) ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe UTCTime ->
+  Maybe HighPrecMoney ->
+  Flow Common.RideListRes
+getRideListInCities allCities mbCities ownDriverOnly merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
   logInfo $ "Ride list requested by: " <> requestorId
   let customerCountryCode = DCommon.appendPlusInMobileCountryCode mbCustomerCountryCode
       driverCountryCode = DCommon.appendPlusInMobileCountryCode mbDriverCountryCode
-  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode requestorId
+  DRide.getRideList allCities mbCities ownDriverOnly merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -150,6 +186,14 @@ getRideInfo merchantShortId opCity rideId mbFinanceData = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   DRide.rideInfo merchant.id merchantOpCityId rideId mbFinanceData
 
+-- For a caller whose access is by fleet scope rather than by city: the ride's own city is used, so a fleet's rides
+-- can be opened from any of its cities. The caller has already checked that the ride belongs to a fleet in scope.
+getRideInfoInRideCity :: ShortId DM.Merchant -> Id Common.Ride -> Maybe Bool -> Flow Common.RideInfoRes
+getRideInfoInRideCity merchantShortId rideId mbFinanceData = do
+  merchant <- findMerchantByShortId merchantShortId
+  ride <- QRide.findById (cast @Common.Ride @DRide.Ride rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  DRide.rideInfo merchant.id ride.merchantOperatingCityId rideId mbFinanceData
+
 postRideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes
 postRideSync = DRide.rideSync
 
@@ -165,9 +209,14 @@ getRideKaptureList = DRide.ticketRideList
 getRideFareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.FareBreakUpRes
 getRideFareBreakUp = DRide.fareBreakUp
 
-getRideListV2 :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2
-getRideListV2 merchantShortId opCity requestorId mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto mbToAmount =
-  DRide.getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId (castRideStatus <$> mbRideStatus) mbto mbToAmount mbFleetOwnerId requestorId
+getRideListV2 :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity requestorId _mbCities = getRideListV2InCities False Nothing False merchantShortId opCity requestorId
+
+-- | The V2 list for the cities a fleet-scoped caller asks for (all of the fleet's cities when none is named and
+-- @allCities@ is set); otherwise the city in the URL.
+getRideListV2InCities :: Bool -> Maybe Text -> Bool -> ShortId DM.Merchant -> Context.City -> Text -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2
+getRideListV2InCities allCities mbCities ownDriverOnly merchantShortId opCity requestorId mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto mbToAmount =
+  DRide.getRideListV2 allCities mbCities ownDriverOnly merchantShortId opCity mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId (castRideStatus <$> mbRideStatus) mbto mbToAmount mbFleetOwnerId requestorId
 
 castRideStatus :: Common.RideStatus -> DRide.RideStatus
 castRideStatus s = case s of

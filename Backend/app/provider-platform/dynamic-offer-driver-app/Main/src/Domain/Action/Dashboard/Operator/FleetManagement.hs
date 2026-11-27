@@ -25,7 +25,7 @@ import qualified Domain.Types.Person as DP
 import qualified Environment
 import EulerHS.Prelude hiding (any, forM_, id, length, null, whenJust)
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Encryption (getDbHash)
 import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
 import Kernel.Sms.Config (useFakeSms)
@@ -40,6 +40,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.FleetContact as SFleetContact
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder
   ( BuildFleetLinkUnlinkSuccessMessageReq (..),
@@ -83,9 +84,10 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
     createFleetInfo (foa, person, FOI.FleetOwnerInformation {..}) = do
       now <- getCurrentTime
       totalVehicle <- VRCQuery.countAllRCForFleet fleetOwnerPersonId.getId merchantId
+      contact <- SFleetContact.contactOf person
       decryptedMobileNumber <-
-        mapM decrypt person.mobileNumber
-          >>= fromMaybeM (InvalidRequest $ "Person do not have a mobile number " <> person.id.getId)
+        contact.mobileNumber
+          & fromMaybeM (InvalidRequest $ "Person do not have a mobile number " <> person.id.getId)
       merchant <- findMerchantByShortId merchantShortId
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
@@ -104,7 +106,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
             fleetName = fleetName,
             isActive = foa.isActive,
             enabled = enabled,
-            mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
+            mobileCountryCode = fromMaybe "+91" contact.mobileCountryCode,
             mobileNumber = decryptedMobileNumber,
             vehicleCount = totalVehicle,
             fleetType = Just $ DRegistrationV2.castFleetTypeToDomain fleetType,
@@ -169,10 +171,11 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
     forM_ activeAssociations $ \assoc ->
       DriverMode.decrementOperatorStatusKeyForFleetOwner assoc.operatorId assoc.fleetOwnerId
 
+  contact <- SFleetContact.contactOf fleetOwner
   decryptedMobileNumber <-
-    mapM decrypt fleetOwner.mobileNumber
-      >>= fromMaybeM (InvalidRequest $ "Person does not have a mobile number " <> getId fleetOwner.id)
-  let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
+    contact.mobileNumber
+      & fromMaybeM (InvalidRequest $ "Person does not have a mobile number " <> getId fleetOwner.id)
+  let phoneNumber = fromMaybe "+91" contact.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
   (mbSender, message, templateId, messageType) <-
     buildFleetUnlinkSuccessMessage merchantOpCityId $
@@ -203,35 +206,41 @@ postFleetManagementFleetLinkSendOtpUtil ::
   Kernel.Prelude.Maybe (Id DP.Person) ->
   Environment.Flow Common.FleetOwnerSendOtpRes
 postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req skipOtpVerification mbDashboardPersonId = do
-  let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+  let hitsKey = maybe (req.mobileCountryCode <> req.mobileNumber) (\fleetId -> "fleetId:" <> fleetId.getId) req.fleetId
   sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (makeFleetLinkHitsCountKey phoneNumber) sendOtpRateLimitOptions
+  checkSlidingWindowLimitWithOptions (makeFleetLinkHitsCountKey hitsKey) sendOtpRateLimitOptions
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mobileNumberHash <- getDbHash req.mobileNumber
   let enabled = Just False
-  fleetOwner <- do
-    mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
-    mbFleetOwner <- forM mbPerson $ \person -> case person.role of
-      role | DCommon.checkFleetOwnerRole role -> pure person
-      _ -> throwError (InvalidRequest "Person should be fleet owner")
+  fleetOwner <- case req.fleetId of
+    Just fleetId -> do
+      person <- B.runInReplica $ QP.findById (cast fleetId) >>= fromMaybeM (FleetOwnerNotFound fleetId.getId)
+      unless (DCommon.checkFleetOwnerRole person.role && person.merchantId == merchant.id) $
+        throwError (InvalidRequest "Invalid fleet owner")
+      pure person
+    Nothing -> do
+      mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
+      mbFleetOwner <- forM mbPerson $ \person -> case person.role of
+        role | DCommon.checkFleetOwnerRole role -> pure person
+        _ -> throwError (InvalidRequest "Person should be fleet owner")
 
-    case mbFleetOwner of
-      Just owner -> pure owner
-      Nothing -> do
-        let createReq =
-              Common.FleetOwnerLoginReqV2
-                { mobileNumber = req.mobileNumber,
-                  mobileCountryCode = req.mobileCountryCode,
-                  fleetType = Nothing
-                }
-        let personAuth = DRegistrationV2.buildFleetOwnerAuthReq merchant.id opCity createReq
-        deploymentVersion <- asks (.version)
-        personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId Nothing
-        -- Fleet owner info is created with NORMAL_FLEET by default (can be overwritten in register)
-        void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId Nothing
-        pure personData
+      case mbFleetOwner of
+        Just owner -> pure owner
+        Nothing -> do
+          let createReq =
+                Common.FleetOwnerLoginReqV2
+                  { mobileNumber = req.mobileNumber,
+                    mobileCountryCode = req.mobileCountryCode,
+                    fleetType = Nothing
+                  }
+          let personAuth = DRegistrationV2.buildFleetOwnerAuthReq merchant.id opCity createReq
+          deploymentVersion <- asks (.version)
+          personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId Nothing
+          -- Fleet owner info is created with NORMAL_FLEET by default (can be overwritten in register)
+          void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId Nothing
+          pure personData
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
@@ -254,6 +263,8 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
       QFOA.create fleetOperatorAssociation
     else do
       smsCfg <- asks (.smsCfg)
+      -- The consent goes to the fleet's own contact, which falls back to the owner's phone.
+      phoneNumber <- fleetContactPhone fleetOwner
       let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
           key = makeFleetLinkOtpKey phoneNumber
       otpCode <- maybe generateOTPCode return mbUseFakeOtp
@@ -293,8 +304,8 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   checkAssocOperator <- B.runInReplica $ QFOA.findByFleetOwnerIdAndOperatorId fleetOwner.id operator.id True
   when (isJust checkAssocOperator) $ throwError (InvalidRequest "Fleet already associated with operator")
 
-  decryptedMobileNumber <- mapM decrypt fleetOwner.mobileNumber >>= fromMaybeM (InvalidRequest $ "Person does not have a mobile number " <> getId fleetOwner.id)
-  let key = makeFleetLinkOtpKey (fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber)
+  phoneNumber <- fleetContactPhone fleetOwner
+  let key = makeFleetLinkOtpKey phoneNumber
   storedOtp <- Redis.get key >>= fromMaybeM OtpNotFound
   unless (storedOtp == req.otp) $ throwError InvalidOtp
 
@@ -316,7 +327,6 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   when allowCacheDriverFlowStatus $ do
     DriverMode.incrementOperatorStatusKeyForFleetOwner operator.id.getId fleetOwner.id.getId
 
-  let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
   let mbUseFakeOtp = (show <$> useFakeSms smsCfg) <|> fleetOwner.useFakeOtp
   whenNothing_ mbUseFakeOtp $ do
@@ -376,6 +386,13 @@ postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
               }
       QFMA.create fleetMemberAssociation
   pure Kernel.Types.APISuccess.Success
+
+-- | The number a fleet is reached on: its own contact, else the owner's phone.
+fleetContactPhone :: DP.Person -> Environment.Flow Text
+fleetContactPhone fleetOwner = do
+  contact <- SFleetContact.contactOf fleetOwner
+  number <- contact.mobileNumber & fromMaybeM (InvalidRequest $ "Person does not have a mobile number " <> getId fleetOwner.id)
+  pure $ fromMaybe "+91" contact.mobileCountryCode <> number
 
 makeFleetLinkOtpKey :: Text -> Text
 makeFleetLinkOtpKey phoneNo = "Fleet:Link:PhoneNo:" <> phoneNo

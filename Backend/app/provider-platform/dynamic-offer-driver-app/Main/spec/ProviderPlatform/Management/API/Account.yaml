@@ -22,6 +22,7 @@ apis:
         type: UnverifiedAccountsResp
   - POST:
       endpoint: /verifyAccount
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: VerifyAccountReq

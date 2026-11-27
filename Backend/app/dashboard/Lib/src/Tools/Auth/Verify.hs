@@ -19,6 +19,8 @@ module Tools.Auth.Verify
   )
 where
 
+import qualified Domain.Types.Capability as DC
+import qualified Domain.Types.FleetScopeMode as DFSM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
@@ -37,6 +39,7 @@ import qualified Storage.Queries.MerchantPair as QMerchantPair
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Auth.Capability as Capability
 import qualified Tools.Auth.Common as Common
+import qualified Tools.Auth.FleetScope as FleetScope
 import Tools.Auth.Merchant (merchantCityAccessCheck)
 
 -- | What the auth path establishes about the caller, minus anything that names
@@ -45,7 +48,12 @@ data VerifiedUser = VerifiedUser
   { personId :: Id DP.Person,
     merchant :: DM.Merchant,
     city :: City.City,
-    person :: DP.Person
+    person :: DP.Person,
+    -- | The cities and fleets the caller's active assignments hold. Empty unless the merchant has
+    -- scoped assignments switched on.
+    scope :: FleetScope.AuthorizedScope,
+    -- | The fleets this session has chosen to work on, empty meaning all the person holds.
+    fleetSelection :: [Text]
   }
 
 verifyDashboardUser ::
@@ -61,10 +69,21 @@ verifyDashboardUser ::
   RegToken ->
   m VerifiedUser
 verifyDashboardUser requiredServerAccess endpointId pathSegments token = do
-  verified <- verifySession requiredServerAccess token
-  verifyUrlScope endpointId verified pathSegments -- Layer B -- is the merchant/city in the URL the one this session holds.
-  access <- Capability.resolveAccess verified.person.id verified.person.roleId
+  sessionUser <- verifySession requiredServerAccess token
+  -- Layer B -- is the merchant/city in the URL one this person holds. The URL city is the request's city.
+  requestCity <- verifyUrlScope endpointId sessionUser pathSegments
+  let verified =
+        VerifiedUser
+          { personId = sessionUser.personId,
+            merchant = sessionUser.merchant,
+            city = requestCity,
+            person = sessionUser.person,
+            scope = sessionUser.scope,
+            fleetSelection = sessionUser.fleetSelection
+          }
+  ownAccess <- Capability.resolveAccess verified.person.id verified.person.roleId
   endpoints <- Capability.endpointCapabilities endpointId
+  access <- FleetScope.withAssignedRoleAccess verified.merchant verified.city verified.person endpoints ownAccess
   Capability.enforce access endpoints verified.person endpointId -- Layer A -- may this operator call this endpoint at all
   Capability.enforceResourceScopeFromRequest -- Layer C -- and may they touch the specific resource named in the path
     access
@@ -74,7 +93,12 @@ verifyDashboardUser requiredServerAccess endpointId pathSegments token = do
     verified.merchant.id
     verified.city
     pathSegments
-  pure verified
+  scope <- FleetScope.resolveFleetScope verified.merchant verified.city verified.person endpointId endpoints access verified.fleetSelection
+  limit <-
+    if ownAccess.adminTier == DC.superAdminTier || FleetScope.allowsEndpoint ownAccess endpoints
+      then pure Nothing
+      else Just <$> FleetScope.addedRoleCities verified.merchant verified.person endpoints
+  pure verified {scope = scope {FleetScope.limitedToCities = limit}}
 
 -- | Authentication only: who is this, and may they act on this server, merchant
 -- and city. Deliberately does NOT check a capability, so it can be used where
@@ -96,8 +120,18 @@ verifySession requiredServerAccess token = do
   (personId, merchantId, city) <- Common.verifyPerson token
   verifiedPerson <- verifyPersonCredentials personId
   verifiedMerchant <- verifyServerWithPair requiredServerAccess personId merchantId city
+  session <- FleetScope.sessionState token
+  FleetScope.assertOtpSessionStillAllowed session verifiedMerchant verifiedPerson
   verifyCity verifiedMerchant city
-  pure VerifiedUser {personId = verifiedPerson.id, merchant = verifiedMerchant, city = city, person = verifiedPerson}
+  pure
+    VerifiedUser
+      { personId = verifiedPerson.id,
+        merchant = verifiedMerchant,
+        city = city,
+        person = verifiedPerson,
+        scope = FleetScope.noScope,
+        fleetSelection = session.fleetSelection
+      }
 
 -- | Single-login across platforms (dashboard unification): a token is bound
 -- to ONE merchant row, but BAP and BPP merchants are separate rows (e.g.
@@ -188,9 +222,9 @@ scopeExemptEndpoints =
 -- No super-admin bypass, deliberately: 'merchantCityAccessCheck' has none
 -- either, and changing scope goes through 'switchMerchantAndCity', which
 -- re-issues the token rather than reusing one across merchants.
-verifyUrlScope :: BeamFlow m r => Text -> VerifiedUser -> [Text] -> m ()
+verifyUrlScope :: BeamFlow m r => Text -> VerifiedUser -> [Text] -> m City.City
 verifyUrlScope endpointId verified pathSegments
-  | endpointId `elem` scopeExemptEndpoints = pure ()
+  | endpointId `elem` scopeExemptEndpoints = pure verified.city
   | otherwise = case pathSegments of
     -- API.DirectDashboard is the only mount pairing DashboardUserAuth with these
     -- captures: "direct-dashboard" :> Capture "merchantId" :> Capture "city".
@@ -199,14 +233,22 @@ verifyUrlScope endpointId verified pathSegments
       -- what the handler will receive.
       case parseUrlPiece citySeg of
         Left _ -> throwError AccessDenied
-        Right urlCity ->
+        Right urlCity -> do
+          -- The city the session was issued for always works. On a merchant in ENFORCE any other city
+          -- works too when the person has access to it, so one session serves every city they can reach.
+          -- Everywhere else the URL city has to be the session's city.
+          let anyHeldCity = verified.merchant.fleetScopeMode == DFSM.ENFORCE
+          when (anyHeldCity && urlCity /= verified.city) $ do
+            held <- QAccess.findByPersonIdAndMerchantIdAndCity verified.personId verified.merchant.id urlCity
+            when (isNothing held) $ throwError AccessDenied
           void $
             merchantCityAccessCheck
               (ShortId merchantSeg)
               verified.merchant.shortId
               urlCity
-              verified.city
-    _ -> pure ()
+              (if anyHeldCity then urlCity else verified.city)
+          pure urlCity
+    _ -> pure verified.city
 
 -- Authorization is capability-only. The access_matrix is not consulted here
 -- any more: `Tools.Auth.Capability.enforce` is the entire verdict, and an

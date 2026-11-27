@@ -19,6 +19,7 @@ module ProviderPlatformClient.DynamicOfferDriver.Fleet
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
+import "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 (FleetOwnerVerifiedRes)
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
@@ -34,7 +35,7 @@ import "lib-dashboard" Tools.Metrics
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
-    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
+    fleetOwnerVerify :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient FleetOwnerVerifiedRes,
     fleetOwnerRegister :: Maybe Bool -> Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
   }
 

@@ -28,10 +28,13 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.Fleet
+import qualified SharedLogic.FleetScope
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
 getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> Environment.Flow [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
 getLiveMapDrivers a7 a6 a5 a4 a3 a2 a1 = do
-  (mbFleetOwnerId, requestorId) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a5) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a5) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a5) a3
+  -- The map can be centred on a driver, which tells where they are, so a limited caller has to be able to read them.
+  Kernel.Prelude.whenJust a2 (SharedLogic.FleetScope.assertMayReadSubject a5 . Kernel.Types.Id.getId)
+  (mbFleetOwnerId, requestorId) <- SharedLogic.FleetScope.scopedLiveMapFleet a5 a3
   Domain.Action.Dashboard.Fleet.LiveMap.getLiveMapDrivers a7 a6 a4 requestorId mbFleetOwnerId a2 a1

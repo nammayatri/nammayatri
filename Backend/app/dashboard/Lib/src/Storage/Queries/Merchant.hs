@@ -36,6 +36,10 @@ findById ::
   m (Maybe Merchant)
 findById merchantId = findOneWithKV [Se.Is BeamM.id $ Se.Eq $ getId merchantId]
 
+findAllByIds :: BeamFlow m r => [Id Merchant] -> m [Merchant]
+findAllByIds [] = pure []
+findAllByIds ids = findAllWithKV [Se.Is BeamM.id $ Se.In (map getId ids)]
+
 findByShortId :: BeamFlow m r => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId = do
   findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId]

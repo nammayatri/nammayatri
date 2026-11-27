@@ -64,6 +64,7 @@ getRideList ::
   City.City ->
   ApiTokenInfo UserActionType ->
   Maybe Common.BookingStatus ->
+  Maybe Text ->
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
@@ -81,10 +82,10 @@ getRideList ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount = do
+getRideList merchantShortId opCity apiTokenInfo bookingStatus cities currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) requestorId bookingStatus currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) requestorId bookingStatus cities currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount
 
 postRideEndMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
 postRideEndMultiple merchantShortId opCity apiTokenInfo req = do
@@ -143,11 +144,11 @@ getRideFareBreakUp merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideFareBreakUp) rideId
 
-getRideListV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2
-getRideListV2 merchantShortId opCity apiTokenInfo currency customerPhoneNo driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId rideStatus to toAmount = do
+getRideListV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe Text -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity apiTokenInfo cities currency customerPhoneNo driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId rideStatus to toAmount = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideListV2) requestorId currency customerPhoneNo driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId rideStatus to toAmount
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideListV2) requestorId cities currency customerPhoneNo driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId rideStatus to toAmount
 
 postRideWaiverRideCancellationPenalty :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postRideWaiverRideCancellationPenalty merchantShortId opCity apiTokenInfo rideId req = do

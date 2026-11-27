@@ -42,10 +42,12 @@ apis:
         type: RideListRes
   - GET: # RideListAPI
       endpoint: /list
+      appServerHandler: custom
       query:
         limit: Int
         offset: Int
         bookingStatus: BookingStatus
+        cities: Text # comma-separated city names; a fleet-scoped caller's list covers those cities (default: all in ENFORCE, the URL city otherwise)
         rideShortId: ShortId Ride
         rideId: Id Ride
         driverId: Id Driver
@@ -72,6 +74,7 @@ apis:
               limit: Int
               offset: Int
               bookingStatus: BookingStatus
+              cities: Text
               rideShortId: ShortId Ride
               customerPhoneNo: Text
               driverPhoneNo: Text
@@ -91,7 +94,9 @@ apis:
               type: RideListRes
   - GET: # RideListV2API
       endpoint: /listV2
+      appServerHandler: custom
       query:
+        cities: Text
         limit: Int
         offset: Int
         rideStatus: RideStatus
@@ -116,6 +121,7 @@ apis:
             params:
               requestorId: Text
             query:
+              cities: Text
               limit: Int
               offset: Int
               rideStatus: RideStatus
@@ -163,6 +169,7 @@ apis:
   - GET: # RideInfoAPI
       endpoint: /{rideId}/info
       auth: ApiAuthV2
+      appServerHandler: custom
       query:
         financeData: Bool
       params:
@@ -210,6 +217,7 @@ apis:
         type: FareBreakUpRes
   - POST: # WaiverRideCancellationPenaltyAPI
       endpoint: /{rideId}/waiverRideCancellationPenalty
+      appServerHandler: custom
       auditRequestBody: false
       auth: ApiAuthV2
       request:
@@ -262,6 +270,8 @@ types:
   RideListItem:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
+    - cityId: Maybe Text # the city the ride was in
+    - cityName: Maybe Text
     - displayBookingId: Maybe Text
     - customerName: Maybe Text
     - customerPhoneNo: Text

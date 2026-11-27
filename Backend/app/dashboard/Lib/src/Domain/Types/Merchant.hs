@@ -16,6 +16,7 @@
 
 module Domain.Types.Merchant where
 
+import qualified Domain.Types.FleetScopeMode as DFSM
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DSN
 import Kernel.External.Encryption
@@ -42,7 +43,9 @@ data MerchantE e = Merchant
     trackLoginLogoutForRoles :: [DRole.DashboardAccessType],
     -- | Email domains an administrator account under this merchant may belong to,
     -- e.g. ["maruti.co.in"]. Empty list leaves the restriction switched off.
-    adminEmailDomains :: [Text]
+    adminEmailDomains :: [Text],
+    -- | Whether, and how, scoped role assignments apply to this merchant. See 'DFSM.FleetScopeMode'.
+    fleetScopeMode :: DFSM.FleetScopeMode
   }
   deriving (Generic)
 

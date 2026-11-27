@@ -28,7 +28,9 @@ data RegistrationTokenT f = RegistrationTokenT
     merchantId :: B.C f Text,
     createdAt :: B.C f Time.UTCTime,
     operatingCity :: B.C f City,
-    enabled :: B.C f Bool
+    enabled :: B.C f Bool,
+    isOtpSession :: B.C f Bool,
+    selectedFleetIds :: B.C f (Maybe [Text])
   }
   deriving (Generic, B.Beamable)
 

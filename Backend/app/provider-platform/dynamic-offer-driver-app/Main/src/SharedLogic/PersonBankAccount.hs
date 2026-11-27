@@ -32,6 +32,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FleetContact as SFleetContact
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -130,14 +131,14 @@ getPersonRegisterBankAccountLink h mbInitiatedBy person = withDynamicLogLevel "p
       merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
       when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands, Context.Finland]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA, Netherlands and Finland"
 
-      mbMobileNumber <- mapM decrypt person.mobileNumber
-      mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
+      contact <- SFleetContact.contactOf person
+      mobileNumber <- contact.mobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
       defaultCountryCode <- case merchantOpCity.country of
         Context.Finland -> pure "+358"
         Context.Netherlands -> pure "+31"
         Context.USA -> pure "+1"
         _ -> throwError $ InvalidRequest "Bank account creation is only supported for USA, Netherlands and Finland"
-      let mobileCountryCode = fromMaybe defaultCountryCode $ person.mobileCountryCode
+      let mobileCountryCode = fromMaybe defaultCountryCode $ contact.mobileCountryCode
       personStripeInfo <- h.fetchPersonStripeInfo
       personDob <- personStripeInfo.personDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
       idNumber <- forM personStripeInfo.idNumber decrypt
@@ -169,7 +170,7 @@ getPersonRegisterBankAccountLink h mbInitiatedBy person = withDynamicLogLevel "p
       let createAccountReq =
             Payment.ConnectAccountReq
               { country = merchantOpCity.country,
-                email = person.email,
+                email = contact.email,
                 dateOfBirth = DT.utctDay personDob,
                 firstName = person.firstName,
                 lastName = person.lastName,

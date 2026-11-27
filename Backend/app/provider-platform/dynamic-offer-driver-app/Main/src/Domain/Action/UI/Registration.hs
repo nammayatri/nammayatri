@@ -386,6 +386,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
+      SP.NO_LOGIN -> throwError $ InvalidRequest "This account has no login of its own"
 
   -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
   whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
@@ -606,6 +607,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
       -- Conductor/driver identified by the GIMS badge token (set on the Person right
       -- after this); no email or mobile is captured for the employeeId login.
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> pure (Nothing, Nothing, Nothing)
+      -- An entity that is a scope and not a login, such as a fleet, has no phone or email of its own.
+      SP.NO_LOGIN -> pure (Nothing, Nothing, Nothing)
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry (cast merchantOperatingCityId) $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
@@ -1055,6 +1058,8 @@ getToken req = do
   mbPersonId <- TempAppCode.redeemTempAppCode operatorLinkTempAppCodeCfg req.appSecretCode
   personId <- Id <$> mbPersonId & fromMaybeM (InvalidRequest "Invalid or expired code")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- A code is only ever made for a driver. Refuse anything else, with the same answer as a bad code.
+  unless (person.role == SP.DRIVER) $ throwError (InvalidRequest "Invalid or expired code")
   mbToken <- listToMaybe <$> QR.findAllByPersonId personId.getId
   case mbToken of
     Just regToken -> do

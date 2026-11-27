@@ -21,13 +21,16 @@ where
 
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Types.Person as DP
+import qualified "lib-dashboard" Domain.Types.Person as DDashPerson
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import "lib-dashboard" Storage.Beam.SchemaInstances ()
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
 import qualified Storage.Queries.Person as QP
+import qualified "lib-dashboard" Storage.Queries.Person as QDashPerson
 import Tools.Error
 
 data FleetOwnerInfo = FleetOwnerInfo
@@ -50,7 +53,13 @@ checkRequestorAccessToFleet allowOtherRoles mbRequestorId fleetOwnerId = do
       -- new flow
       mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
       case mbRequestor of
-        Nothing -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
+        Nothing -> do
+          -- No driver-app record. Only a known dashboard person who is not a fleet owner, an admin who is
+          -- authorised by capability, passes. An id nobody holds, or a fleet owner's, is refused: it used to
+          -- pass, so a requestor id the caller could choose was enough to reach any fleet.
+          mbDashboardPerson <- runInDashboardDb $ QDashPerson.findById (Id requestorId :: Id DDashPerson.Person)
+          unless (maybe False (not . DDashPerson.isFleetOwner) mbDashboardPerson) $ throwError AccessDenied
+          pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
         Just requestor -> do
           case requestor.role of
             role | DCommon.checkFleetOwnerRole role -> do

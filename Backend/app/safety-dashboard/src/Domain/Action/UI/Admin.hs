@@ -8,6 +8,7 @@ import qualified Dashboard.SafetyPlatform as Safety
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.Text as T hiding (concat, elem, filter, length, map, null)
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import qualified Domain.Action.UI.Suspect as DS
 import qualified Domain.Action.UI.SuspectFlagRequest as SAF
 import Domain.Action.UI.Webhook as Webhook
@@ -125,6 +126,7 @@ postMerchantUserAssignRole tokenInfo req = do
       when (person.id == tokenInfo.personId) $ throwError $ InvalidRequest "Can't change your own role."
       role <- QRole.findByName req.roleName >>= fromMaybeM (RoleDoesNotExist req.roleName)
       QP.updatePersonRole person.id role
+      AssignSync.syncPersonAssignments person.id
       return Kernel.Types.APISuccess.Success
 
 deleteMerchantUserDelete :: TokenInfo -> API.Types.UI.Admin.DeleteMerchantUserReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
@@ -133,8 +135,11 @@ deleteMerchantUserDelete tokenInfo req = do
   QAccess.deleteAllByMerchantIdAndPersonId tokenInfo.merchantId person.id
   Auth.cleanCachedTokensByMerchantId person.id tokenInfo.merchantId
   QReg.deleteAllByPersonIdAndMerchantId person.id tokenInfo.merchantId
+  AssignSync.syncPersonAssignments person.id
   findMerchantAccess <- QAccess.findAllByPersonId person.id
-  when (null findMerchantAccess) $ QP.deletePerson person.id
+  when (null findMerchantAccess) $ do
+    AssignSync.removePersonAssignments person.id
+    QP.deletePerson person.id
   return Kernel.Types.APISuccess.Success
 
 buildUpdateSuspectRequest :: API.Types.UI.Admin.SuspectFlagChangeRequestList -> Domain.Types.Suspect.Suspect -> Environment.Flow Domain.Types.Suspect.Suspect

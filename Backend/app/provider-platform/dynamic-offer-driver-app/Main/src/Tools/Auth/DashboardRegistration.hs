@@ -45,6 +45,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Account as CommonAccount
 import qualified Dashboard.Common as CommonDashboard
 import qualified Data.Text as T
+import qualified "lib-dashboard" Domain.Action.Dashboard.AssignmentSync as AssignSync
 import qualified "lib-dashboard" Domain.Action.Dashboard.Registration as DRegistration
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
@@ -56,7 +57,7 @@ import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.City as City
-import Kernel.Types.Error (GenericError (InvalidRequest), MerchantError (MerchantDoesNotExist), PersonError (PersonDoesNotExist))
+import Kernel.Types.Error (GenericError (InvalidRequest), MerchantError (MerchantDoesNotExist))
 import Kernel.Types.Id (Id (..), ShortId (..))
 import Kernel.Utils.Common
 import "lib-dashboard" Storage.Beam.BeamFlow (BeamFlow)
@@ -93,22 +94,13 @@ merchantByShortId merchantShortId =
 -- provider-dashboard did this in @postRegistrationV2VerifyOtp@ and returned the
 -- token; the application server's own response carries no token, so without
 -- this the fleet owner has nothing to authenticate with afterwards.
-issueFleetOwnerAuthToken :: RegistrationFlow m r => Text -> City.City -> Text -> Text -> m Text
-issueFleetOwnerAuthToken merchantShortId opCity mobileNumber mobileCountryCode = runInDashboardDb $ do
-  person <-
-    QDashboardPerson.findByMobileNumber mobileNumber mobileCountryCode
-      >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+--
+-- The session goes to the person the OTP was issued to when that is known, and otherwise to the
+-- person the phone number matches in the dashboard.
+issueFleetOwnerAuthToken :: RegistrationFlow m r => Text -> City.City -> Text -> Text -> Maybe Text -> m Text
+issueFleetOwnerAuthToken merchantShortId opCity mobileNumber mobileCountryCode mbBoundPersonId = runInDashboardDb $ do
   merchant <- merchantByShortId merchantShortId
-  unless (opCity `elem` merchant.supportedOperatingCities) $
-    throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  token <- DRegistration.generateToken person.id merchant opCity
-  when
-    ( person.verified /= Just True
-        && merchant.verifyFleetWhileLogin == Just True
-        && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)
-    )
-    $ QDashboardPerson.updatePersonVerifiedStatus person.id True
-  pure token
+  DRegistration.mintFleetOtpSession merchant opCity mobileNumber mobileCountryCode mbBoundPersonId
 
 -- | The dashboard person id for a mobile number, if one exists.
 --
@@ -214,6 +206,7 @@ deleteDashboardPerson personId = runInDashboardDb $ do
   whenJust mbPerson $ \_ -> do
     QDashboardAccess.deleteAllByPersonId (Id personId)
     QDashboardRegToken.deleteAllByPersonId (Id personId)
+    AssignSync.removePersonAssignments (Id personId)
     QDashboardPerson.deletePerson (Id personId)
     logTagInfo "PermanentlyDelete" $ "removed dashboard person " <> personId
 

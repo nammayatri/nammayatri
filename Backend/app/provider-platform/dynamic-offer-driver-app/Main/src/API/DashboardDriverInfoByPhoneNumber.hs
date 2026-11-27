@@ -38,6 +38,7 @@ import Environment
 import Kernel.Beam.Functions (runInDashboardDb)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Error as KernelError
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
@@ -62,12 +63,16 @@ type API =
 handler :: FlowServer API
 handler = getDriverInfoByPhoneNumber
 
--- | Error codes from this server that mean "this city does not have the driver",
--- as opposed to "the lookup itself failed". Only these are swallowed by the city
--- loop; anything else must propagate, or an outage in one city would silently
--- masquerade as a driver-not-found for the whole search.
-driverMissErrorCodes :: [Text]
-driverMissErrorCodes = ["PERSON_DOES_NOT_EXIST", "MERCHANT_OPERATING_CITY_NOT_FOUND"]
+-- | Whether an error means "this city does not have the driver", as opposed to "the
+-- lookup itself failed". Only these are swallowed by the city loop; anything else
+-- must propagate, or an outage in one city would silently masquerade as a
+-- driver-not-found for the whole search. The lookup is a call in this process, so
+-- these are its own error types, not the remote-call error the proxy caught.
+isDriverMiss :: SomeException -> Bool
+isDriverMiss err = case (fromException err, fromException err) of
+  (Just (KernelError.PersonDoesNotExist _), _) -> True
+  (_, Just (KernelError.MerchantOperatingCityNotFound _)) -> True
+  _ -> False
 
 -- | Deduplicate, then put the caller's token city first; the remaining cities
 -- keep their original relative order. The token city is overwhelmingly the
@@ -120,7 +125,7 @@ getDriverInfoByPhoneNumber merchantShortId tokenInfo mbMobileNumber mbMobileCoun
     -- built with a per-city default country code, so reconstructing it here would
     -- be wrong for any merchant outside India.
     searchCities mobileNumber [] mbFirstMiss = case mbFirstMiss of
-      Just firstMiss -> throwError firstMiss
+      Just firstMiss -> throwM firstMiss
       Nothing -> throwError $ E.PersonDoesNotExist (fromMaybe "" mbMobileCountryCode <> mobileNumber)
     searchCities mobileNumber (city : remainingCities) mbFirstMiss = do
       result <- tryCity mobileNumber city
@@ -154,7 +159,7 @@ getDriverInfoByPhoneNumber merchantShortId tokenInfo mbMobileNumber mbMobileCoun
             Nothing -- personId
             Nothing -- walletId
       )
-        `catch` \(err :: E.Error) ->
-          if err.contents.errorCode `elem` driverMissErrorCodes
+        `catch` \(err :: SomeException) ->
+          if isDriverMiss err
             then pure (Left err)
-            else throwError err
+            else throwM err

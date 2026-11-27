@@ -1,0 +1,652 @@
+{
+  "info": {
+    "name": "FleetScopeIsolation - a fleet owner cannot reach another fleet",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// One-time per run: random phones, so the run is repeatable and can run beside others.",
+          "if (!pm.collectionVariables.get('_fs_init')) {",
+          "  const rnd = () => '9' + String(Math.floor(Math.random() * 900000000) + 100000000).slice(0, 8);",
+          "  pm.environment.set('fleet_a_mobile', rnd());",
+          "  pm.environment.set('fleet_b_mobile', rnd());",
+          "  pm.environment.set('run_stamp', String(Date.now()));",
+          "  pm.collectionVariables.set('_fs_init', '1');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 A - Fleet owner login OTP (direct tree)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_a_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login otp 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('run_started_at', new Date(Date.now() - 120000).toISOString());",
+              "const rnd = () => '9' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');",
+              "pm.environment.set('fleet_a_mobile', rnd());",
+              "pm.environment.set('fleet_b_mobile', rnd());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 A - Fleet owner verify OTP (direct tree)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_a_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"otp\": \"{{login_otp}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify otp 200', () => pm.response.to.have.status(200));",
+              "const t = pm.response.json().authToken;",
+              "pm.test('session token issued', () => pm.expect(t).to.be.a('string').and.not.empty);",
+              "pm.environment.set('fleet_a_token', t);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 B - Fleet owner login OTP (direct tree)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_b_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login otp 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 B - Fleet owner verify OTP (direct tree)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{fleet_b_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"otp\": \"{{login_otp}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify otp 200', () => pm.response.to.have.status(200));",
+              "const t = pm.response.json().authToken;",
+              "pm.test('session token issued', () => pm.expect(t).to.be.a('string').and.not.empty);",
+              "pm.environment.set('fleet_b_token', t);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Resolve both fleet ids (the person each session belongs to)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"registration_token\", \"select\": [\"token\", \"person_id\"], \"where_clause\": [{\"column_name\": \"token\", \"val\": [\"{{fleet_a_token}}\", \"{{fleet_b_token}}\"], \"op\": \"IN\"}], \"limit\": 10}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('found both sessions', () => pm.expect(rows.length).to.equal(2));",
+              "const of = t => (rows.find(r => r.token === t) || {}).person_id;",
+              "pm.environment.set('fleet_a_id', of(pm.environment.get('fleet_a_token')));",
+              "pm.environment.set('fleet_b_id', of(pm.environment.get('fleet_b_token')));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 15000); // the app writes through a key-value store and the drainer copies to Postgres; the DB read below must wait for it"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Read the driver-app merchant's internal api key",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"merchant\", \"select\": [\"short_id\", \"internal_api_key\"], \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('merchant found', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('internal_api_key', rows[0].internal_api_key);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Backfill assignments for the merchant (also exercises the endpoint)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{internal_api_key}}"
+          }
+        ],
+        "url": "{{baseURL_app}}/internal/{{dashboard_merchant_id}}/fleetScopeBackfill?dryRun=false"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('backfill 200', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "pm.test('both fleets have a dashboard person', () => {",
+              "  pm.expect(b.fleetsWithoutDashboardPerson).to.not.include(pm.environment.get('fleet_a_id'));",
+              "  pm.expect(b.fleetsWithoutDashboardPerson).to.not.include(pm.environment.get('fleet_b_id'));",
+              "});",
+              "pm.test('the owners hold their fleets', () => pm.expect(b.fleetOwnerAssignments + b.alreadyPresent).to.be.above(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Each owner holds an ACTIVE assignment on their own fleet",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"person_role_assignment\", \"select\": [\"person_id\", \"scope_id\", \"status\"], \"where_clause\": [{\"column_name\": \"scope_type\", \"val\": \"FLEET\", \"op\": \"=\"}, {\"column_name\": \"status\", \"val\": \"ACTIVE\", \"op\": \"=\"}], \"limit\": 200}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// The app writes through Redis and a drainer copies to Postgres, so a row can take a while to appear: ask again.",
+              "const retryKey = '_retry_' + pm.info.requestId;",
+              "const attempts = Number(pm.environment.get(retryKey) || 0);",
+              "if (((pm.response.json().rows) || []).length === 0 && attempts < 6) {",
+              "  pm.environment.set(retryKey, attempts + 1);",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "  return;",
+              "}",
+              "const rows = (pm.response.json().rows) || [];",
+              "const has = id => rows.some(r => r.person_id === id && r.scope_id === id);",
+              "pm.test('A holds fleet A', () => pm.expect(has(pm.environment.get('fleet_a_id'))).to.equal(true));",
+              "pm.test('B holds fleet B', () => pm.expect(has(pm.environment.get('fleet_b_id'))).to.equal(true));",
+              "pm.test('A does not hold fleet B', () => pm.expect(rows.some(r => r.person_id === pm.environment.get('fleet_a_id') && r.scope_id === pm.environment.get('fleet_b_id'))).to.equal(false));"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "setTimeout(function () {}, 15000); // the app writes through a key-value store and the drainer copies to Postgres; the DB read below must wait for it"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Find the dashboard merchant row",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/select",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"merchant\", \"select\": [\"id\", \"short_id\", \"fleet_scope_mode\"], \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}], \"limit\": 50}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const rows = (pm.response.json().rows) || [];",
+              "pm.test('dashboard merchant found', () => pm.expect(rows.length).to.equal(1));",
+              "pm.environment.set('dashboard_merchant_row_id', rows[0].id);",
+              "pm.environment.set('orig_fleet_scope_mode', rows[0].fleet_scope_mode);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Switch the merchant to ENFORCE",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/update",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"merchant\", \"set\": {\"fleet_scope_mode\": \"ENFORCE\"}, \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mode updated', () => pm.expect(pm.response.json().rowcount).to.equal(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10b - Drop cached copies of the merchant",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/redis/del",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\": \"*{{dashboard_merchant_row_id}}*\", \"target\": \"cluster\"}"
+        }
+      }
+    },
+    {
+      "name": "11 - A lists the vehicles of their own fleet: allowed",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/getAllVehicle?mbFleetOwnerId={{fleet_a_id}}&mbMemberPersonId={{fleet_a_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('own fleet 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - A names fleet B: refused",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/getAllVehicle?mbFleetOwnerId={{fleet_b_id}}&mbMemberPersonId={{fleet_a_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('another fleet is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - A names fleet B for the driver list: refused",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/getAllDriver?mbFleetOwnerId={{fleet_b_id}}&mbMemberPersonId={{fleet_a_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('another fleet is refused', () => pm.expect(pm.response.code).to.be.within(400, 499));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - A claims to be B's member and names no fleet: still only A's fleet",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/getAllVehicle?mbMemberPersonId={{fleet_b_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('answered', () => pm.expect(pm.response.code).to.be.within(200, 499));",
+              "if (pm.response.code === 200) {",
+              "  const v = (pm.response.json().vehicles || pm.response.json().list || []);",
+              "  pm.test('nothing of fleet B comes back', () => pm.expect(v.every(x => x.fleetOwnerId !== pm.environment.get('fleet_b_id'))).to.equal(true));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 - A selects fleet B in the session: refused",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_dashboard_root}}/user/switchScope",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fleetIds\": [\"{{fleet_b_id}}\"]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('cannot select a fleet they do not hold', () => pm.expect(pm.response.code).to.be.within(400, 499));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 - A selects their own fleet in the session: allowed",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_dashboard_root}}/user/switchScope",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fleetIds\": [\"{{fleet_a_id}}\"]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('own fleet can be selected', () => pm.response.to.have.status(200));",
+              "pm.test('the selection comes back', () => pm.expect(pm.response.json().fleetIds).to.eql([pm.environment.get('fleet_a_id')]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 - A clears the selection (all my fleets)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_a_token}}"
+          }
+        ],
+        "url": "{{baseURL_dashboard_root}}/user/switchScope",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fleetIds\": []}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('cleared', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 - Restore the merchant's original mode",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/sql/update",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_dashboard\", \"table_name\": \"merchant\", \"set\": {\"fleet_scope_mode\": \"{{orig_fleet_scope_mode}}\"}, \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mode restored', () => pm.expect(pm.response.json().rowcount).to.equal(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18b - Drop cached copies of the merchant",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{mockServerUrl}}/mock/redis/del",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pattern\": \"*{{dashboard_merchant_row_id}}*\", \"target\": \"cluster\"}"
+        }
+      }
+    }
+  ]
+}

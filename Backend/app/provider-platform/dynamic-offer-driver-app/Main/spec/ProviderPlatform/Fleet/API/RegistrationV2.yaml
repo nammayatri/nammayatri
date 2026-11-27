@@ -51,7 +51,7 @@ apis:
             request:
               type: FleetOwnerVerifyReqV2
             response:
-              type: APISuccess
+              type: FleetOwnerVerifiedRes
 
   - POST:
       endpoint: /v2/register
@@ -72,6 +72,66 @@ apis:
               type: FleetOwnerRegisterReqV2
             response:
               type: FleetOwnerRegisterResV2
+
+  - POST:
+      endpoint: /v2/create
+      appServerHandler: custom
+      name: postRegistrationV2CreateFleet
+      auth: ApiAuthV2
+      request:
+        type: FleetCreateReqV2
+      response:
+        type: FleetCreateResV2
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+      migrate:
+        capability: fleet.onboarding.write
+
+  - GET:
+      endpoint: /v2/contact
+      appServerHandler: custom
+      name: getRegistrationV2Contact
+      auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
+      response:
+        type: FleetContactRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+      migrate:
+        capability: fleet.onboarding.read
+
+  - POST:
+      endpoint: /v2/contact
+      appServerHandler: custom
+      name: postRegistrationV2Contact
+      auth: ApiAuthV2
+      request:
+        type: UpdateFleetContactReq
+      response:
+        type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+      migrate:
+        capability: fleet.onboarding.write
+
+  - POST:
+      endpoint: /v2/assignment/accept
+      appServerHandler: custom
+      name: postRegistrationV2AcceptFleetAssignment
+      auth: ApiAuthV2
+      request:
+        type: AcceptFleetAssignmentReqV2
+      response:
+        type: APISuccess
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+      migrate:
+        capability: fleet.onboarding.write
 
   - POST:
       endpoint: /register/bankAccount/link
@@ -137,6 +197,12 @@ types:
   FleetOwnerVerifyResV2:
     - authToken: Text
     - recordType: NewType
+  # What the application server answers to the dashboard's OTP check. It still reads as an APISuccess
+  # (result = "Success"), so an older dashboard keeps working, and adds the person the OTP was issued to,
+  # which the dashboard mints the session for. Absent when the OTP predates storing the person.
+  FleetOwnerVerifiedRes:
+    - result: Text
+    - personId: Maybe Text
   FleetOwnerRegisterReqV2:
     - firstName: Text
     - lastName: Text
@@ -163,6 +229,32 @@ types:
   FleetType:
     - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
     - derive: "HttpInstance"
+  FleetCreateReqV2: # a person creates a fleet; it is a scope they get an admin assignment on, not a login
+    - fleetName: Text
+    - fleetType: Maybe FleetType
+    - contactMobileCountryCode: Maybe Text
+    - contactMobileNumber: Maybe Text
+    - contactEmail: Maybe Text
+    - derive: "'HideSecrets"
+  FleetContactRes: # the contact a fleet is reached on; contactSetOnFleet is false while it still falls back to the owner's own
+    - contactMobileCountryCode: Maybe Text
+    - contactMobileNumber: Maybe Text
+    - contactEmail: Maybe Text
+    - contactSetOnFleet: Bool
+    - fleetName: Maybe Text
+  UpdateFleetContactReq: # sets the fleet's own contact; a missing phone or e-mail clears it, so the fleet falls back to the owner's
+    - fleetOwnerId: Maybe Text
+    - contactMobileCountryCode: Maybe Text
+    - contactMobileNumber: Maybe Text
+    - contactEmail: Maybe Text
+    - derive: "'HideSecrets"
+  AcceptFleetAssignmentReqV2: # accept an offer to work on a fleet; when it is a handover, say whose contact the fleet keeps
+    - assignmentId: Text
+    - useMyContact: Maybe Bool
+    - derive: "'HideSecrets"
+  FleetCreateResV2:
+    - fleetId: Text
+    - recordType: NewType
   FleetOwnerRegisterResV2:
     - enabled: Bool
     - recordType: NewType

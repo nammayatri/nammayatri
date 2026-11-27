@@ -13,6 +13,7 @@ module: Driver
 apis:
   - GET: # ListDriverRidesForFleetAPI
       endpoint: /fleet/listRides/{driverId}
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         driverId: Id Person

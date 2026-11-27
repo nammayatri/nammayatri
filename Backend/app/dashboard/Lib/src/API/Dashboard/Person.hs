@@ -17,6 +17,7 @@ module API.Dashboard.Person where
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Action.Dashboard.Roles as DRoles
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonRoleAssignment as DPRA
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -42,6 +43,16 @@ type API =
              :> Capture "personId" (Id DP.Person)
              :> "assignRole"
              :> Capture "roleId" (Id DRole.Role)
+             :> Post '[JSON] APISuccess
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personId" (Id DP.Person)
+             :> "grantRole"
+             :> ReqBody '[JSON] DPerson.GrantRoleReq
+             :> Post '[JSON] APISuccess
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personId" (Id DP.Person)
+             :> "revokeRole"
+             :> Capture "assignmentId" (Id DPRA.PersonRoleAssignment)
              :> Post '[JSON] APISuccess
            -- TODO : Deprecated, Remove after successful deployment
            :<|> DashboardAuth 'DASHBOARD_ADMIN
@@ -136,6 +147,8 @@ handler :: DashboardLoginFlow r => FlowServerR r API
 handler =
   ( listPerson
       :<|> assignRole
+      :<|> grantRole
+      :<|> revokeRole
       :<|> assignMerchantAccess -- TODO : Deprecated, Remove after successful deployment
       :<|> assignMerchantCityAccess
       :<|> resetMerchantAccess
@@ -168,6 +181,14 @@ createPerson tokenInfo = withDashboardDbFlowHandlerAPI . DPerson.createPerson to
 assignRole :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandlerR r APISuccess
 assignRole tokenInfo personId =
   withDashboardDbFlowHandlerAPI . DPerson.assignRole tokenInfo personId
+
+grantRole :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> DPerson.GrantRoleReq -> FlowHandlerR r APISuccess
+grantRole tokenInfo personId =
+  withDashboardDbFlowHandlerAPI . DPerson.grantRole tokenInfo personId
+
+revokeRole :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> Id DPRA.PersonRoleAssignment -> FlowHandlerR r APISuccess
+revokeRole tokenInfo personId =
+  withDashboardDbFlowHandlerAPI . DPerson.revokeRole tokenInfo personId
 
 assignMerchantAccess :: DashboardLoginFlow r => TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandlerR r APISuccess
 assignMerchantAccess tokenInfo personId req = do

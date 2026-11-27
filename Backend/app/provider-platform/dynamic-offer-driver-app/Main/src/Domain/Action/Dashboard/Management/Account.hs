@@ -60,6 +60,9 @@ postAccountVerifyAccount merchantShortId opCity Common.VerifyAccountReq {..} = d
   fleetOwnerPerson <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- The fleet must belong to the caller's merchant; the id comes from the request.
+  unless (fleetOwnerPerson.merchantId == merchant.id) $
+    throwError (PersonDoesNotExist fleetOwnerId'.getId)
   tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if enabled
     then do

@@ -36,6 +36,7 @@ type API =
   "user"
     :> "capabilities"
     :> DashboardAuth 'DASHBOARD_USER
+    :> QueryParam "fleetIds" Text
     :> Get '[JSON] DCap.UserCapabilitiesRes
     :<|> "admin"
       :> "capability"
@@ -84,8 +85,8 @@ handler =
              :<|> deletePersonCapability
          )
 
-getUserCapabilities :: DashboardLoginFlow r => TokenInfo -> FlowHandlerR r DCap.UserCapabilitiesRes
-getUserCapabilities = withDashboardDbFlowHandlerAPI . DCap.getUserCapabilities
+getUserCapabilities :: DashboardLoginFlow r => TokenInfo -> Maybe Text -> FlowHandlerR r DCap.UserCapabilitiesRes
+getUserCapabilities tokenInfo = withDashboardDbFlowHandlerAPI . DCap.getUserCapabilities tokenInfo
 
 listCapabilities :: DashboardLoginFlow r => TokenInfo -> FlowHandlerR r DCap.ListCapabilitiesRes
 listCapabilities = withDashboardDbFlowHandlerAPI . DCap.listCapabilities
