@@ -57,7 +57,7 @@ types:
     agg: "[WalletAggregateBucket]"
   TopUpRequest:
     amount: HighPrecMoney
-    purpose: "Maybe !Text"  # Optional. Use "airport" for airport entry fee recharge; omit for general wallet topup.
+    purpose: Maybe Text  # Optional. Use "airport" for airport entry fee recharge; omit for general wallet topup.
   PayoutHistoryItem:
     amount: Maybe HighPrecMoney
     payoutFee: HighPrecMoney

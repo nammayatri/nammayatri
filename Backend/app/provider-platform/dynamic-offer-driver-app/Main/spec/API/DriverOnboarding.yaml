@@ -46,8 +46,8 @@ module: DriverOnboardingV2
 types:
   # No Show: image is a base64 photo.
   RCTakeoverPhotoReq:
-    rcNo: "!Text"
-    image: "!Text" # base64 JPEG, PNG or WebP; a data: URI prefix is allowed
+    rcNo: Text
+    image: Text # base64 JPEG, PNG or WebP; a data: URI prefix is allowed
   RCTakeoverPhotoResult:
     enum: "VALID,INVALID"
   RCTakeoverPhotoResp:
@@ -172,6 +172,34 @@ types:
     isSelected: Bool
     priority: Maybe Int
     autoAcceptance: Maybe AutoAcceptanceInfo
+  # Request copies of the three tier types above, with Text where they have TranslatedText: a request cannot take TranslatedText.
+  UpdateServiceTiersReq:
+    tiers: [UpdateServiceTierReq]
+    canSwitchToRental: Maybe Bool
+    canSwitchToInterCity: Maybe Bool
+    canSwitchToIntraCity: Maybe Bool
+    enableForAirport: AirportRestrictionType
+    airConditioned: Maybe UpdateAirConditionedTierReq
+    autoAcceptLockedByFleet: Maybe Bool
+  UpdateAirConditionedTierReq:
+    isWorking: Bool
+    usageRestrictionType: AirConditionedRestrictionType
+    restrictionMessage: Maybe Text
+  UpdateServiceTierReq:
+    serviceTierType: ServiceTierType
+    name: Text
+    isUsageRestricted: Maybe Bool
+    shortDescription: Maybe Text
+    longDescription: Maybe Text
+    seatingCapacity: Maybe Int
+    airConditioned: Maybe Double
+    luggageCapacity: Maybe Int
+    driverRating: Maybe Centesimal
+    vehicleRating: Maybe Double
+    isDefault: Bool
+    isSelected: Bool
+    priority: Maybe Int
+    autoAcceptance: Maybe AutoAcceptanceInfo
   AutoAcceptanceInfo:
     minWalletBalanceRequired: Maybe HighPrecMoney
     mode: Maybe AutoAcceptanceMode
@@ -182,7 +210,7 @@ types:
     priceWithCurrency: PriceAPIEntity
     derive: Show
   SSNReq:
-    ssn: "!Text"
+    ssn: Text
   FarePolicyHour:
     enum: "Peak,NonPeak,Night"
   RateCardResp:
@@ -196,17 +224,17 @@ types:
     farePolicyHour: FarePolicyHour
     rateCardItems: [RateCardItem]
   DriverPanReq:
-    panNumber: "!Text"
+    panNumber: Text
     imageId1 : Id Image
     imageId2 : Maybe (Id Image)
     consent: Bool
-    nameOnCard: "Maybe !Text"
+    nameOnCard: Maybe Text
     dateOfBirth: Maybe UTCTime
     consentTimestamp: Maybe UTCTime
     validationStatus: Maybe ValidationStatus
     verifiedBy: Maybe VerifiedBy
-    transactionId: "Maybe !Text"
-    nameOnGovtDB: "Maybe !Text"
+    transactionId: Maybe Text
+    nameOnGovtDB: Maybe Text
     docType: Maybe PanType
   GetLiveSelfieResp:
     recordType: NewType
@@ -214,14 +242,14 @@ types:
   AadhaarCardReq:
     aadhaarFrontImageId: Maybe (Id Image)
     aadhaarBackImageId: Maybe (Id Image)
-    maskedAadhaarNumber: "Maybe !Text"
-    nameOnCard: "Maybe !Text"
-    dateOfBirth: "Maybe !Text"
-    address: "Maybe !Text"
+    maskedAadhaarNumber: Maybe Text
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
     consent: Bool
     consentTimestamp: UTCTime
     validationStatus: ValidationStatus
-    transactionId: "!Text"
+    transactionId: Text
   BankAccountLinkResp:
     chargesEnabled: Bool
     payoutsEnabled: Maybe Bool
@@ -240,30 +268,30 @@ types:
     bankName: "Maybe !Text"
     bankAccountLast4: "Maybe !Text"
   FleetInfo:
-    id: "!Text"
-    ownerName: "!Text"
-    fleetName: "Maybe !Text"
-    phoneNumber: "Maybe !Text"
+    id: Text
+    ownerName: Text
+    fleetName: Maybe Text
+    phoneNumber: Maybe Text
     address: Maybe Address
-    requestReason: "Maybe !Text"
-    responseReason: "Maybe !Text"
+    requestReason: Maybe Text
+    responseReason: Maybe Text
     chargesEnabled: Maybe Bool
     createdAt: UTCTime
     isActive: Bool
     isAssociated: Bool
     associatedTill: Maybe UTCTime
   HVSdkCallLogReq:
-    txnId: "!Text"
-    hvFlowId: "Maybe !Text"
+    txnId: Text
+    hvFlowId: Maybe Text
     docType: Maybe DocumentType
-    status : "Maybe !Text"
-    callbackResponse : "Maybe !Text"
-    failureReason : "Maybe !Text"
+    status : Maybe Text
+    callbackResponse : Maybe Text
+    failureReason : Maybe Text
   CommonDocumentReq:
     documentType: DocumentType
-    documentData: "!Text"  # JSON string containing all document data
+    documentData: Text  # JSON string containing all document data
     imageId: Maybe (Id Image)  # Optional image for documents that need it
-    registrationNo: "Maybe !Text"  # Set for vehicle documents so the doc is scoped to that RC
+    registrationNo: Maybe Text  # Set for vehicle documents so the doc is scoped to that RC
   VehiclePhotosResp:
     left: "[!Text]"
     right: "[!Text]"
@@ -275,8 +303,8 @@ types:
   DriverGstinReq:
     imageId1 : Id Image
     imageId2 : Maybe (Id Image)
-    gstNumber : "!Text"
-    transactionId : "Maybe !Text"
+    gstNumber : Text
+    transactionId : Maybe Text
     validationStatus : Maybe ValidationStatus
     verifiedBy : Maybe VerifiedBy
   FleetRCListRes:
@@ -293,7 +321,7 @@ types:
     fleetOwnerId: Id Person
     onboardingVehicleCategory: Maybe VehicleCategory
     isRevoke: Maybe Bool
-    requestReason: "Maybe !Text"
+    requestReason: Maybe Text
   ShareLinkRes:
     link: "!Text"
     expiresAt: UTCTime
@@ -303,31 +331,31 @@ types:
     authorizationUrl: "!Text"
   PullDocumentReq:
     docType: DocumentType
-    drivingLicenseNumber: "!Text"
+    drivingLicenseNumber: Text
   VerifyBankAccReq:
-      - bankAccountNo : "!Text"
-      - bankIfscCode : "!Text"
+      - bankAccountNo : Text
+      - bankIfscCode : Text
   # TDS Certificate validation types
   TDSInvoiceEntry:
-    invoiceId: "!Text"
+    invoiceId: Text
     invoiceDate: UTCTime
-    invoiceNumber: "!Text"
+    invoiceNumber: Text
     baseValue: HighPrecMoney
     gst: HighPrecMoney
     invoiceValue: HighPrecMoney
     tdsAmountAgainstInvoice: HighPrecMoney
-    tanNumber: "Maybe !Text"
-    tdsCertificateNumber: "Maybe !Text"
-    quarter: "!Text"
-    assessmentYear: "!Text"
+    tanNumber: Maybe Text
+    tdsCertificateNumber: Maybe Text
+    quarter: Text
+    assessmentYear: Text
   TDSCertificateData:
     tdsCertificates: '[TDSInvoiceEntry]'
     overallTdsAmount: HighPrecMoney
   TDSCertificateValidationError:
-    field: "!Text"
-    invoiceId: "!Text"
+    field: Text
+    invoiceId: Text
     # errorMessage is validation error text; errors are not keyed
-    errorMessage: "!Text"
+    errorMessage: Text
 
 apis:
   - GET:
@@ -396,7 +424,7 @@ apis:
       endpoint: /driver/updateServiceTiers
       auth: TokenAuth PROVIDER_TYPE
       request:
-        type: DriverVehicleServiceTiers
+        type: UpdateServiceTiersReq
       response:
         type: APISuccess
   - POST:

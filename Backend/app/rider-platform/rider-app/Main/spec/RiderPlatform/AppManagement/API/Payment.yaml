@@ -139,7 +139,7 @@ types:
     - updatedAt: UTCTime
   RefundRequestRespondReq:
     - approve: Bool
-    - responseDescription: "Maybe !Text"
+    - responseDescription: Maybe Text
     - refundComponents: "Maybe [RefundComponentItem]" # approve: admin's per-component breakdown (modify/add/zero); null = approve as-requested / retry prior approval; component-wise cap
     - retryRefunds: Maybe Bool # in case if previous refund was failed
     - deductFromDriver: Maybe Bool # required when approve=true; false = platform absorbs, true = clawback from driver — ledger-based (no Stripe reverse_transfer)
@@ -154,9 +154,9 @@ types:
     - amount: PriceAPIEntity
   RefundRequestInitiateReq:
     - refundComponents: "[RefundComponentItem]"  # per-component amounts (required) — same as customer create; component-wise cap; total = sum
-    - description: "Maybe !Text"                     # admin notes; null = handler default
+    - description: Maybe Text                     # admin notes; null = handler default
     - deductFromDriver: Maybe Bool                # false = platform absorbs, true = clawback from driver — ledger-based (no Stripe reverse_transfer)
-    - evidence: "Maybe !Text"                        # optional proof image (base64), same as customer create; shown to the approver via /info
+    - evidence: Maybe Text                        # optional proof image (base64), same as customer create; shown to the approver via /info
     - fileType: Maybe FileType
-    - reqContentType: "Maybe !Text"
+    - reqContentType: Maybe Text
     - derive: "'HideSecrets"

@@ -308,7 +308,7 @@ types:
     - bookingId: Id Booking
     - cancellationReasonCode: CancellationReasonCode
     - cancellationStage: CancellationStage
-    - additionalInfo: "Maybe !Text"
+    - additionalInfo: Maybe Text
   MultipleRideCancelReq:
     - recordType: NewType
     - multipleRideCancelInfo: [BookingCancelledReq]

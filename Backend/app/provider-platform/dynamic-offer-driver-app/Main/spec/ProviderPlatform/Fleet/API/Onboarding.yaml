@@ -141,11 +141,11 @@ apis:
               type: ReferralInfoRes
 types:
   VerifyReq:
-    driverId: "!Text"
-    imageId: "!Text"
-    optionalImageId: "Maybe !Text"
-    identifierNumber: "!Text"
-    identifierName: "Maybe !Text"
+    driverId: Text
+    imageId: Text
+    optionalImageId: Maybe Text
+    identifierNumber: Text
+    identifierName: Maybe Text
   VerifyDocumentRes:
     - enableFleetOwner: Bool
     - recordType: NewType

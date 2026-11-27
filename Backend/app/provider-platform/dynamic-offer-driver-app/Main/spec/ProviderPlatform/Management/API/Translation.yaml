@@ -87,11 +87,11 @@ types:
     - derive: "'HideSecrets"
 
   TranslationUpsertEntry:
-    - key: "!Text"
+    - key: Text
     - language: Language
-    - field: "!Text"
+    - field: Text
     - variant: "Maybe [(!Kernel.Prelude.Text, !Kernel.Prelude.Text)]"
-    - text: "!Text"
+    - text: Text
 
   # Every entry is tried; saved counts the written ones and failed names each cell that was not,
   # with the reason. The entries of one key, variant and language stand or fall together.

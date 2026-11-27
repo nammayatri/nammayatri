@@ -696,7 +696,7 @@ computeAutoAcceptSignal ::
   (ServiceTierType -> Bool) ->
   DVeh.Vehicle ->
   VehicleServiceTier ->
-  Maybe API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTier ->
+  Maybe API.Types.UI.DriverOnboardingV2.UpdateServiceTierReq ->
   AutoAcceptSignal
 computeAutoAcceptSignal hasAutoAssignTag vehicle driverServiceTier mbTierRequest =
   case driverServiceTier.autoAcceptanceConfig of
@@ -727,10 +727,10 @@ postDriverUpdateServiceTiers ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers ->
+    API.Types.UI.DriverOnboardingV2.UpdateServiceTiersReq ->
     Environment.Flow APISuccess
   )
-postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
+postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateServiceTiersReq {..} = do
   -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing

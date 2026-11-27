@@ -394,6 +394,45 @@ newtype UpdateAirConditionUpdateRequest = UpdateAirConditionUpdateRequest {isAir
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data UpdateAirConditionedTierReq = UpdateAirConditionedTierReq
+  { isWorking :: Kernel.Prelude.Bool,
+    restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    usageRestrictionType :: Domain.Types.DriverInformation.AirConditionedRestrictionType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateServiceTierReq = UpdateServiceTierReq
+  { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    autoAcceptance :: Kernel.Prelude.Maybe AutoAcceptanceInfo,
+    driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+    isDefault :: Kernel.Prelude.Bool,
+    isSelected :: Kernel.Prelude.Bool,
+    isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    name :: Kernel.Prelude.Text,
+    priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    serviceTierType :: Domain.Types.Common.ServiceTierType,
+    shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateServiceTiersReq = UpdateServiceTiersReq
+  { airConditioned :: Kernel.Prelude.Maybe UpdateAirConditionedTierReq,
+    autoAcceptLockedByFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
+    tiers :: [UpdateServiceTierReq]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ValidationStatus
   = APPROVED
   | DECLINED

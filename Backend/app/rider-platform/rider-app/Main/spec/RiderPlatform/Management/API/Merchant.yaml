@@ -407,7 +407,7 @@ apis:
 
 types:
   MerchantUpdateReq:
-    - name: "Maybe !Text"
+    - name: Maybe Text
     - exoPhones: Maybe (NonEmpty ExophoneReq)
     - fcmConfig: Maybe FCMConfigUpdateReq
     - gatewayUrl: Maybe BaseUrl
@@ -423,11 +423,11 @@ types:
   SchedulerTriggerReq:
     - scheduledAt: Maybe UTCTime
     - jobName: Maybe JobName
-    - jobData: "!Text"
+    - jobData: Text
     - derive: "'HideSecrets"
   ReviveSchedulerJobsReq:
     - recordType: NewType
-    - jobIds: "[!Text]"
+    - jobIds: [Text]
     - derive: "'HideSecrets"
   ReviveSchedulerJobsRes:
     - recordType: NewType
@@ -494,14 +494,14 @@ types:
   RiderMerchantMessageCatalogResp:
     - values: "[!Text]"
   UpsertRiderMerchantMessageReq:
-    - messageKey: "!Text"
-    - message: "!Text"
-    - templateId: "!Text"
+    - messageKey: Text
+    - message: Text
+    - templateId: Text
     - containsUrlButton: Bool
     - jsonData: Maybe Value
-    - messageType: "Maybe !Text"
-    - senderHeader: "Maybe !Text"
-    - mediaUrl: "Maybe !Text"
+    - messageType: Maybe Text
+    - senderHeader: Maybe Text
+    - mediaUrl: Maybe Text
     - language: Maybe Language
     - derive: "'HideSecrets"
 
