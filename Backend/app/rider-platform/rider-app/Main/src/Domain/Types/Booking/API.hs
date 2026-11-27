@@ -88,6 +88,7 @@ import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import SharedLogic.DriverNumber (getDriverMobileNumber)
 import qualified SharedLogic.FareBreakdown as SFareBreakdown
+import qualified SharedLogic.FareUpdateReason as FareUpdate
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Settlement as Settlement
 import qualified SharedLogic.Type as SLT
@@ -211,7 +212,8 @@ data BookingAPIEntity = BookingAPIEntity
     fleetEngineEnabled :: Maybe Bool,
     rentalStops :: Maybe [RentalStopAPIEntity],
     maxPendingRentalStops :: Maybe Int,
-    stopsVersion :: Maybe Int
+    stopsVersion :: Maybe Int,
+    fareUpdateInfo :: Maybe FareUpdate.FareUpdateInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -458,99 +460,108 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
   mbPaymentCharge <- Settlement.bookingPaymentChargeDetails booking
   mbRentalStops <- mkRentalStopsAPIEntity booking activeRide isValueAddNP
   mbStopsVersion <- bookingStopsVersion booking
-  return $
-    BookingAPIEntity
-      { id = booking.id,
-        status = booking.status,
-        agencyName = bppDetails.name,
-        agencyNumber = Just providerNum,
-        riderMobileNumber = riderMobile,
-        riderName = riderName,
-        estimatedFare = booking.estimatedFare.amountInt,
-        discount = booking.discount <&> (.amountInt),
-        estimatedTotalFare = booking.estimatedTotalFare.amountInt,
-        estimatedFareWithCurrency = mkRoundedPriceAPIEntity booking.estimatedFare,
-        discountWithCurrency = mkRoundedPriceAPIEntity <$> booking.discount,
-        estimatedTotalFareWithCurrency = mkRoundedPriceAPIEntity booking.estimatedTotalFare,
-        fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
-        initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
-        rideList = rides,
-        hasNightIssue = hasNightIssue,
-        tripTerms = [],
-        estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) estimatedFareBreakups,
-        fareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) fareBreakups,
-        rideScheduledTime = booking.startTime,
-        returnTime = booking.returnTime,
-        bookingDetails,
-        rideStartTime = activeRide >>= (.rideStartTime),
-        rideEndTime = activeRide >>= (.rideEndTime),
-        estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
-        estimatedDistanceWithUnit = booking.estimatedDistance,
-        estimatedDuration = booking.estimatedDuration,
-        duration = getRideDuration activeRide,
-        merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
-        specialLocationTag = booking.specialLocationTag,
-        specialLocationName = booking.specialLocationName,
-        pickupSpecialZoneInfo = mkSpecialZoneGateInfo booking.pickupArea,
-        paymentMethodId = paymentMethodId,
-        paymentInstrument = booking.paymentInstrument,
-        paymentMode = booking.paymentMode,
-        paymentUrl = booking.paymentUrl,
-        createdAt = booking.createdAt,
-        updatedAt = booking.updatedAt,
-        hasDisability = (Just . isJust) booking.disabilityTag,
-        sosStatus = mbSosStatus,
-        isBookingUpdated = booking.isBookingUpdated,
-        eligibleForBetterDriverSearch = booking.eligibleForBetterDriverSearch,
-        supersededByBookingId = Id <$> booking.supersededByBookingId,
-        betterDriverAbortRadiusMeters = booking.betterDriverAbortRadiusMeters,
-        isValueAddNP,
-        merchantOperatingCityId = booking.merchantOperatingCityId,
-        isPetRide = booking.isPetRide,
-        vehicleServiceTierType = booking.vehicleServiceTierType,
-        vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
-        vehicleServiceTierLuggageCapacity = booking.vehicleServiceTierLuggageCapacity,
-        numberOfPassengers = booking.numberOfPassengers,
-        numberOfCheckInBags = booking.numberOfCheckInBags,
-        numberOfCabinBags = booking.numberOfCabinBags,
-        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
-        isAirConditioned = booking.isAirConditioned,
-        driverCancellationNotAllowed = booking.driverCancellationNotAllowed,
-        serviceTierName,
-        serviceTierShortDesc,
-        driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
-        driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
-        isScheduled = booking.isScheduled,
-        cancellationReason = mbCancellationReason,
-        isAlreadyFav = activeRide >>= (.isAlreadyFav),
-        favCount = activeRide >>= (.favCount),
-        tripCategory = booking.tripCategory,
-        estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
-        vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
-        isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus),
-        isInsured = Just booking.isInsured,
-        insuredAmount = booking.insuredAmount,
-        billingCategory = booking.billingCategory,
-        vehicleCategory = booking.vehicleCategory,
-        mbJourneyId = mbJourneyLeg <&> (.journeyId),
-        displayBookingId = booking.displayBookingId,
-        driverPreference = booking.driverPreference,
-        specialLocationSupportNumber = booking.specialLocationSupportNumber,
-        commissionCharge = booking.commission,
-        componentGrossMultipliers = PaymentCharge.grossMultipliers mbPaymentCharge <$> booking.riderTaxRates,
-        taxRates = booking.riderTaxRates,
-        bookingDepositAmount = booking.bookingDepositAmount,
-        bookingDeposit = Nothing,
-        refunds = refunds,
-        fareSettlementType = booking.fareSettlementType,
-        cardInfo = cardInfo,
-        isSilentReallocation = Nothing,
-        parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo,
-        fleetEngineEnabled = fleetEngineEnabled,
-        rentalStops = fst <$> mbRentalStops,
-        maxPendingRentalStops = snd <$> mbRentalStops,
-        stopsVersion = mbStopsVersion
-      }
+  bookingAPIEntity <-
+    pure $
+      BookingAPIEntity
+        { id = booking.id,
+          status = booking.status,
+          agencyName = bppDetails.name,
+          agencyNumber = Just providerNum,
+          riderMobileNumber = riderMobile,
+          riderName = riderName,
+          estimatedFare = booking.estimatedFare.amountInt,
+          discount = booking.discount <&> (.amountInt),
+          estimatedTotalFare = booking.estimatedTotalFare.amountInt,
+          estimatedFareWithCurrency = mkRoundedPriceAPIEntity booking.estimatedFare,
+          discountWithCurrency = mkRoundedPriceAPIEntity <$> booking.discount,
+          estimatedTotalFareWithCurrency = mkRoundedPriceAPIEntity booking.estimatedTotalFare,
+          fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
+          initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
+          rideList = rides,
+          hasNightIssue = hasNightIssue,
+          tripTerms = [],
+          estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) estimatedFareBreakups,
+          fareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> FB.withoutHiddenLines (.description) fareBreakups,
+          rideScheduledTime = booking.startTime,
+          returnTime = booking.returnTime,
+          bookingDetails,
+          rideStartTime = activeRide >>= (.rideStartTime),
+          rideEndTime = activeRide >>= (.rideEndTime),
+          estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
+          estimatedDistanceWithUnit = booking.estimatedDistance,
+          estimatedDuration = booking.estimatedDuration,
+          duration = getRideDuration activeRide,
+          merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+          specialLocationTag = booking.specialLocationTag,
+          specialLocationName = booking.specialLocationName,
+          pickupSpecialZoneInfo = mkSpecialZoneGateInfo booking.pickupArea,
+          paymentMethodId = paymentMethodId,
+          paymentInstrument = booking.paymentInstrument,
+          paymentMode = booking.paymentMode,
+          paymentUrl = booking.paymentUrl,
+          createdAt = booking.createdAt,
+          updatedAt = booking.updatedAt,
+          hasDisability = (Just . isJust) booking.disabilityTag,
+          sosStatus = mbSosStatus,
+          isBookingUpdated = booking.isBookingUpdated,
+          eligibleForBetterDriverSearch = booking.eligibleForBetterDriverSearch,
+          supersededByBookingId = Id <$> booking.supersededByBookingId,
+          betterDriverAbortRadiusMeters = booking.betterDriverAbortRadiusMeters,
+          isValueAddNP,
+          merchantOperatingCityId = booking.merchantOperatingCityId,
+          isPetRide = booking.isPetRide,
+          vehicleServiceTierType = booking.vehicleServiceTierType,
+          vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
+          vehicleServiceTierLuggageCapacity = booking.vehicleServiceTierLuggageCapacity,
+          numberOfPassengers = booking.numberOfPassengers,
+          numberOfCheckInBags = booking.numberOfCheckInBags,
+          numberOfCabinBags = booking.numberOfCabinBags,
+          vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
+          isAirConditioned = booking.isAirConditioned,
+          driverCancellationNotAllowed = booking.driverCancellationNotAllowed,
+          serviceTierName,
+          serviceTierShortDesc,
+          driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+          driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+          isScheduled = booking.isScheduled,
+          cancellationReason = mbCancellationReason,
+          isAlreadyFav = activeRide >>= (.isAlreadyFav),
+          favCount = activeRide >>= (.favCount),
+          tripCategory = booking.tripCategory,
+          estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
+          vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
+          isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus),
+          isInsured = Just booking.isInsured,
+          insuredAmount = booking.insuredAmount,
+          billingCategory = booking.billingCategory,
+          vehicleCategory = booking.vehicleCategory,
+          mbJourneyId = mbJourneyLeg <&> (.journeyId),
+          displayBookingId = booking.displayBookingId,
+          driverPreference = booking.driverPreference,
+          specialLocationSupportNumber = booking.specialLocationSupportNumber,
+          commissionCharge = booking.commission,
+          componentGrossMultipliers = PaymentCharge.grossMultipliers mbPaymentCharge <$> booking.riderTaxRates,
+          taxRates = booking.riderTaxRates,
+          bookingDepositAmount = booking.bookingDepositAmount,
+          bookingDeposit = Nothing,
+          refunds = refunds,
+          fareSettlementType = booking.fareSettlementType,
+          cardInfo = cardInfo,
+          isSilentReallocation = Nothing,
+          parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo,
+          fleetEngineEnabled = fleetEngineEnabled,
+          rentalStops = fst <$> mbRentalStops,
+          maxPendingRentalStops = snd <$> mbRentalStops,
+          stopsVersion = mbStopsVersion,
+          fareUpdateInfo = Nothing
+        }
+
+  mbFareUpdateInfo <- case (booking.status, rides) of
+    (COMPLETED, ride : _)
+      | not (null fareBreakups) ->
+        FareUpdate.mkFareUpdateInfo booking.id booking.merchantOperatingCityId person.language (mkFareUpdateInput bookingAPIEntity ride)
+    _ -> pure Nothing
+  pure bookingAPIEntity {fareUpdateInfo = mbFareUpdateInfo}
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
     getRideDuration mbRide = do
@@ -558,6 +569,24 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
       startTime <- ride.rideStartTime
       endTime <- ride.rideEndTime
       return $ nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
+
+mkFareUpdateInput :: BookingAPIEntity -> RideAPIEntity -> FareUpdate.FareUpdateInput
+mkFareUpdateInput entity ride =
+  FareUpdate.FareUpdateInput
+    { finalFareBreakup = entity.fareBreakup,
+      estimatedFareBreakup = entity.estimatedFareBreakup,
+      grossMultipliers = ride.componentGrossMultipliers <|> entity.componentGrossMultipliers,
+      computedPrice = ride.computedPriceWithCurrency,
+      estimatedTotalFare = entity.estimatedTotalFareWithCurrency,
+      rideStartTime = entity.rideStartTime,
+      rideEndTime = entity.rideEndTime,
+      estimatedDuration = entity.estimatedDuration,
+      estimatedDistance = entity.estimatedDistance,
+      chargeableDistance = ride.chargeableRideDistance,
+      isRental = case entity.bookingDetails of
+        RentalAPIDetails _ -> True
+        _ -> False
+    }
 
 -- | Looks up the BAP FleetEngine service config for the city and returns its 'enabled' flag.
 -- Nothing when no FE config exists for that city (consumer app treats as SDK-off).

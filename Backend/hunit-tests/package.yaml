@@ -85,6 +85,7 @@ library:
   source-dirs: src
   exposed-modules:
     - Dashboard
+    - FareUpdateReasonTests
     - FileManagementUnitTests
     - SharedCabBlacklistTests
   other-modules:
