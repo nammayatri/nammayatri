@@ -310,6 +310,7 @@ types:
 
   ParkingEntryStatus:
     enum: "Entered,NotEntered"
+    derive: "HttpInstance"
 
 apis:
   # GET /ticket/places

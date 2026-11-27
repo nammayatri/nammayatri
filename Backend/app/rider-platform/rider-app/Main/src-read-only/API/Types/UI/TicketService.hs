@@ -4,6 +4,7 @@ module API.Types.UI.TicketService where
 
 import qualified API.Types.UI.ParkingBooking
 import qualified Dashboard.Common
+import Data.Aeson (eitherDecode, encode)
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text

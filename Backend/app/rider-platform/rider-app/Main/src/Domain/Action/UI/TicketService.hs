@@ -99,6 +99,7 @@ import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.SMS as Sms
 import qualified Tools.Wallet as Wallet
+import Prelude (id)
 
 --import Control.Monad.Extra (mapMaybeM)
 
