@@ -17,6 +17,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import time
 import urllib.parse
 import urllib.request
@@ -62,11 +63,19 @@ PC_SOCKET = "data/process-compose.sock"
 # (mock-registry, location-tracking, notification-service, consumers, test tools)
 # restarts by design (availability.restart = always / on_failure in
 # nix/services/nammayatri.nix) while its dependencies warm up, so its restarts are
-# not a failure. One-shot steps fail when they exit non-zero; the two app servers
-# (restart = always) fail once they have restarted RESTART_LIMIT times.
-CORE_ONESHOT = ("nammayatri-init", "dashboard-migrations")
+# not a failure.
+# One-shot steps fail when they exit non-zero.
+CORE_ONESHOT = ("cabal-build", "nammayatri-init", "dashboard-migrations")
+# The two app servers (restart = always) are also restarted by design: the liveness
+# probe kills a slow start (migrations on a fresh workspace), and config-sync restarts
+# them through the process-compose API. Those are kills (a signal: exit -1, or 128+N).
+# Only a real crash (the program exits with 1..127) counts, and only once the app has
+# restarted RESTART_LIMIT times.
 CORE_SERVERS = ("rider-app-exe", "dynamic-offer-driver-app-exe")
+CORE = CORE_ONESHOT + CORE_SERVERS
 RESTART_LIMIT = 3
+# Consecutive ssh timeouts tolerated while polling before the run gives up.
+SSH_RETRIES = 5
 # The stages after which process-compose (and so its socket) is up.
 WATCHED_STAGES = ("cache-restore", "build", "services")
 # What a failure in each stage is called at the top of the GitHub run.
@@ -95,7 +104,7 @@ class StackFailure(RuntimeError):
 HINTS = [
     ("Expression doesn't match annotation",
      "dhall config doesn't match the code — check Backend/dhall-configs/dev/<service>.dhall"),
-    ("25001", "a DB migration uses CONCURRENTLY inside a multi-statement file (or a stale shared-kernel)"),
+    ('sqlState = "25001"', "a DB migration uses CONCURRENTLY inside a multi-statement file (or a stale shared-kernel)"),
     ("SqlError", "a DB migration failed — see the last 'Executing:' line above"),
     ("Text file busy", "two services built the same binary at once (process-compose race)"),
     ("address already in use", "a port is already taken (AddrInUse)"),
@@ -174,35 +183,60 @@ def services(t: ssh.Target, wdir: str, timeout: int = 15) -> list:
     """Every process-compose service as {name, status, is_ready, restarts,
     exit_code, is_running}, read over the workspace's process-compose socket.
     [] before the socket exists (the stack has not reached services yet)."""
-    r = ssh.run(t, f"curl -s --max-time 8 --unix-socket {shlex.quote(wdir)}/{PC_SOCKET} "
-                   "http://localhost/processes 2>/dev/null", timeout=timeout)
+    r = _run_soft(t, f"curl -s --max-time 8 --unix-socket {shlex.quote(wdir)}/{PC_SOCKET} "
+                     "http://localhost/processes 2>/dev/null", timeout=timeout)
     try:
-        return json.loads(r.stdout).get("data") or []
+        return json.loads(r).get("data") or []
     except (ValueError, AttributeError):
         return []
 
 
+def _run_soft(t: ssh.Target, script: str, timeout: int) -> str:
+    """stdout of an ssh call that only adds detail (progress, service list, log
+    lines): a slow or broken ssh gives "" instead of an exception, so it can never
+    fail a build that is fine. The next poll tries again."""
+    try:
+        return ssh.run(t, script, timeout=timeout).stdout or ""
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
+
+
 def _exited_bad(p: dict) -> bool:
+    """Stopped and not running, with a non-zero exit code."""
     return (not p.get("is_running")
             and p.get("exit_code") not in (0, None)
             and p.get("status") in ("Completed", "Error", "Failed"))
 
 
+def _crashed(p: dict) -> bool:
+    """The last exit was the program failing (1..127), not a kill by a signal
+    (-1 or 128+N: liveness probe, a restart through the API, a manual stop)."""
+    code = p.get("exit_code")
+    return isinstance(code, int) and 0 < code < 128
+
+
 def _root_failure(procs: list) -> tuple:
-    """The core service that actually broke, and the services left Skipped
-    waiting on it. Broke = a CORE_ONESHOT step exited non-zero, or a CORE_SERVERS
-    app restarted >= RESTART_LIMIT times or stopped for good with a non-zero exit.
-    Any other service is ignored (see CORE_ONESHOT). Returns (bad|None, [skipped])."""
+    """The service that actually broke, and the core services left Skipped
+    because of it. Returns (bad|None, [skipped core names]).
+
+    Broke = a CORE_ONESHOT step exited non-zero; or a CORE_SERVERS app crashed
+    (exit 1..127) after restarting RESTART_LIMIT times; or a core service was
+    Skipped because something it waits on failed: then the failed service is
+    reported (whatever it is), else the skipped core service itself. Other
+    services' restarts and failures are ignored."""
     by_name = {p.get("name"): p for p in procs}
-    skipped = [p["name"] for p in procs if p.get("status") == "Skipped"]
+    skipped = [n for n in CORE if (by_name.get(n) or {}).get("status") == "Skipped"]
     for name in CORE_ONESHOT:
         p = by_name.get(name)
         if p and _exited_bad(p):
             return p, skipped
     for name in CORE_SERVERS:
         p = by_name.get(name)
-        if p and ((p.get("restarts") or 0) >= RESTART_LIMIT or _exited_bad(p)):
+        if p and _crashed(p) and ((p.get("restarts") or 0) >= RESTART_LIMIT or _exited_bad(p)):
             return p, skipped
+    if skipped:
+        cause = next((p for p in procs if p.get("status") != "Skipped" and _exited_bad(p)), None)
+        return (cause or by_name[skipped[0]]), skipped
     return None, skipped
 
 
@@ -215,20 +249,22 @@ def service_errors(t: ssh.Target, wdir: str, name: str, n: int = 20, timeout: in
     d = shlex.quote(wdir)
     pat = "'error|exception|Executing:|match annotation|SqlError|busy|in use'"
     lines = f"| tr '\\r' '\\n' | sed 's/\\x1b\\[[0-9;]*m//g'"
-    r = ssh.run(t, f"""cd {d} 2>/dev/null || exit 0
+    r = _run_soft(t, f"""cd {d} 2>/dev/null || exit 0
 src=""
 for f in Backend/{shlex.quote(name)}.log {shlex.quote(name)}.log; do [ -s "$f" ] && {{ src=$f; break; }}; done
 if [ -n "$src" ]; then all=$(tail -n 5000 "$src" {lines}); else all=$(grep -aF {shlex.quote("[" + name)} {LOG} 2>/dev/null | tail -n 5000 {lines}); fi
 errs=$(printf '%s\\n' "$all" | grep -aiE {pat} | tail -n {int(n)})
 if [ -n "$errs" ]; then printf '%s\\n' "$errs"; else printf '%s\\n' "$all" | tail -n {int(n)}; fi""",
-                timeout=timeout)
-    return r.stdout.strip()
+                  timeout=timeout)
+    return r.strip()
 
 
 def _failure_message(t: ssh.Target, wdir: str, bad: dict, skipped: list) -> str:
     errs = service_errors(t, wdir, bad["name"])
     hint = _hint_for(errs)
-    if _exited_bad(bad):
+    if bad.get("status") == "Skipped":
+        what = "did not start (something it waits on failed)"
+    elif _exited_bad(bad):
         what = f"exited with code {bad.get('exit_code')}"
     else:
         what = f"keeps crashing ({bad.get('restarts', 0)} restarts)"
@@ -237,8 +273,9 @@ def _failure_message(t: ssh.Target, wdir: str, bad: dict, skipped: list) -> str:
         msg += f"\nHint: {hint}"
     if errs:
         msg += "\n" + errs
-    if skipped:
-        msg += "\nDid not start (waiting on it): " + ", ".join(skipped)
+    others = [n for n in skipped if n != bad["name"]]
+    if others:
+        msg += "\nDid not start because of it: " + ", ".join(others)
     return msg
 
 
@@ -249,13 +286,16 @@ def _hint_for(text: str) -> str | None:
 
 def build_progress(t: ssh.Target, wdir: str, timeout: int = 15) -> str:
     """A one-line summary of where the build is: the cache result and the newest
-    '[N of M] Compiling <pkg>' line. '' when there is nothing to report yet."""
-    r = ssh.run(t,
-                "tr '\\r' '\\n' < " + shlex.quote(wdir) + "/" + LOG + " 2>/dev/null"
-                " | sed 's/\\x1b\\[[0-9;]*m//g'"
-                " | grep -aE 'cache-restore: (cache hit|cache miss|no cache|done)|of [0-9]+] Compiling' | tail -n 1",
-                timeout=timeout)
-    line = r.stdout.strip()
+    '[N of M] Compiling <pkg>' line. '' when there is nothing to report yet.
+    Greps first and cleans only the matching line, so the poll stays cheap
+    however big the log grows."""
+    pat = shlex.quote("cache-restore: (cache hit|cache miss|no cache|done)|of [0-9]+] Compiling")
+    r = _run_soft(t,
+                  f"grep -aE 'Compiling|cache-restore:' {shlex.quote(wdir)}/{LOG} 2>/dev/null | tail -n 20"
+                  " | tr '\\r' '\\n' | sed 's/\\x1b\\[[0-9;]*m//g'"
+                  f" | grep -aE {pat} | tail -n 1",
+                  timeout=timeout)
+    line = r.strip()
     if not line:
         return ""
     # drop the "[cache-restore\t] " / "[cabal-build\t] " prefix, then a trailing
@@ -315,8 +355,18 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
     deadline = time.time() + timeout
     seen = ""
     last_progress = ""
+    ssh_misses = 0
     while True:
-        st = status(t, wdir)
+        try:
+            st = status(t, wdir)
+            ssh_misses = 0
+        except subprocess.TimeoutExpired:
+            ssh_misses += 1
+            if ssh_misses >= SSH_RETRIES:
+                raise StackFailure(seen or "none", f"lost ssh to {t.host}: {ssh_misses} status checks in a row timed out")
+            out(f"[stack] ssh to {t.host} timed out, retrying")
+            time.sleep(interval)
+            continue
         if st["stage"] != seen:
             seen = st["stage"]
             out(f"[stack] stage: {seen}")
