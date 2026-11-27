@@ -590,13 +590,20 @@ DEVBOX_FCM_KEY_FILE = Path(os.environ.get(
 # The same for the rider app (customer notifications), whose Firebase project can differ.
 DEVBOX_FCM_RIDER_KEY_FILE = Path(os.environ.get(
     "DEVBOX_FCM_RIDER_SERVICE_ACCOUNT_FILE", "~/.config/devbox/fcm-rider-service-account.b64")).expanduser()
-# Per-project keys: one <anything>.b64 per Firebase project (the project is read from
-# inside the key, so the file name is only for humans). Different apps live in different
-# Firebase projects (jp-beckn-dev, movingtech-international, ...), and a key sends only to
-# its own project; dropping a project's key file here makes that project's apps work with
-# no code change. The two legacy single files above stay the fallback for the mock rows.
+# Per-merchant keys, for apps whose Firebase project differs from the default one:
+#   <DEVBOX_FCM_KEY_DIR>/driver/<MERCHANT_SHORT_ID>.b64   (driver app, e.g. driver/LYNX_PARTNER.b64)
+#   <DEVBOX_FCM_KEY_DIR>/rider/<MERCHANT_SHORT_ID>.b64    (rider app,  e.g. rider/LYNX.b64)
+# A key sends only to its own Firebase project, so a merchant is chosen by its short_id (always
+# in the DB), not by the project in its FCM URL: config-sync rewrites FCM URLs to the local mock
+# (jp-beckn-dev and fleetx on master data, every project on prod / prod_international data) and
+# feature-migration 0013 drops the path, so the URL no longer says which project a merchant uses.
+# Merchants without a file get the legacy single-file key above (Namma Yatri, Bridge, Bharat
+# Taxi: all on that key's project), exactly as before.
 DEVBOX_FCM_KEY_DIR = Path(os.environ.get(
     "DEVBOX_FCM_KEY_DIR", "~/.config/devbox/fcm")).expanduser()
+# File names are matched to merchant.short_id ignoring case; the name is a bound SQL
+# parameter, the check only keeps out names that cannot be a short_id.
+_MERCHANT_SHORT_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
 def _devbox_fcm_project(key: str) -> str:
@@ -623,160 +630,116 @@ def _read_devbox_fcm_key(key_file: Path) -> tuple[str, str]:
     return key, _devbox_fcm_project(key)
 
 
-def _collect_devbox_fcm_keys():
-    """Gather the FCM keys the host has, as ({project_id: key}, default, notes).
+def _fcm_url(project: str) -> str:
+    return f"https://fcm.googleapis.com/v1/projects/{project}/messages:send/"
 
-    project_keys maps each Firebase project to its key, read from every *.b64 in
-    DEVBOX_FCM_KEY_DIR and the two legacy single files (the project is read from
-    inside each key, never the file name; first file wins a clash). default is
-    (project, key) of the legacy single file — the fallback applied to the mock
-    rows (config-sync redacts jp-beckn-dev URLs to the local mock, so those rows
-    no longer name their project; see assets/patches.json.example). notes holds a
-    line per file that could not be read. Never returns or logs a key value."""
-    project_keys = {}
-    notes = []
-    default_project = None
-    dir_files = sorted(DEVBOX_FCM_KEY_DIR.glob("*.b64")) if DEVBOX_FCM_KEY_DIR.is_dir() else []
-    legacy_files = [p for p in (DEVBOX_FCM_KEY_FILE, DEVBOX_FCM_RIDER_KEY_FILE) if p.is_file()]
-    for f in dir_files + legacy_files:
+
+def _collect_devbox_fcm_keys(side: str):
+    """Keys for one app ("driver" or "rider"), as (default, merchant_keys, notes, error).
+
+    default is (key, project) from the legacy single file of that side, or None when the host
+    has none. merchant_keys maps a file's short_id to (key, project), one per
+    <DEVBOX_FCM_KEY_DIR>/<side>/<SHORT_ID>.b64. A per-merchant file that cannot be read is
+    skipped with a note (one app's bad file must not stop the others). error is set when the
+    legacy file is present but unusable, which fails the sync as before. Notes and errors name
+    files and fields only, never a key value."""
+    legacy = DEVBOX_FCM_KEY_FILE if side == "driver" else DEVBOX_FCM_RIDER_KEY_FILE
+    notes, default, error = [], None, None
+    if legacy.is_file():
         try:
-            key, project = _read_devbox_fcm_key(f)
+            default = _read_devbox_fcm_key(legacy)
         except (OSError, ValueError) as e:
-            notes.append(f"[devbox-fcm] skipping {f.name}: {e}")
+            error = f"[devbox-fcm] ERROR {legacy}: {e}; FCM not changed"
+            return None, {}, [error], error
+    merchant_keys = {}
+    side_dir = DEVBOX_FCM_KEY_DIR / side
+    for f in sorted(side_dir.glob("*.b64")) if side_dir.is_dir() else []:
+        if not _MERCHANT_SHORT_ID_RE.match(f.stem):
+            notes.append(f"[devbox-fcm] skipping {side}/{f.name}: name must be a merchant short_id")
             continue
-        project_keys.setdefault(project, key)
-        if f in legacy_files and default_project is None:
-            default_project = project
-    default = (default_project, project_keys[default_project]) if default_project else None
-    return project_keys, default, notes
+        try:
+            merchant_keys[f.stem] = _read_devbox_fcm_key(f)
+        except (OSError, ValueError) as e:
+            notes.append(f"[devbox-fcm] skipping {side}/{f.name}: {e}")
+    return default, merchant_keys, notes, error
 
 
-def _fcm_project_sql(col):
-    """SQL that extracts the Firebase project from an fcmUrl/fcm_url column
-    (NULL for the local mock, which carries no projects/<name>/ segment)."""
-    return f"substring({col} from 'projects/([^/]+)/')"
+def _set_fcm(cur, schema: str, table: str, key: str, project: str, short_id=None) -> int:
+    """Write one key (and the URL of its own project) to the FCM rows of one table: every row,
+    or only the rows of the merchant whose short_id matches (ignoring case). Returns rowcount."""
+    params = {"url": _fcm_url(project), "key": key}
+    if table == "merchant_service_config":
+        sql = (f"UPDATE {schema}.merchant_service_config"
+               " SET config_json = (config_json::jsonb"
+               "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json")
+        where = ["service_name = 'Notification_FCM'"]
+    else:
+        sql = f"UPDATE {schema}.transporter_config SET fcm_url = %(url)s, fcm_service_account = %(key)s"
+        where = []
+    if short_id is not None:
+        where.append(f"merchant_id IN (SELECT id FROM {schema}.merchant"
+                     " WHERE upper(short_id) = upper(%(short_id)s))")
+        params["short_id"] = short_id
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    cur.execute(sql, params)
+    return cur.rowcount
 
 
-def _apply_devbox_fcm(ctx=None):
-    """Point the driver app's FCM at the real Firebase project(s) the host has a key for,
-    so driver notifications reach phones on any network. Each merchant keeps the project
-    its config names: a per-project key is applied only to that project's rows, and the
-    legacy/default key fills the mock rows (the redacted jp-beckn-dev merchants). A
-    merchant whose project has no key is left as imported — never given another project's
-    key. Updates merchant_service_config Notification_FCM (ride requests) and
-    transporter_config (other notifications). Returns (ok, log line), never the key; ok is
-    False only on a DB error."""
-    project_keys, default = ctx if ctx is not None else _collect_devbox_fcm_keys()[:2]
-    if not project_keys and not default:
-        return True, "[devbox-fcm] no key files; driver FCM stays on the mock"
-    proj = _fcm_project_sql("config_json::jsonb->>'fcmUrl'")
-    tproj = _fcm_project_sql("fcm_url")
+# Where each app reads FCM: driver-app from merchant_service_config (ride requests) and
+# transporter_config (other notifications); rider-app from merchant_service_config only.
+_FCM_TABLES = {
+    "driver": ("atlas_driver_offer_bpp", ("merchant_service_config", "transporter_config")),
+    "rider": ("atlas_app", ("merchant_service_config",)),
+}
+
+
+def _apply_devbox_fcm():
+    """Point driver and rider FCM at real Firebase when the devbox host has key files: each
+    app's legacy key on all its FCM rows (as before), then each per-merchant key on that
+    merchant's rows only. Every row's URL is built from the project inside the key it gets,
+    so URL and key always match. All keys are read and checked first, then everything is
+    written in one transaction: an unusable legacy file or a DB error changes nothing, and
+    re-running gives the same result. Must run before the apps restart.
+    Returns (ok, log lines, error); nothing returned ever includes a key."""
+    lines, keys = [], {}
+    for side in _FCM_TABLES:
+        default, merchant_keys, notes, error = _collect_devbox_fcm_keys(side)
+        lines += notes
+        if error:
+            return False, lines, error
+        keys[side] = (default, merchant_keys)
+    if not any(d or m for d, m in keys.values()):
+        return True, lines + ["[devbox-fcm] no key files; FCM stays on the mock"], None
+    summaries = []
     conn = None
-    applied = []
-    skipped = []
     try:
         conn = get_conn()
         with conn, conn.cursor() as cur:
-            cur.execute(
-                f"SELECT DISTINCT {proj} FROM atlas_driver_offer_bpp.merchant_service_config"
-                " WHERE service_name = 'Notification_FCM'")
-            present = {r[0] for r in cur.fetchall() if r[0]}
-            for project, key in project_keys.items():
-                if project not in present:
-                    continue
-                p = {"url": f"https://fcm.googleapis.com/v1/projects/{project}/messages:send/",
-                     "key": key, "project": project}
-                cur.execute(
-                    "UPDATE atlas_driver_offer_bpp.merchant_service_config"
-                    " SET config_json = (config_json::jsonb"
-                    "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json"
-                    f" WHERE service_name = 'Notification_FCM' AND {proj} = %(project)s",
-                    p)
-                msc = cur.rowcount
-                cur.execute(
-                    "UPDATE atlas_driver_offer_bpp.transporter_config"
-                    f" SET fcm_url = %(url)s, fcm_service_account = %(key)s WHERE {tproj} = %(project)s",
-                    p)
-                applied.append(f"{project} ({msc} msc, {cur.rowcount} tc)")
-            skipped = sorted(present - set(project_keys))
-            if default:
-                dp, dkey = default
-                p = {"url": f"https://fcm.googleapis.com/v1/projects/{dp}/messages:send/", "key": dkey}
-                cur.execute(
-                    "UPDATE atlas_driver_offer_bpp.merchant_service_config"
-                    " SET config_json = (config_json::jsonb"
-                    "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json"
-                    f" WHERE service_name = 'Notification_FCM' AND {proj} IS NULL",
-                    p)
-                msc = cur.rowcount
-                cur.execute(
-                    "UPDATE atlas_driver_offer_bpp.transporter_config"
-                    f" SET fcm_url = %(url)s, fcm_service_account = %(key)s WHERE {tproj} IS NULL",
-                    p)
-                applied.append(f"{dp} [mock rows] ({msc} msc, {cur.rowcount} tc)")
+            for side, (default, merchant_keys) in keys.items():
+                schema, tables = _FCM_TABLES[side]
+                applied, unknown = [], []
+                if default is not None:
+                    key, project = default
+                    counts = [_set_fcm(cur, schema, t, key, project) for t in tables]
+                    applied.append(f"default {project} ({'/'.join(map(str, counts))} rows)")
+                for short_id, (key, project) in merchant_keys.items():
+                    counts = [_set_fcm(cur, schema, t, key, project, short_id) for t in tables]
+                    if sum(counts) == 0:
+                        unknown.append(short_id)
+                    else:
+                        applied.append(f"{short_id} -> {project} ({'/'.join(map(str, counts))} rows)")
+                msg = f"[devbox-fcm] {side} FCM -> " + (", ".join(applied) if applied else "nothing to change")
+                if unknown:
+                    msg += f"; WARNING no merchant with short_id: {', '.join(unknown)} (file name must be the short_id)"
+                summaries.append(msg)
     except Exception as e:
-        return False, f"[devbox-fcm] ERROR updating driver FCM ({type(e).__name__}); nothing changed"
+        error = f"[devbox-fcm] ERROR updating FCM config ({type(e).__name__}); nothing changed"
+        return False, lines + [error], error
     finally:
         if conn is not None:
             conn.close()
-    msg = "[devbox-fcm] driver FCM -> " + (", ".join(applied) if applied else "no matching merchants")
-    if skipped:
-        msg += f"; left on the mock (no key for: {', '.join(skipped)})"
-    return True, msg
-
-
-def _apply_devbox_rider_fcm(ctx=None):
-    """The rider-app counterpart of _apply_devbox_fcm: points rider FCM (driver assigned,
-    driver arrived, ride started, ...) at the right Firebase project per merchant. Rider-app
-    reads FCM only from atlas_app.merchant_service_config Notification_FCM. Same rules as
-    _apply_devbox_fcm: per-project keys go to their own rows, the default key fills the mock
-    rows, projects with no key are left alone. Returns (ok, log line); never includes the key."""
-    project_keys, default = ctx if ctx is not None else _collect_devbox_fcm_keys()[:2]
-    if not project_keys and not default:
-        return True, "[devbox-fcm] no key files; rider FCM stays on the mock"
-    proj = _fcm_project_sql("config_json::jsonb->>'fcmUrl'")
-    conn = None
-    applied = []
-    skipped = []
-    try:
-        conn = get_conn()
-        with conn, conn.cursor() as cur:
-            cur.execute(
-                f"SELECT DISTINCT {proj} FROM atlas_app.merchant_service_config"
-                " WHERE service_name = 'Notification_FCM'")
-            present = {r[0] for r in cur.fetchall() if r[0]}
-            for project, key in project_keys.items():
-                if project not in present:
-                    continue
-                p = {"url": f"https://fcm.googleapis.com/v1/projects/{project}/messages:send/",
-                     "key": key, "project": project}
-                cur.execute(
-                    "UPDATE atlas_app.merchant_service_config"
-                    " SET config_json = (config_json::jsonb"
-                    "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json"
-                    f" WHERE service_name = 'Notification_FCM' AND {proj} = %(project)s",
-                    p)
-                applied.append(f"{project} ({cur.rowcount})")
-            skipped = sorted(present - set(project_keys))
-            if default:
-                dp, dkey = default
-                p = {"url": f"https://fcm.googleapis.com/v1/projects/{dp}/messages:send/", "key": dkey}
-                cur.execute(
-                    "UPDATE atlas_app.merchant_service_config"
-                    " SET config_json = (config_json::jsonb"
-                    "   || jsonb_build_object('fcmUrl', %(url)s, 'fcmServiceAccount', %(key)s))::json"
-                    f" WHERE service_name = 'Notification_FCM' AND {proj} IS NULL",
-                    p)
-                applied.append(f"{dp} [mock rows] ({cur.rowcount})")
-    except Exception as e:
-        return False, f"[devbox-fcm] ERROR updating rider FCM ({type(e).__name__}); nothing changed"
-    finally:
-        if conn is not None:
-            conn.close()
-    msg = "[devbox-fcm] rider FCM -> " + (", ".join(applied) if applied else "no matching merchants")
-    if skipped:
-        msg += f"; left on the mock (no key for: {', '.join(skipped)})"
-    return True, msg
+    return True, lines + summaries, None
 
 
 PC_SOCKET_PATH = os.environ.get("PC_SOCKET_PATH") or str(PROJECT_ROOT / "data" / "process-compose.sock")
@@ -1093,24 +1056,17 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
             return
 
         # Step 3b: real FCM (driver, rider) when the devbox host has key files (before the restart).
-        # Keys are collected once (one <project>.b64 per Firebase project, plus the legacy
-        # single files as the fallback for the mock rows). No key file is fine (FCM stays on
-        # the mock); a present-but-unusable file, or a failed update, fails the sync.
-        fcm_keys, fcm_default, fcm_notes = _collect_devbox_fcm_keys()
-        for note in fcm_notes:
-            _append_log(note)
-        if fcm_notes and not fcm_keys and not fcm_default:
+        # The legacy single file of each app is the default key; per-merchant files under
+        # DEVBOX_FCM_KEY_DIR/{driver,rider}/<SHORT_ID>.b64 override it for their merchant.
+        # No key file is fine (FCM stays on the mock); an unusable legacy file or a failed
+        # update fails the sync and changes nothing, like the steps above.
+        ok, msgs, error = _apply_devbox_fcm()
+        for m in msgs:
+            _append_log(m)
+        if not ok:
             with _config_sync_lock:
-                _config_sync_state["error"] = "[devbox-fcm] key file(s) present but none usable; FCM not changed"
+                _config_sync_state["error"] = error
             return
-        fcm_ctx = (fcm_keys, fcm_default)
-        for apply_fcm in (_apply_devbox_fcm, _apply_devbox_rider_fcm):
-            ok, msg = apply_fcm(fcm_ctx)
-            _append_log(msg)
-            if not ok:
-                with _config_sync_lock:
-                    _config_sync_state["error"] = msg
-                return
 
         # Step 4: restart so haskell services see the new config. Clear the
         # Redis config caches first, otherwise the restarted apps can keep
