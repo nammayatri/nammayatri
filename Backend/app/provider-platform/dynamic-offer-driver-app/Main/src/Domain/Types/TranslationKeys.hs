@@ -257,6 +257,7 @@ data EarningsLabel
   | CommissionInclTax
   | PaymentChargeInclTax
   | BuyerDiscount
+  | Adjustments
   deriving stock (Show, Eq, Ord, Bounded, Enum)
 
 -- | The legacy row key of each earnings label.
@@ -278,6 +279,7 @@ earningsLabelText = \case
   CommissionInclTax -> "COMMISSION_INCL_TAX"
   PaymentChargeInclTax -> "PAYMENT_CHARGE_INCL_TAX"
   BuyerDiscount -> "BUYER_DISCOUNT"
+  Adjustments -> "ADJUSTMENTS"
 
 -- | The AC-usage note on the driver's vehicle details.
 data AcUsageMessage = Restricted | Working

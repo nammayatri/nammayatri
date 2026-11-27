@@ -121,6 +121,7 @@ data TransporterConfigT f = TransporterConfigT
     crossTravelCities :: (B.C f [Kernel.Types.Beckn.City.City]),
     currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
     customerPayableFareBreakupSubItemsConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    customerPayableFareBreakupSubItemsDashboardConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     dailyConditionCooldownTimeHours :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     dailyMinRidesForBlocking :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     dailyMinRidesForNudging :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),

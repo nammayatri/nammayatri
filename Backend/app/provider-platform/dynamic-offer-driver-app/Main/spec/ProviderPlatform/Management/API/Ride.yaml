@@ -180,6 +180,16 @@ apis:
         rideId: Id Ride
       response:
         type: RideInfoRes
+  - GET: # RideFinanceInfoAPI
+      endpoint: /{rideId}/financeInfo
+      appServerHandler: custom
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideFinanceInfoRes
+      migrate:
+        capability: city-operations.ride.read
   - GET: # RideEvidenceListAPI
       endpoint: /{rideId}/evidence
       auth: ApiAuthV2
@@ -722,6 +732,32 @@ types:
     - personId: Id Driver
     - classification: Classification
     - derive': "Show, Generic, ToSchema"
+  RideFinanceInfoRes:
+    - fare: RideFinanceInfoFare
+    - charges: [RideFinanceInfoChargeGroup]
+    - derive: "'HideSecrets"
+  RideFinanceInfoChargeGroup:
+    - key: "!Text"
+    - title: TranslatedText
+    - estimated: Maybe PriceAPIEntity
+    - actual: Maybe PriceAPIEntity
+    - rows: [RideFinanceInfoChargeRow]
+  RideFinanceInfoChargeRow:
+    - key: "!Text"
+    - title: TranslatedText
+    - estimated: Maybe PriceAPIEntity
+    - actual: Maybe PriceAPIEntity
+  RideFinanceInfoFare:
+    - fareBeforeDiscountEstimated: PriceAPIEntity
+    - discountEstimated: Maybe PriceAPIEntity
+    - grossEstimated: PriceAPIEntity
+    - fareBeforeDiscountActual: Maybe PriceAPIEntity
+    - discountActual: Maybe PriceAPIEntity
+    - grossActual: Maybe PriceAPIEntity
+    - netEstimated: PriceAPIEntity
+    - netActual: Maybe PriceAPIEntity
+    - amountToCollectInCash: Maybe PriceAPIEntity
+    - amountToBeSettledOnline: Maybe PriceAPIEntity
   FareBreakUpRes:
     - estimatedFareBreakUp: Maybe FareBreakUp
     - actualFareBreakUp: Maybe FareBreakUp

@@ -26,6 +26,7 @@ imports:
   Classification: Kernel.External.Ticket.Interface.Types
   ParentSearchRequestLocationInfo: Domain.Types.Extra.Booking
   Meters: Kernel.Types.Common
+  PaymentStatus: Domain.Types.Ride
 
 importPackageOverrides:
   Domain.Action.Dashboard.Ride: "rider-app"
@@ -232,6 +233,13 @@ types:
     - specialLocationTag: "Maybe !Text"
     - specialLocationName: "Maybe !Text"
     - isScheduled: Bool
+    - customerId: Maybe (Id Customer)
+    - paymentStatus: Maybe PaymentStatus
+    - cardInfo: Maybe RideCardDetails
+  RideCardDetails:
+    - cardBrand: "Maybe !Text"
+    - cardType: "Maybe !Text"
+    - cardLastFourDigits: "Maybe !Text"
   RideOfferInfo:
     - offerId: "!Text"
     - offerCode: "Maybe !Text"

@@ -505,6 +505,47 @@ data RideEvidenceListRes = RideEvidenceListRes {evidence :: [RideEvidenceItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RideFinanceInfoChargeGroup = RideFinanceInfoChargeGroup
+  { key :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
+    estimated :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    actual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    rows :: [RideFinanceInfoChargeRow]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideFinanceInfoChargeRow = RideFinanceInfoChargeRow
+  { key :: Kernel.Prelude.Text,
+    title :: Domain.Types.TranslationKey.TranslatedText,
+    estimated :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    actual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideFinanceInfoFare = RideFinanceInfoFare
+  { fareBeforeDiscountEstimated :: Kernel.Types.Common.PriceAPIEntity,
+    discountEstimated :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    grossEstimated :: Kernel.Types.Common.PriceAPIEntity,
+    fareBeforeDiscountActual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    discountActual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    grossActual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    netEstimated :: Kernel.Types.Common.PriceAPIEntity,
+    netActual :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    amountToCollectInCash :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    amountToBeSettledOnline :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideFinanceInfoRes = RideFinanceInfoRes {fare :: RideFinanceInfoFare, charges :: [RideFinanceInfoChargeGroup]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RideFinanceInfoRes where
+  hideSecrets = Kernel.Prelude.identity
+
 data RideFlowDebugRes = RideFlowDebugRes
   { currentStage :: FlowStage,
     tripCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -843,7 +884,7 @@ data WalletTransactionItem = WalletTransactionItem {ledgerEntryId :: Kernel.Prel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = "ride" :> (GetRideAgentList :<|> (GetRideListHelper :<|> (GetRideListV2Helper :<|> (PostRideEndMultipleHelper :<|> (PostRideCancelMultipleHelper :<|> (GetRideInfo :<|> (GetRideEvidence :<|> (GetRideEvidenceFile :<|> (PostRideEvidenceVisibilityHelper :<|> (PostRideSync :<|> (PostRideSyncMultiple :<|> (PostRideRoute :<|> (GetRideEstimatedRoute :<|> (GetRideSnappedRoute :<|> (GetRideKaptureList :<|> (GetRideFareBreakUp :<|> (PostRideWaiverRideCancellationPenalty :<|> (GetRideNearby :<|> (GetRideCallCount :<|> GetRideFlowDebug)))))))))))))))))))
+type API = "ride" :> (GetRideAgentList :<|> (GetRideListHelper :<|> (GetRideListV2Helper :<|> (PostRideEndMultipleHelper :<|> (PostRideCancelMultipleHelper :<|> (GetRideInfo :<|> (GetRideFinanceInfo :<|> (GetRideEvidence :<|> (GetRideEvidenceFile :<|> (PostRideEvidenceVisibilityHelper :<|> (PostRideSync :<|> (PostRideSyncMultiple :<|> (PostRideRoute :<|> (GetRideEstimatedRoute :<|> (GetRideSnappedRoute :<|> (GetRideKaptureList :<|> (GetRideFareBreakUp :<|> (PostRideWaiverRideCancellationPenalty :<|> (GetRideNearby :<|> (GetRideCallCount :<|> GetRideFlowDebug))))))))))))))))))))
 
 type GetRideAgentList =
   "agent"
@@ -1199,6 +1240,8 @@ type GetRideInfo =
               )
        )
 
+type GetRideFinanceInfo = Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> ("financeInfo" :> Get '[JSON] RideFinanceInfoRes)
+
 type GetRideEvidence = Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> ("evidence" :> Get '[JSON] RideEvidenceListRes)
 
 type GetRideEvidenceFile = Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> ("evidence" :> (Capture "evidenceId" Kernel.Prelude.Text :> ("file" :> Get '[JSON] RideEvidenceFileRes)))
@@ -1316,6 +1359,7 @@ data RideAPIs = RideAPIs
     postRideEndMultiple :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (MultipleRideEndReq -> EulerHS.Types.EulerClient MultipleRideEndResp),
     postRideCancelMultiple :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (MultipleRideCancelReq -> EulerHS.Types.EulerClient MultipleRideCancelResp),
     getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Maybe [RideDetailGroup] -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient RideInfoRes)),
+    getRideFinanceInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideFinanceInfoRes,
     getRideEvidence :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideEvidenceListRes,
     getRideEvidenceFile :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideEvidenceFileRes),
     postRideEvidenceVisibility :: Kernel.Types.Id.Id Dashboard.Common.Ride -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (SetRideEvidenceVisibilityReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess))),
@@ -1335,7 +1379,7 @@ data RideAPIs = RideAPIs
 mkRideAPIs :: Client EulerHS.Types.EulerClient API -> RideAPIs
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideAgentList :<|> getRideList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> getRideEvidence :<|> getRideEvidenceFile :<|> postRideEvidenceVisibility :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideEstimatedRoute :<|> getRideSnappedRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty :<|> getRideNearby :<|> getRideCallCount :<|> getRideFlowDebug = rideClient
+    getRideAgentList :<|> getRideList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> getRideFinanceInfo :<|> getRideEvidence :<|> getRideEvidenceFile :<|> postRideEvidenceVisibility :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideEstimatedRoute :<|> getRideSnappedRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty :<|> getRideNearby :<|> getRideCallCount :<|> getRideFlowDebug = rideClient
 
 data RideUserActionType
   = GET_RIDE_AGENT_LIST
@@ -1344,6 +1388,7 @@ data RideUserActionType
   | POST_RIDE_END_MULTIPLE
   | POST_RIDE_CANCEL_MULTIPLE
   | GET_RIDE_INFO
+  | GET_RIDE_FINANCE_INFO
   | GET_RIDE_EVIDENCE
   | GET_RIDE_EVIDENCE_FILE
   | POST_RIDE_EVIDENCE_VISIBILITY

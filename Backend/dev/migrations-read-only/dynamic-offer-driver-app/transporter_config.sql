@@ -1372,3 +1372,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rental_next_sto
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN sms_otp_allowed_country_codes text[] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN customer_payable_fare_breakup_sub_items_dashboard_config json ;

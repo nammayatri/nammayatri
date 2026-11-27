@@ -49,6 +49,7 @@ import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Action.UI.EstimateBP as EstimateBP
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
+import qualified Domain.Types.Booking.API as DBookingAPI
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.BookingStatus as DTB
 import Domain.Types.CancellationReason
@@ -449,6 +450,10 @@ rideInfo merchantId mbLanguage reqRideId = do
   let fareProductType = mkFareProductType booking.bookingDetails
   mbSos <- SafetyCQSos.findByRideId (cast ride.id)
   let mbSosId = (cast @SafetyDSos.Sos @Dashboard.Common.Sos . (.id)) <$> mbSos
+  -- The card the ride was charged to, found the same way as for the rider's own booking screen. A cash ride has
+  -- no payment order, so no card.
+  mbPaymentOrder <- B.runInReplica $ QPaymentOrder.findByDomainEntityId ride.id.getId
+  mbCardInfo <- B.runInReplica $ DBookingAPI.getOrderCardInfo mbPaymentOrder
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
@@ -508,7 +513,10 @@ rideInfo merchantId mbLanguage reqRideId = do
         rideDistanceSaved = mbSearchRequest >>= (.betterPointRideDistanceSaved),
         specialLocationTag = booking.specialLocationTag,
         specialLocationName = booking.specialLocationName,
-        isScheduled = booking.isScheduled
+        isScheduled = booking.isScheduled,
+        customerId = Just (cast booking.riderId),
+        paymentStatus = Just ride.paymentStatus,
+        cardInfo = (\card -> Common.RideCardDetails {cardBrand = card.cardBrand, cardType = card.cardType, cardLastFourDigits = card.cardLastFourDigits}) <$> mbCardInfo
       }
 
 getRideOfferInfo :: Maybe Language -> DB.Booking -> DRide.Ride -> DP.Person -> Flow (Maybe Common.RideOfferInfo)

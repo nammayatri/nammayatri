@@ -113,6 +113,20 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateCallingMode ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())))
+updateCallingMode callingMode driverCallingOption forceDirectCalling merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.callingMode callingMode,
+      Se.Set Beam.driverCallingOption driverCallingOption,
+      Se.Set Beam.forceDirectCalling forceDirectCalling,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 updateCustomerPayableFareBreakupSubItemsConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode] ->
@@ -121,23 +135,6 @@ updateCustomerPayableFareBreakupSubItemsConfig customerPayableFareBreakupSubItem
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.customerPayableFareBreakupSubItemsConfig (Kernel.Prelude.toJSON <$> customerPayableFareBreakupSubItemsConfig),
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
-
-updateCallingMode ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-  Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption ->
-  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
-  m ()
-updateCallingMode callingMode driverCallingOption forceDirectCalling merchantOperatingCityId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.callingMode callingMode,
-      Se.Set Beam.driverCallingOption driverCallingOption,
-      Se.Set Beam.forceDirectCalling forceDirectCalling,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -243,6 +240,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.crossTravelCities crossTravelCities,
       Se.Set Beam.currency (Just currency),
       Se.Set Beam.customerPayableFareBreakupSubItemsConfig (Kernel.Prelude.toJSON <$> customerPayableFareBreakupSubItemsConfig),
+      Se.Set Beam.customerPayableFareBreakupSubItemsDashboardConfig (Kernel.Prelude.toJSON <$> customerPayableFareBreakupSubItemsDashboardConfig),
       Se.Set Beam.dailyConditionCooldownTimeHours dailyConditionCooldownTimeHours,
       Se.Set Beam.dailyMinRidesForBlocking dailyMinRidesForBlocking,
       Se.Set Beam.dailyMinRidesForNudging dailyMinRidesForNudging,

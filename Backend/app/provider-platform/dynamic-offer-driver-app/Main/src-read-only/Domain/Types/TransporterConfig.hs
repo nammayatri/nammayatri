@@ -129,6 +129,7 @@ data TransporterConfig = TransporterConfig
     crossTravelCities :: [Kernel.Types.Beckn.City.City],
     currency :: Kernel.Types.Common.Currency,
     customerPayableFareBreakupSubItemsConfig :: Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode],
+    customerPayableFareBreakupSubItemsDashboardConfig :: Kernel.Prelude.Maybe [Domain.Types.Extra.TransporterConfig.FareBreakupNode],
     dailyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dailyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dailyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

@@ -25,6 +25,7 @@ module Domain.Action.Dashboard.Ride
     mkLocationFromLocationMapping,
     ticketRideList,
     fareBreakUp,
+    rideFinanceInfo,
     getNearby,
   )
 where
@@ -33,10 +34,13 @@ import qualified API.Types.Dashboard.RideBooking.Ride as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as MGMT
 import qualified Beckn.ACL.Common as BecknACL
+import BecknV2.OnDemand.FareBreakup.SubItems (FareUIComponentType (Deduction), FareUISubItem (..))
+import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
+import Control.Applicative ((<|>))
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.HashMap.Strict as HM
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -52,11 +56,13 @@ import qualified Domain.Types.BapMetadata as Fields
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverLocation as Fields
 import qualified Domain.Types.DriverQuote as Fields
 import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import Domain.Types.Extra.TransporterConfig (FareBreakupNode)
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Feedback as Fields
@@ -70,7 +76,8 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as Fields
 import qualified Domain.Types.StopInformation as DSI
 import Domain.Types.TranslationKey (textAsReceived)
-import Domain.Types.TranslationKeys (TranslationKey (..))
+import Domain.Types.TranslationKeys (EarningsLabel (Adjustments), TranslationKey (..))
+import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Vehicle as Fields
 import qualified Domain.Types.VehicleRegistrationCertificate as Fields
 import Environment
@@ -80,7 +87,7 @@ import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
 import qualified Kernel.External.Maps.Types as KEMT
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.External.Types (Language)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
@@ -106,6 +113,7 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Safety.Domain.Types.Sos as Fields
 import qualified Safety.Storage.Queries.Sos as QSafetySos
+import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFleetOperatorAssociation (checkFleetDriverAndDriverOperatorAssociation)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -127,6 +135,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DriverQuote as DQ
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FareParameters as SQFP
@@ -1259,6 +1268,72 @@ fareBreakUp merchantShortId opCity reqRideId = do
           Just fareParams -> Just $ buildFareBreakUp mbWaitingChargeInfo ride.discountAmount fareParams
           Nothing -> Nothing
       }
+
+-- | The ride's gross / net fares and cash / online amounts, and its charges grouped for the fare breakup.
+-- The ride must already be checked to belong to the dashboard's merchant and city.
+rideFinanceInfo :: Maybe Language -> DRide.Ride -> Flow Common.RideFinanceInfoRes
+rideFinanceInfo mbLanguage ride = do
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  finalFareParams <- maybe (pure Nothing) (runInReplica . SQFP.findById) ride.fareParametersId
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+  mbCancellationDues <- if isJust ride.cancellationChargesOnCancel then runInReplica (QCDD.findByRideId ride.id) else pure Nothing
+  -- A city without a groups config gets no charges at all, so the dashboard can keep its own fare table.
+  charges <- maybe (pure []) (chargeGroups (fromMaybe ENGLISH mbLanguage) booking ride finalFareParams mbCancellationDues mbTransporterConfig) (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsDashboardConfig))
+  -- Net, cash and online are worked out by the driver app's own function, so they always match what the driver sees.
+  let amounts = DRideCommon.computeRideAmounts (fromMaybe Tax.GST (mbTransporterConfig >>= (.taxConfig.taxRegime))) finalFareParams mbCancellationDues booking ride
+      price cur amt = PriceAPIEntity amt cur
+      -- Gross is what the customer is charged: the fare before discount minus the discount.
+      gross cur fareAmount mbDiscount = price cur (fareAmount - fromMaybe 0 mbDiscount)
+  pure
+    Common.RideFinanceInfoRes
+      { fare =
+          Common.RideFinanceInfoFare
+            { fareBeforeDiscountEstimated = price booking.currency booking.estimatedFare,
+              discountEstimated = price booking.currency <$> booking.discountAmount,
+              grossEstimated = gross booking.currency booking.estimatedFare booking.discountAmount,
+              fareBeforeDiscountActual = price ride.currency <$> ride.fare,
+              discountActual = price ride.currency <$> ride.discountAmount,
+              grossActual = (\actualFare -> gross ride.currency actualFare ride.discountAmount) <$> ride.fare,
+              netEstimated = price booking.currency amounts.estimatedBaseFareV2,
+              netActual = price ride.currency <$> (amounts.computedFareNet <|> amounts.cancellationCompensationNet),
+              amountToCollectInCash = price ride.currency <$> amounts.mbAmountToCollectInCash,
+              amountToBeSettledOnline = price ride.currency <$> amounts.mbAmountToBeSettledOnline
+            },
+        charges
+      }
+
+-- | The groups of the driver app's earnings card for "fare paid by customer", grouped by the dashboard's config:
+-- estimated from the booking alone, actual from the ride once it has a final fare. The buyer discount is put,
+-- unchanged, in an adjustments group of its own.
+chargeGroups :: Language -> SRB.Booking -> DRide.Ride -> Maybe DFP.FareParameters -> Maybe DCDD.CancellationDuesDetails -> Maybe DTConf.TransporterConfig -> [FareBreakupNode] -> Flow [Common.RideFinanceInfoChargeGroup]
+chargeGroups language booking ride finalFareParams mbCancellationDues mbTransporterConfig groupsConfig = do
+  labels <- DRideCommon.fetchEarningsLabels ride.merchantOperatingCityId language
+  mbFullFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  adjustmentsTitle <- CQTranslations.findTextByKey (Just ride.merchantOperatingCityId) language (Earnings_Label Adjustments)
+  let mbTaxRates = DRideCommon.rideDriverTaxRates booking mbFullFarePolicy mbTransporterConfig
+      (customerBearsCharge, driverBearsCharge) = DRideCommon.paymentChargeBearers ride.paymentChargeBearer
+  estimatedEarnings <- DRideCommon.buildBookingEarnings language labels booking (Just groupsConfig) mbTaxRates
+  mbActualEarnings <-
+    if isJust ride.fare
+      then Just <$> DRideCommon.buildRideEarnings language labels booking ride booking.fareParams finalFareParams (mfilter (not . SCD.carriedInRiderBalance) mbCancellationDues) customerBearsCharge driverBearsCharge (Just groupsConfig) mbTaxRates Nothing
+      else pure Nothing
+  let farePaidGroups earnings = maybe [] (concatMap (inAdjustments (Just (fromMaybe "Adjustments" adjustmentsTitle))) . (.subItems)) (find ((== "FARE_PAID_BY_CUSTOMER") . (.title)) earnings.fareBreakup)
+  pure
+    [ Common.RideFinanceInfoChargeGroup {key, title = titleOf key mbEstimated mbActual, estimated = amountOf <$> mbEstimated, actual = amountOf <$> mbActual, rows}
+      | (key, mbEstimated, mbActual) <- pairByKey (farePaidGroups estimatedEarnings) (foldMap farePaidGroups mbActualEarnings),
+        let rows = [Common.RideFinanceInfoChargeRow {key = rowKey, title = titleOf rowKey mbEstimatedRow mbActualRow, estimated = amountOf <$> mbEstimatedRow, actual = amountOf <$> mbActualRow} | (rowKey, mbEstimatedRow, mbActualRow) <- pairByKey (foldMap (.subItems) mbEstimated) (foldMap (.subItems) mbActual)]
+    ]
+  where
+    inAdjustments title item
+      | item.title == "BUYER_DISCOUNT" = [FareUISubItem {title = "ADJUSTMENTS", price = item.price, uiTranslation = title, _type = item._type, subItems = [item]}]
+      | otherwise = [item]
+    -- Each key with its estimated and actual line, in the order the lines come.
+    pairByKey estimatedLines actualLines = [(key, lineOf key estimatedLines, lineOf key actualLines) | key <- nub (map (.title) (estimatedLines <> actualLines))]
+    lineOf key = find ((== key) . (.title))
+    -- The card shows deductions as positive amounts.
+    amountOf line = PriceAPIEntity (if line._type == Deduction then negate line.price.amount else line.price.amount) line.price.currency
+    -- The label the earnings card read, else the key.
+    titleOf key mbEstimated mbActual = textAsReceived (fromMaybe key ((mbActual <|> mbEstimated) >>= (.uiTranslation)))
 
 buildFareBreakUp :: Maybe DFPC.WaitingChargeInfo -> Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
 buildFareBreakUp mbWaitingChargeInfo mbDiscount DFP.FareParameters {..} = do
