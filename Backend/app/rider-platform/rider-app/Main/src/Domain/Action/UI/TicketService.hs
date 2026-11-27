@@ -549,8 +549,8 @@ parkingStay row = do
 normalizePlate :: Text -> Text
 normalizePlate = T.filter Data.Char.isAlphaNum . T.toUpper
 
--- True when the plate typed in is not the booked one. The parking check refuses a request whose plate is empty once normalized
--- before this runs, so an empty typed plate never reaches the comparison as a match. A booking with no plate stored has nothing to compare.
+-- True when the plate typed in is not the booked one. The parking check passes Nothing when no usable plate was typed (none sent, or empty
+-- once normalized), which skips the comparison. A booking with no plate stored has nothing to compare.
 plateTypedDiffers :: Maybe Text -> Maybe Text -> Bool
 plateTypedDiffers (Just typed) (Just booked) = normalizePlate typed /= normalizePlate booked
 plateTypedDiffers _ _ = False
@@ -1543,12 +1543,14 @@ verifyTicketBookingV2 viaParkingCluster = processBookingService
       | bookingService.ticketServiceId /= ticketServiceId = createVerificationResp DifferentService Nothing (Just ticketService) Nothing
       | ticketService.bookingMode == Domain.Types.TicketService.TimeWindow = do
         unless viaParkingCluster $ throwError parkingOnlyViaCluster
-        -- A parking check always needs the plate the marshal sees on the vehicle (other services never send one). It is judged as it is
-        -- compared, so a plate of only spaces or punctuation counts as missing.
-        when (maybe True (T.null . normalizePlate) req.vehicleNumber) $ throwError $ InvalidRequest "vehicleNumber is required to verify a parking ticket"
+        -- The plate is optional. When the marshal types one it must match the booked plate; when none is sent, or it is only spaces or
+        -- punctuation (empty once normalized), the ticket is verified on its id alone.
+        let typedPlate = case req.vehicleNumber of
+              Just p | not (T.null (normalizePlate p)) -> Just p
+              _ -> Nothing
         -- A different plate is refused BEFORE the entry is marked, and the booked plate is not sent back
         -- (it would let the marshal copy it instead of checking the vehicle).
-        if plateTypedDiffers req.vehicleNumber bookingService.vehicleNumber
+        if plateTypedDiffers typedPlate bookingService.vehicleNumber
           then createVerificationResp VehicleMismatch Nothing (Just ticketService) Nothing
           else do
             (status, shown) <- verifyParkingBooking bookingService

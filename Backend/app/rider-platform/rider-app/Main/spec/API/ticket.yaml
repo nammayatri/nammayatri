@@ -243,7 +243,7 @@ types:
 
   TicketServiceVerificationReq:
     assignments: "Maybe [SharedLogic.CallBPPInternal.BookingAssignment]"
-    vehicleNumber: Maybe Text # parking: required for a parking check (the plate the marshal sees); must match the booked one. Ignored by other services
+    vehicleNumber: Maybe Text # parking: optional. When sent (the plate the marshal sees) it must match the booked one; when omitted the ticket is verified by its id alone. Ignored by other services
 
   TicketServiceVerificationResp:
     ticketServiceName: Maybe Text
