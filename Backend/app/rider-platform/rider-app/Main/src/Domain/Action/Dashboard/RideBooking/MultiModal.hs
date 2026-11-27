@@ -21,7 +21,6 @@ import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as Fields
 import qualified Domain.Types.Person
-import Domain.Types.TranslationKey (textAsReceived)
 import qualified Email.Flow as Email
 import qualified Email.Types as EmailT
 import qualified Environment
@@ -152,7 +151,7 @@ postMultiModalAddComment _merchantShortId _opCity customerId req = do
 getMultiModalGetComments :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp)
 getMultiModalGetComments _merchantShortId _opCity customerId = do
   person <- QPerson.findById (Kernel.Types.Id.Id customerId) >>= fromMaybeM (PersonDoesNotExist customerId)
-  pure API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp {comments = fmap textAsReceived <$> person.comments, customerId = person.id}
+  pure API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp {comments = person.comments, customerId = person.id}
 
 postMultiModalCustomerMultimodalOrderSoftCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMultiModalCustomerMultimodalOrderSoftCancel merchantShortId _opCity customerId journeyId legOrder = do

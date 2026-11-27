@@ -143,4 +143,4 @@ types:
     body: Text
   CustomerCommentsResp:
     customerId: Id Person
-    comments: Maybe [TranslatedText]
+    comments: Maybe [Text]
