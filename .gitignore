@@ -56,3 +56,6 @@ control-center/
 # Deploy/start bookkeeping (workspace fingerprint + last-started commit)
 /.stack-state.json
 node_modules/
+
+# Corporate shuttle main-road data (embedded at compile time by SharedLogic/CorporateShuttle/MainRoads.hs)
+Backend/app/rider-platform/rider-app/Main/data/corporate-shuttle/bangalore-main-roads.txt
