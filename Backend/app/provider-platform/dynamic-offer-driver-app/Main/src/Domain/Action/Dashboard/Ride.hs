@@ -39,6 +39,7 @@ import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
+import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Time as Time
@@ -1278,12 +1279,11 @@ rideFinanceInfo mbLanguage ride = do
   -- Net, cash and online are taken from the driver app's own ride response, so they always match what the driver sees.
   driverInfo <- runInReplica $ QDriverInfo.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
   driverRide <- DUIRide.buildDriverRideResItem ride.driverId driverInfo ENGLISH Nothing mbTransporterConfig (ride, booking)
-  let estimatedFareParams = booking.fareParams
-      price cur amt = PriceAPIEntity amt cur
+  let price cur amt = PriceAPIEntity amt cur
       -- Gross is what the customer is charged: the fare before discount minus the discount.
       gross cur fareAmount mbDiscount = price cur (fareAmount - fromMaybe 0 mbDiscount)
       -- A city without a groups config gets no charges at all, so the dashboard can keep its own fare table.
-      chargeGroups = maybe [] (\groupsConfig -> configuredChargeGroups groupsConfig estimatedFareParams finalFareParams <> [adjustmentsGroup booking ride finalFareParams]) (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsDashboardConfig))
+      chargeGroups = maybe [] (\groupsConfig -> configuredChargeGroups groupsConfig booking.fareParams finalFareParams <> [adjustmentsGroup booking ride finalFareParams]) (mbTransporterConfig >>= (.customerPayableFareBreakupSubItemsDashboardConfig))
   charges <- mapM (mkChargeGroup ride.merchantOperatingCityId (fromMaybe ENGLISH mbLanguage) booking.currency ride.currency) (pruneChargeGroups chargeGroups)
   pure
     Common.RideFinanceInfoRes
@@ -1306,7 +1306,7 @@ rideFinanceInfo mbLanguage ride = do
 -- | A charges group with its rows, or a single row, before its label is looked up.
 data ChargeLine = ChargeLine
   { chargeKey :: Text,
-    chargeAdjustment :: Maybe FareBreakupAdjustment,
+    chargeAdjustment :: Maybe (FareBreakupAdjustment, Text), -- an adjustments line's translation key and English name
     chargeEstimated :: Maybe HighPrecMoney,
     chargeActual :: Maybe HighPrecMoney,
     chargeRows :: [ChargeLine]
@@ -1320,45 +1320,26 @@ configuredChargeGroups groupsConfig estimatedFareParams mbFinalFareParams =
   pairLines (SFB.exactFareBreakup groupsConfig estimatedFareParams) (SFB.exactFareBreakup groupsConfig <$> mbFinalFareParams)
   where
     pairLines estimatedLines mbActualLines = zipWith toChargeLine estimatedLines (maybe (repeat Nothing) (map Just) mbActualLines)
-    toChargeLine estimatedLine mbActualLine =
-      ChargeLine
-        { chargeKey = estimatedLine.key,
-          chargeAdjustment = Nothing,
-          chargeEstimated = Just estimatedLine.amount,
-          chargeActual = (.amount) <$> mbActualLine,
-          chargeRows = pairLines estimatedLine.subItems ((.subItems) <$> mbActualLine)
-        }
+    toChargeLine estimatedLine mbActualLine = ChargeLine {chargeKey = estimatedLine.key, chargeAdjustment = Nothing, chargeEstimated = Just estimatedLine.amount, chargeActual = (.amount) <$> mbActualLine, chargeRows = pairLines estimatedLine.subItems ((.subItems) <$> mbActualLine)}
 
 -- | Discounts and commission. They are not fare pieces, so the config cannot place them.
 adjustmentsGroup :: SRB.Booking -> DRide.Ride -> Maybe DFP.FareParameters -> ChargeLine
 adjustmentsGroup booking ride mbFinalFareParams =
-  ChargeLine
-    { chargeKey = "ADJUSTMENTS",
-      chargeAdjustment = Just Adjustments,
-      chargeEstimated = total (.chargeEstimated),
-      chargeActual = total (.chargeActual),
-      chargeRows = rows
-    }
+  ChargeLine {chargeKey = "ADJUSTMENTS", chargeAdjustment = Just (Adjustments, "Adjustments"), chargeEstimated = total (.chargeEstimated), chargeActual = total (.chargeActual), chargeRows = rows}
   where
-    componentOf component fareParams = Map.lookup component (SFB.breakupComponentAmounts fareParams)
-    adjustmentRow key adjustment mbEstimated mbActual = ChargeLine {chargeKey = key, chargeAdjustment = Just adjustment, chargeEstimated = mbEstimated, chargeActual = mbActual, chargeRows = []}
+    adjustmentRow key adjustment englishName mbEstimated mbActual = ChargeLine {chargeKey = key, chargeAdjustment = Just (adjustment, englishName), chargeEstimated = mbEstimated, chargeActual = mbActual, chargeRows = []}
     -- These fare pieces are already negative amounts.
-    fareComponentRow key adjustment component = adjustmentRow key adjustment (componentOf component booking.fareParams) (componentOf component =<< mbFinalFareParams)
+    fareComponentRow key adjustment englishName component = adjustmentRow key adjustment englishName (componentOf component booking.fareParams) (componentOf component =<< mbFinalFareParams)
+    componentOf component = Map.lookup component . SFB.breakupComponentAmounts
     rows =
-      [ adjustmentRow "DISCOUNT" RideDiscount (negate <$> booking.discountAmount) (negate <$> ride.discountAmount),
+      [ adjustmentRow "DISCOUNT" RideDiscount "Discount" (negate <$> booking.discountAmount) (negate <$> ride.discountAmount),
         -- As in the driver app's earnings card, the commission on old cancellation dues added to this ride is included.
-        adjustmentRow "COMMISSION" RideCommission (negate <$> booking.commission) actualCommission,
-        fareComponentRow "PERSONAL_DISCOUNT" PersonalDiscount FarePolicyD.PersonalDiscountComponent,
-        fareComponentRow "BUSINESS_DISCOUNT" BusinessDiscount FarePolicyD.BusinessDiscountComponent,
-        fareComponentRow "NEGATIVE_FARE_ADJUSTMENT" NegativeFareAdjustment FarePolicyD.NegativeFareAdjustmentComponent
+        adjustmentRow "COMMISSION" RideCommission "Commission" (negate <$> booking.commission) (negate . sum <$> nonEmpty (catMaybes [ride.commission, ride.cancellationDuesCommission])),
+        fareComponentRow "PERSONAL_DISCOUNT" PersonalDiscount "Personal Discount" FarePolicyD.PersonalDiscountComponent,
+        fareComponentRow "BUSINESS_DISCOUNT" BusinessDiscount "Business Discount" FarePolicyD.BusinessDiscountComponent,
+        fareComponentRow "NEGATIVE_FARE_ADJUSTMENT" NegativeFareAdjustment "Fare Adjustment" FarePolicyD.NegativeFareAdjustmentComponent
       ]
-    actualCommission =
-      if isNothing ride.commission && isNothing ride.cancellationDuesCommission
-        then Nothing
-        else Just (negate (fromMaybe 0 ride.commission + fromMaybe 0 ride.cancellationDuesCommission))
-    total side = case mapMaybe side rows of
-      [] -> Nothing
-      amounts -> Just (sum amounts)
+    total side = sum <$> nonEmpty (mapMaybe side rows)
 
 -- | Drops the rows that are 0 or missing on both sides, then the groups left with no rows.
 pruneChargeGroups :: [ChargeLine] -> [ChargeLine]
@@ -1372,27 +1353,14 @@ pruneChargeGroups groups =
 mkChargeGroup :: Id DMOC.MerchantOperatingCity -> Language -> Currency -> Currency -> ChargeLine -> Flow Common.RideFinanceInfoChargeGroup
 mkChargeGroup merchantOpCityId language estimatedCurrency actualCurrency chargeGroup = do
   groupTitle <- labelOf chargeGroup
-  rows <-
-    forM chargeGroup.chargeRows $ \row -> do
-      rowTitle <- labelOf row
-      pure Common.RideFinanceInfoChargeRow {key = row.chargeKey, title = rowTitle, estimated = estimatedOf row, actual = actualOf row}
+  rows <- forM chargeGroup.chargeRows $ \row -> (\rowTitle -> Common.RideFinanceInfoChargeRow {key = row.chargeKey, title = rowTitle, estimated = estimatedOf row, actual = actualOf row}) <$> labelOf row
   pure Common.RideFinanceInfoChargeGroup {key = chargeGroup.chargeKey, title = groupTitle, estimated = estimatedOf chargeGroup, actual = actualOf chargeGroup, rows}
   where
     labelOf line = case line.chargeAdjustment of
-      Just adjustment -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (FareBreakup_Adjustment adjustment) (adjustmentEnglishName adjustment)
+      Just (adjustment, englishName) -> CQTranslations.findTranslatedText (Just merchantOpCityId) language (FareBreakup_Adjustment adjustment) englishName
       Nothing -> CQTranslations.findTranslatedTextByOpsKey (Just merchantOpCityId) language ("FARE_BREAKUP_" <> line.chargeKey) line.chargeKey
     estimatedOf line = (`PriceAPIEntity` estimatedCurrency) <$> line.chargeEstimated
     actualOf line = (`PriceAPIEntity` actualCurrency) <$> line.chargeActual
-
--- | The English name of an adjustments row, shown when its key has no row in the asked language or in English.
-adjustmentEnglishName :: FareBreakupAdjustment -> Text
-adjustmentEnglishName = \case
-  Adjustments -> "Adjustments"
-  RideDiscount -> "Discount"
-  RideCommission -> "Commission"
-  PersonalDiscount -> "Personal Discount"
-  BusinessDiscount -> "Business Discount"
-  NegativeFareAdjustment -> "Fare Adjustment"
 
 buildFareBreakUp :: Maybe DFPC.WaitingChargeInfo -> Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
 buildFareBreakUp mbWaitingChargeInfo mbDiscount DFP.FareParameters {..} = do
