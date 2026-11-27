@@ -7,7 +7,7 @@ SELECT
     moc.merchant_id,
     moc.id,
     'Customers waiting',
-    '{#waiting#} customers waiting on {#routeName#}, near {#stopName#}.',
+    'Customers waiting on {#routeName#}: {#waiting#}, near {#stopName#}.',
     'ENGLISH',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP

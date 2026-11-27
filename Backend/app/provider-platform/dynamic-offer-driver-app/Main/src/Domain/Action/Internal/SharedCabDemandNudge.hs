@@ -9,6 +9,7 @@ import Data.Maybe (listToMaybe)
 import qualified Data.Set as Set
 import Domain.Action.Internal.SharedCabTrip (authMerchant)
 import qualified Domain.Types.Common as DCommon
+import Domain.Types.DriverInformation (DriverInformationE (..))
 import Domain.Types.DriverLocation (DriverLocation (..))
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Person, PersonE (..))
@@ -22,6 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Notifications
@@ -37,7 +39,8 @@ nudgeDrivers merchantId req = do
   let tunables = req.tunables
       onRoutePlates = Set.fromList req.onRoutePlates
   onRouteVehicles <- filter isSharedCab <$> QVehicle.findAllByRegistrationNos (ordNub [cab.vehicleNumber | route <- req.routes, cab <- route.onRoute])
-  let driverOfPlate = Map.fromList [(v.registrationNo, v.driverId) | v <- onRouteVehicles]
+  onlineDrivers <- Set.fromList . map (.driverId) . filter ((== Just DCommon.ONLINE) . (.mode)) <$> QDriverInformation.findAllByDriverIds (map (.driverId.getId) onRouteVehicles)
+  let driverOfPlate = Map.fromList [(v.registrationNo, v.driverId) | v <- onRouteVehicles, Set.member v.driverId onlineDrivers]
       onRouteCards =
         Map.fromList
           [ (driverId, [option route cab.nextIdx 0])
