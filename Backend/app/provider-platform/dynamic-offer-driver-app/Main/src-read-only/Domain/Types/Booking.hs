@@ -41,6 +41,7 @@ data Booking = Booking
     bapUri :: Kernel.Prelude.Text,
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    bookingType :: Domain.Types.Booking.BookingType,
     businessEmailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationDuesCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationDuesCommissionTaxBreakup :: Kernel.Prelude.Maybe BecknV2.OnDemand.FareBreakup.Tax.TaxBreakup,
@@ -152,6 +153,7 @@ data BookingStatus
 data BookingType
   = SpecialZoneBooking
   | NormalBooking
+  | NudgeRide
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)

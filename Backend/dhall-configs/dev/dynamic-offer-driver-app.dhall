@@ -362,6 +362,7 @@ let AllocatorJobType =
       | WalletIntegrityCheck
       | ChargeWalletPenalty
       | MaterialiseSharedRuns
+      | CompleteStaleNudgeRide
       >
 
 let jobRetryOnExceptionMapx =
@@ -480,6 +481,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MaterialiseSharedRuns, mapValue = True }
+      , { mapKey = AllocatorJobType.CompleteStaleNudgeRide, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

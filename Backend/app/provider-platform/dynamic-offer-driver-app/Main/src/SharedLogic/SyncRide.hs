@@ -79,7 +79,8 @@ syncUpcomingRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncUpcomingRide ride' booking' = do
   DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
   handle (errHandler (Just ride.status) booking.status "scheduled ride assigned") $ do
-    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
+    unless (booking.bookingType == DB.NudgeRide) $
+      CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
   pure $ Common.RideSyncRes Common.RIDE_UPCOMING "Success. Sent scheduled ride started update to bap"
 
 -- NEW --
@@ -94,7 +95,9 @@ syncNewRide ride' booking' = do
         if isJust ride.driverArrivalTime
           then CallBAP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
           else CallBAP.sendRideEnroutePickupStatusToBAP booking ride driver vehicle
-      else CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
+      else
+        unless (booking.bookingType == DB.NudgeRide) $
+          CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
   pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
 
 fetchBookingDetails :: DRide.Ride -> DB.Booking -> Flow DCommon.BookingDetails

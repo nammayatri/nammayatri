@@ -325,7 +325,8 @@ startRideHandler ServiceHandle {..} rideId req = do
 
       fork "finalize distance to pickup" $ finalizePickupDistance ride.id driverId
 
-      fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
+      unless (booking.bookingType == SRB.NudgeRide) $
+        fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
       fork "startRide - Complete pickup zone request and add driver to active list" $ do
         ADL.addDriverToActiveList driverId (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)

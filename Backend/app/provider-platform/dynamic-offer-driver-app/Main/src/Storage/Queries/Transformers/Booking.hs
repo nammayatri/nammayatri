@@ -24,6 +24,7 @@ getTripCategory _bookingType _tripCategory = case _tripCategory of
     case _bookingType of
       Domain.Types.Booking.NormalBooking -> OneWay OneWayOnDemandDynamicOffer
       Domain.Types.Booking.SpecialZoneBooking -> OneWay OneWayRideOtp
+      Domain.Types.Booking.NudgeRide -> OneWay OneWayRideOtp
 
 fromAndToLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DLM.LocationMapping] -> Maybe TripCategory -> Text -> Maybe Text -> Maybe Text -> Text -> Maybe Text -> m (DL.Location, Maybe DL.Location)
 fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId = do

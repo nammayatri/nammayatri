@@ -24,6 +24,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -35,9 +36,11 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
-import Lib.Scheduler.Environment (JobCreator)
+import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
@@ -61,8 +64,13 @@ callBasedEndRide ::
     Redis.HedisLTSFlowEnv r,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    JobCreator r m,
-    Finance.HasActorInfo m r
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasField "blackListedJobs" r [Text],
+    SchedulerFlow r,
+    Finance.HasActorInfo m r,
+    FinanceBeamFlow.BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
+    PostActionsEnv r
   ) =>
   EndRide.ServiceHandle m ->
   Id Merchant ->
