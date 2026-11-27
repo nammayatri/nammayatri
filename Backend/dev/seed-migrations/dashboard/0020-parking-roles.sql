@@ -13,13 +13,16 @@ INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALU
     ('city-operations.parking_cluster.read', 'city-operations', 'See a parking cluster and its zones'' occupancy', false),
     ('city-operations.parking_cluster.write', 'city-operations', 'Take a parking cluster live or back to draft', false),
     ('city-operations.parking_revenue.read', 'city-operations', 'See a parking cluster''s revenue', false),
-    ('city-operations.parking_marshal.execute', 'city-operations', 'Check parking tickets and take cash bookings in a cluster', false)
+    ('city-operations.parking_marshal.execute', 'city-operations', 'Check parking tickets and take cash bookings in a cluster', false),
+    ('city-operations.parking_bookings.read', 'city-operations', 'See the bookings of a parking cluster, by date, with the vehicle and the customer', false),
+    ('city-operations.parking_cluster_details.read', 'city-operations', 'Read a parking cluster as the place editor shows it (zone shapes, rules, prices), read only', false)
 ON CONFLICT (id) DO NOTHING;
 
 UPDATE atlas_dashboard.capability
    SET resource_type = 'TICKET_PLACE'
  WHERE id IN ('city-operations.parking_cluster.read', 'city-operations.parking_cluster.write',
-              'city-operations.parking_revenue.read', 'city-operations.parking_marshal.execute');
+              'city-operations.parking_revenue.read', 'city-operations.parking_marshal.execute', 'city-operations.parking_bookings.read',
+              'city-operations.parking_cluster_details.read');
 
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id, resource_id_param) VALUES
     ('city-operations.parking_cluster.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PARKING/GET_PARKING_CLUSTER', 'param:clusters'),
@@ -27,7 +30,14 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
     ('city-operations.parking_cluster.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PARKING/GET_PARKING_OCCUPANCY', 'param:clusters'),
     ('city-operations.parking_revenue.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PARKING/GET_PARKING_CLUSTER_REVENUE', 'param:clusters'),
     ('city-operations.parking_marshal.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PARKING/VERIFY_PARKING_TICKET', 'param:clusters'),
-    ('city-operations.parking_marshal.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PARKING/CASH_BOOK_PARKING', 'param:clusters')
+    ('city-operations.parking_marshal.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PARKING/CASH_BOOK_PARKING', 'param:clusters'),
+    -- The ticket-place bookings route is shared with every other ticket place; this capability scopes a parking person to their
+    -- own clusters by the place id in /ticket/places/{placeId}/bookings/list. Holders of ticket_booking.read are not affected.
+    ('city-operations.parking_bookings.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKET_PLACE_BOOKINGS', 'param:places'),
+    -- The place editor's read route, scoped like the cluster routes: a person with assigned clusters reads only those (the id is the
+    -- segment after "ticketplace" in /ticketdashboard/ticketplace/{id}/info), a person with none reads any cluster of their merchant and city.
+    -- The shared ticket_place.read capability, held by ticket-dashboard users and the city manager, is not touched.
+    ('city-operations.parking_cluster_details.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_TICKETPLACE_INFO', 'param:ticketplace')
 ON CONFLICT (capability_id, server_name, endpoint_id) DO UPDATE SET resource_id_param = EXCLUDED.resource_id_param;
 
 INSERT INTO atlas_dashboard.role (id, name, dashboard_access_type, description, created_at, updated_at)
@@ -45,17 +55,19 @@ INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_dashboard.role r,
      (VALUES ('city-operations.parking.read'), ('city-operations.parking_cluster.read'),
              ('city-operations.parking_cluster.write'), ('city-operations.parking_revenue.read'), ('city-operations.parking_marshal.execute'),
-             ('city-operations.ticket_place.read'), ('city-operations.ticket_place.write')) AS c(cap)
+             ('city-operations.ticket_place.read'), ('city-operations.ticket_place.write'),
+             ('city-operations.parking_bookings.read')) AS c(cap)
 WHERE r.name = 'PARKING_CITY_MANAGER' ON CONFLICT DO NOTHING;
 
 -- Area manager: their clusters' occupancy, revenue and marshal actions; taking a cluster live stays with the city manager.
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_dashboard.role r,
-     (VALUES ('city-operations.parking_cluster.read'), ('city-operations.parking_revenue.read'), ('city-operations.parking_marshal.execute')) AS c(cap)
+     (VALUES ('city-operations.parking_cluster.read'), ('city-operations.parking_revenue.read'), ('city-operations.parking_marshal.execute'),
+             ('city-operations.parking_bookings.read'), ('city-operations.parking_cluster_details.read')) AS c(cap)
 WHERE r.name = 'PARKING_AREA_MANAGER' ON CONFLICT DO NOTHING;
 
 -- Marshal: their clusters' occupancy, ticket checks and cash bookings.
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_dashboard.role r,
-     (VALUES ('city-operations.parking_cluster.read'), ('city-operations.parking_marshal.execute')) AS c(cap)
+     (VALUES ('city-operations.parking_cluster.read'), ('city-operations.parking_marshal.execute'), ('city-operations.parking_bookings.read')) AS c(cap)
 WHERE r.name = 'PARKING_MARSHAL' ON CONFLICT DO NOTHING;

@@ -378,8 +378,12 @@ getTicketPlaceBookings ::
   Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Kernel.Prelude.UTCTime ->
+  Maybe Kernel.Prelude.UTCTime ->
+  Maybe (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService) ->
+  Maybe API.Types.UI.TicketService.ParkingEntryStatus ->
   Domain.Types.TicketBooking.BookingStatus ->
   Environment.Flow API.Types.UI.TicketService.TicketPlaceBookingList
-getTicketPlaceBookings merchantShortId _opCity placeId mbLimit mbOffset status = do
+getTicketPlaceBookings merchantShortId opCity placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.getTicketPlaceBookings (Nothing, m.id) placeId mbLimit mbOffset status
+  Domain.Action.UI.TicketService.getTicketPlaceBookingsDashboard m.id merchantShortId opCity placeId mbLimit mbOffset mbFrom mbTo mbZoneId mbEntry status

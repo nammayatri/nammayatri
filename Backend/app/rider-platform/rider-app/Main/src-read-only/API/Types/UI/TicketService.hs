@@ -4,6 +4,7 @@ module API.Types.UI.TicketService where
 
 import qualified API.Types.UI.ParkingBooking
 import qualified Dashboard.Common
+import Data.Aeson (eitherDecode, encode)
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
@@ -24,6 +25,7 @@ import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Lib.Payment.Domain.Types.Refunds
 import Servant
 import qualified SharedLogic.CallBPPInternal
@@ -237,10 +239,14 @@ data TicketBookingServiceDetails = TicketBookingServiceDetails
     categories :: [TicketBookingCategoryDetails],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     noteInfo :: Kernel.Prelude.Maybe Data.Text.Text,
+    paymentMethod :: Kernel.Prelude.Maybe Domain.Types.TicketBooking.PaymentMethod,
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.TicketBookingService.ServiceStatus,
     ticketServiceName :: Data.Text.Text,
     ticketServiceShortId :: Data.Text.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    vehicleType :: Kernel.Prelude.Maybe Data.Text.Text,
     verificationCount :: Kernel.Prelude.Int
   }
   deriving stock (Generic)
@@ -289,7 +295,17 @@ data TicketPlaceAvailability = TicketPlaceAvailability {closedDays :: [Kernel.Pr
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketPlaceBookingList = TicketPlaceBookingList {bookings :: [API.Types.UI.TicketService.TicketBookingDetails], summary :: Dashboard.Common.Summary}
+data ParkingBookingCounts = ParkingBookingCounts {booked :: Kernel.Prelude.Int, entered :: Kernel.Prelude.Int, notEntered :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ParkingEntryStatus
+  = Entered
+  | NotEntered
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data TicketPlaceBookingList = TicketPlaceBookingList {bookings :: [API.Types.UI.TicketService.TicketBookingDetails], parkingCounts :: Kernel.Prelude.Maybe ParkingBookingCounts, summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -329,7 +345,7 @@ data TicketServiceResp = TicketServiceResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketServiceVerificationReq = TicketServiceVerificationReq {assignments :: Kernel.Prelude.Maybe [SharedLogic.CallBPPInternal.BookingAssignment]}
+data TicketServiceVerificationReq = TicketServiceVerificationReq {assignments :: Kernel.Prelude.Maybe [SharedLogic.CallBPPInternal.BookingAssignment], vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -361,5 +377,8 @@ data TicketVerificationStatus
   | PaymentPending
   | InvalidBooking
   | CancelledBooking
+  | VehicleMismatch
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''ParkingEntryStatus)
