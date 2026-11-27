@@ -181,7 +181,6 @@ instance Text.Read.Read RideBookingUserActionType where
                ]
       )
     where
-      app_prec = 10
-      stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
+      app_prec = 10; stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
 $(Data.Singletons.TH.genSingletons [''RideBookingUserActionType])

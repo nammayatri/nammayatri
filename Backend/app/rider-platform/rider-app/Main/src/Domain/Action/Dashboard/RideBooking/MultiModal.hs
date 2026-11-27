@@ -1,9 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.Dashboard.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage, postMultiModalSendDirectMessage, postMultiModalAddComment, getMultiModalGetComments) where
+module Domain.Action.Dashboard.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage, postMultiModalSendDirectMessage, postMultiModalAddComment, getMultiModalGetComments, postMultiModalCustomerMultimodalOrderSoftCancel, getMultiModalCustomerMultimodalOrderCancelStatus, postMultiModalCustomerMultimodalOrderCancel, postMultiModalCustomerMultimodalOrderReschedule) where
 
 import qualified API.Types.Dashboard.RideBooking.MultiModal
+import qualified API.Types.UI.FRFSTicketService
+import qualified API.Types.UI.MultimodalConfirm
 import Data.Aeson
 import qualified Data.Bifunctor as BF
 import qualified Data.ByteString.Lazy as BSL
@@ -11,12 +13,15 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified "this" Domain.Action.UI.Booking
+import qualified Domain.Action.UI.MultimodalConfirm as DMultimodalConfirm
 import qualified "this" Domain.Types.Booking.API
 import qualified Domain.Types.BookingStatus
 import Domain.Types.EmptyDynamicParam
 import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as Fields
+import qualified Domain.Types.Person
+import Domain.Types.TranslationKey (textAsReceived)
 import qualified Email.Flow as Email
 import qualified Email.Types as EmailT
 import qualified Environment
@@ -147,7 +152,27 @@ postMultiModalAddComment _merchantShortId _opCity customerId req = do
 getMultiModalGetComments :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp)
 getMultiModalGetComments _merchantShortId _opCity customerId = do
   person <- QPerson.findById (Kernel.Types.Id.Id customerId) >>= fromMaybeM (PersonDoesNotExist customerId)
-  pure API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp {comments = person.comments, customerId = person.id}
+  pure API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp {comments = fmap textAsReceived <$> person.comments, customerId = person.id}
+
+postMultiModalCustomerMultimodalOrderSoftCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMultiModalCustomerMultimodalOrderSoftCancel merchantShortId _opCity customerId journeyId legOrder = do
+  merchant <- findMerchantByShortId merchantShortId
+  DMultimodalConfirm.postMultimodalOrderSoftCancel (Just customerId, merchant.id) journeyId legOrder
+
+getMultiModalCustomerMultimodalOrderCancelStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp)
+getMultiModalCustomerMultimodalOrderCancelStatus merchantShortId _opCity customerId journeyId legOrder = do
+  merchant <- findMerchantByShortId merchantShortId
+  DMultimodalConfirm.getMultimodalOrderCancelStatus (Just customerId, merchant.id) journeyId legOrder
+
+postMultiModalCustomerMultimodalOrderCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMultiModalCustomerMultimodalOrderCancel merchantShortId _opCity customerId journeyId legOrder = do
+  merchant <- findMerchantByShortId merchantShortId
+  DMultimodalConfirm.postMultimodalOrderCancel (Just customerId, merchant.id) journeyId legOrder
+
+postMultiModalCustomerMultimodalOrderReschedule :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> API.Types.UI.FRFSTicketService.FRFSRescheduleReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMultiModalCustomerMultimodalOrderReschedule merchantShortId _opCity customerId journeyId legOrder req = do
+  merchant <- findMerchantByShortId merchantShortId
+  DMultimodalConfirm.postMultimodalOrderReschedule (Just customerId, merchant.id) journeyId legOrder req
 
 instance FromHttpApiData [Domain.Types.Journey.JourneyStatus] where
   parseUrlPiece = parseHeader . DT.encodeUtf8
