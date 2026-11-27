@@ -303,7 +303,9 @@ data DriverRideRes = DriverRideRes
     showRoutePerRequest :: Maybe Bool,
     enableManualArrival :: Maybe Bool,
     invoiceId ::
-      Maybe Text -- finance invoice id (booking.financeInvoiceId); the client fetches the PDF on demand via /finance/invoice/pdf (kept out of the hot list path — no per-row presign)
+      Maybe Text, -- finance invoice id (booking.financeInvoiceId); the client fetches the PDF on demand via /finance/invoice/pdf (kept out of the hot list path — no per-row presign)
+    tripId :: Maybe Text,
+    routeCode :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -897,7 +899,9 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         customerRating = mbRiderDetails >>= (.customerRating),
         showRoutePerRequest,
         enableManualArrival,
-        invoiceId = mbInvoiceId
+        invoiceId = mbInvoiceId,
+        tripId = ride.tripId <|> booking.tripId,
+        routeCode = ride.routeCode <|> booking.routeCode
       }
 
 getWaitingChargeInfo :: Maybe Meters -> Maybe Months -> FarePolicyD.FullFarePolicy -> Maybe DFPC.WaitingChargeInfo
