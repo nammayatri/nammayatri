@@ -39,8 +39,17 @@ findAllByPersonId :: BeamFlow m r => Id Person -> m [RegistrationToken]
 findAllByPersonId personId =
   findAllWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
 
+findAllByPersonIds :: BeamFlow m r => [Id Person] -> m [RegistrationToken]
+findAllByPersonIds [] = pure []
+findAllByPersonIds personIds =
+  findAllWithKV [Se.Is BeamRT.personId $ Se.In $ getId <$> personIds]
+
 deleteAllByPersonId :: BeamFlow m r => Id Person -> m ()
 deleteAllByPersonId personId = deleteWithKV [Se.Is BeamRT.personId $ Se.Eq $ getId personId]
+
+deleteAllByPersonIds :: BeamFlow m r => [Id Person] -> m ()
+deleteAllByPersonIds [] = pure ()
+deleteAllByPersonIds personIds = deleteWithKV [Se.Is BeamRT.personId $ Se.In $ getId <$> personIds]
 
 updateEnabledStatusByPersonId :: BeamFlow m r => Id Person -> Bool -> m ()
 updateEnabledStatusByPersonId personId enabled =

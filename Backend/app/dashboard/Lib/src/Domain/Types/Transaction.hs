@@ -64,6 +64,7 @@ data Endpoint uat
   | DashboardUserMobileChangeByAdmin
   | DashboardUserRoleAssign
   | DashboardTwoFactorExemptChange
+  | DashboardUserForcePasswordReset
   | UnknownEndpoint
   deriving (Eq, Ord, Generic)
 
@@ -90,4 +91,5 @@ instance Show uat => Text.Show.Show (Endpoint uat) where
     DashboardUserMobileChangeByAdmin -> "DASHBOARD_USER/MOBILE_CHANGE_BY_ADMIN"
     DashboardUserRoleAssign -> "DASHBOARD_USER/ROLE_ASSIGN"
     DashboardTwoFactorExemptChange -> "DASHBOARD_USER/TWO_FACTOR_EXEMPT_CHANGE"
+    DashboardUserForcePasswordReset -> "DASHBOARD_USER/FORCE_PASSWORD_RESET"
     UnknownEndpoint -> "UNKNOWN_ENDPOINT"

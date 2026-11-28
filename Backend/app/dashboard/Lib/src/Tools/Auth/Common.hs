@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry, checkForcedPasswordChange) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, clearTokenCache, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry, checkForcedPasswordChange) where
 
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
@@ -184,8 +184,17 @@ cleanCachedTokens ::
   ) =>
   Id DP.Person ->
   m ()
-cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
+cleanCachedTokens personId = QR.findAllByPersonId personId >>= clearTokenCache
+
+-- | Drop the Redis auth and activity entries for already-fetched tokens, so a caller handling
+-- many people can load all their tokens in one query instead of one per person.
+clearTokenCache ::
+  ( Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  [DR.RegistrationToken] ->
+  m ()
+clearTokenCache regTokens =
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key

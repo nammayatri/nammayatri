@@ -636,6 +636,34 @@ updatePersonPasswordByAdmin personId newPasswordHash = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+-- | Super-admin forced reset: keeps the current password (it is what the person presents to
+-- changePasswordAfterExpiry) but gates every login and token check until they choose a new one.
+-- updatePersonPassword clears the flag.
+-- One UPDATE ... WHERE id IN (...) for the whole batch.
+setForcePasswordChange :: BeamFlow m r => [Id Person] -> m ()
+setForcePasswordChange [] = pure ()
+setForcePasswordChange personIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.forcePasswordChange $ Just True,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.In $ getId <$> personIds
+    ]
+
+-- | The target set of a super-admin "reset all": default-dashboard people with a password and an
+-- email, i.e. everyone who can complete changePasswordAfterExpiry (it looks people up by email +
+-- password on the default dashboard only). Filtered in SQL so ineligible rows are never loaded.
+findAllForcePasswordResetCandidates :: BeamFlow m r => m [Person]
+findAllForcePasswordResetCandidates =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.passwordHash $ Se.Not $ Se.Eq Nothing,
+          Se.Is BeamP.emailHash $ Se.Not $ Se.Eq Nothing,
+          Se.Is BeamP.dashboardType $ Se.Eq DPT.DEFAULT_DASHBOARD
+        ]
+    ]
+
 updatePersonPasswordUpdatedAt :: BeamFlow m r => Id Person -> m ()
 updatePersonPasswordUpdatedAt personId = do
   now <- getCurrentTime
