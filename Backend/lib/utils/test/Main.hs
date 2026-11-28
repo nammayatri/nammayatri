@@ -1,5 +1,7 @@
 module Main (main) where
 
+import Control.Monad (replicateM)
+import qualified DashboardVpnGuardSpec
 import Data.ByteString (ByteString)
 import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef)
 import qualified Data.Map.Strict as Map
@@ -15,6 +17,7 @@ main :: IO ()
 main = hspec $ do
   pureSpec
   middlewareSpec
+  DashboardVpnGuardSpec.spec
 
 pureSpec :: Spec
 pureSpec = do

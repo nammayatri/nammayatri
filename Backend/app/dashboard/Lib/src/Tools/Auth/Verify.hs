@@ -14,6 +14,7 @@ module Tools.Auth.Verify
     verifyServerWithPair,
     verifyServer,
     verifyCity,
+    dashboardRoleNameForToken,
   )
 where
 
@@ -34,8 +35,27 @@ import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantPair as QMerchantPair
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Capability as Capability
 import qualified Tools.Auth.Common as Common
+import Tools.Error (MerchantError (UserDisabled), RoleError (RoleNotFound))
+
+-- | 'Nothing' only when the token is not a valid session; any other failure is thrown.
+dashboardRoleNameForToken ::
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  RegToken ->
+  m (Maybe Text)
+dashboardRoleNameForToken token = do
+  mbPersonId <-
+    (Just <$> Common.verifyPerson token)
+      `catch` (\(_ :: AuthError) -> pure Nothing)
+      `catch` \case
+        UserDisabled -> pure Nothing
+        e -> throwM e
+  forM mbPersonId $ \personId -> do
+    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+    pure role.name
 
 -- | What the auth path establishes about the caller, minus anything that names
 -- the dashboard's API action types.
