@@ -969,7 +969,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 _type = quote._type,
                 applicablePasses =
                   map FRFSPassOverride.mkPassOptionAPIEntity $
-                    FRFSPassOverride.passOptionsForQuote integratedBppConfig mbPassLegStops stopMatchedPasses serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
+                    FRFSPassOverride.passOptionsForQuote integratedBppConfig mbPassLegStops stopMatchedPasses serviceTierType (maybe singleAdultTicketPrice (.price) (find (\category -> category.category == ADULT) quoteCategories)) singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
                 price = singleAdultTicketPrice.amount,
                 priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,
                 quantity = adultQuantity,

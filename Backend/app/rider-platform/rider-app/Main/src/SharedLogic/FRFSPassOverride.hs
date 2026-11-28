@@ -148,14 +148,14 @@ hasPurchasedStops applicablePass =
   isJust applicablePass.purchasedPassPayment.sourceStopCode || isJust applicablePass.purchasedPassPayment.destinationStopCode
 
 coversStopPair :: Maybe LegStops -> Price -> ApplicablePass -> Bool
-coversStopPair mbLegStops adultUnitPrice applicablePass
+coversStopPair mbLegStops adultBaseUnitPrice applicablePass
   | onPurchasedPair = True
   | not withinFareCap = False
   | not (requiresStopMatch applicablePass) = True
   | otherwise = coveredAsCheaper
   where
     payment = applicablePass.purchasedPassPayment
-    withinFareCap = maybe True (adultUnitPrice.amount <=) payment.maximumOverrideableFarePerTicket
+    withinFareCap = maybe True (adultBaseUnitPrice.amount <=) payment.maximumOverrideableFarePerTicket
     coveredAsCheaper =
       applicablePass.benefit.allowCheaperStopPairs == Just True
         && isJust payment.maximumOverrideableFarePerTicket
@@ -405,8 +405,8 @@ data PassOption = PassOption
   }
   deriving (Show, Generic)
 
-passOptionsForQuote :: DIBC.IntegratedBPPConfig -> Maybe LegStops -> [ApplicablePass] -> Maybe Spec.ServiceTierType -> Price -> [(Price, Int)] -> [PassOption]
-passOptionsForQuote integratedBPPConfig mbLegStops applicablePasses mbServiceTier adultUnitPrice priceItems =
+passOptionsForQuote :: DIBC.IntegratedBPPConfig -> Maybe LegStops -> [ApplicablePass] -> Maybe Spec.ServiceTierType -> Price -> Price -> [(Price, Int)] -> [PassOption]
+passOptionsForQuote integratedBPPConfig mbLegStops applicablePasses mbServiceTier adultBaseUnitPrice adultUnitPrice priceItems =
   [ PassOption
       { purchasedPassPaymentId = applicablePass.purchasedPassPayment.id,
         passId = applicablePass.pass.id,
@@ -421,7 +421,7 @@ passOptionsForQuote integratedBPPConfig mbLegStops applicablePasses mbServiceTie
       coversTier applicablePass,
       coversQuantity applicablePass,
       hasTripsForQuantity applicablePass,
-      coversStopPair mbLegStops adultUnitPrice applicablePass,
+      coversStopPair mbLegStops adultBaseUnitPrice applicablePass,
       let overriddenTotal = totalWith (applyOverrideBenefit applicablePass.benefit),
       overriddenTotal.amount < baseTotal.amount,
       coverageSupported integratedBPPConfig overriddenTotal
@@ -1061,11 +1061,12 @@ resolvePassOverride ::
   UTCTime ->
   Maybe Spec.ServiceTierType ->
   Price ->
+  Price ->
   [(Price, Int)] ->
   ([ApplicablePass] -> m (Maybe LegStops, [ApplicablePass])) ->
   Id DPPP.PurchasedPassPayment ->
   m (Maybe (ApplicablePass, PassOption))
-resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTier adultUnitPrice priceItems resolveLegStops paymentId
+resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTier adultBaseUnitPrice adultUnitPrice priceItems resolveLegStops paymentId
   | integratedBPPConfig.passOverrideApplicable /= Just True = pure Nothing
   | otherwise = do
     tripDay <- localTripDay person tripTime
@@ -1082,7 +1083,7 @@ resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTie
         pure Nothing
       Just applicablePass -> do
         (mbLegStops, stopMatchedPasses) <- resolveLegStops [applicablePass]
-        case passOptionsForQuote integratedBPPConfig mbLegStops stopMatchedPasses mbServiceTier adultUnitPrice priceItems of
+        case passOptionsForQuote integratedBPPConfig mbLegStops stopMatchedPasses mbServiceTier adultBaseUnitPrice adultUnitPrice priceItems of
           [] -> do
             logWarning $
               "FRFSPassOverride: no applicable option for pass paymentId="
