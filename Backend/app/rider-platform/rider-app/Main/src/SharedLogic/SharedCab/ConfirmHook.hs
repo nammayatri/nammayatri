@@ -52,7 +52,7 @@ confirmHook :: SharedCabConfirmFlow m r => DFTB.FRFSTicketBooking -> m ()
 confirmHook booking =
   when (isSharedCabBooking booking) $
     -- the confirm is committed by now: a Redis or job-table failure here only means the next tick / session open seeds the chain
-    withTryCatch "sharedCab:confirmHook" (ensureAllocationTick booking.merchantId booking.merchantOperatingCityId >> triggerSharedCabAllocation booking.merchantOperatingCityId)
+    withTryCatch "sharedCab:confirmHook" (ensureAllocationTick booking.merchantId booking.merchantOperatingCityId >> triggerSharedCabAllocation booking.merchantOperatingCityId booking.routeCode)
       >>= either (\e -> logError $ "shared-cab confirm hook failed for booking " <> booking.id.getId <> ": " <> show e) pure
 
 onBookingCreated :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> Maybe DJL.JourneyLeg -> m (Maybe DJL.JourneyLeg)
