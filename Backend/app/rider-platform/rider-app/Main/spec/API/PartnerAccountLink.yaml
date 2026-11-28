@@ -1,0 +1,83 @@
+# Partner account linking: a partner (e.g. Ouru) gets its own access token for a rider
+# after the rider enters an OTP on a page we host. Flow and rules:
+# src/Domain/Action/UI/PartnerAccountLink.hs. The HTML page itself is served by the
+# hand-written src/API/UI/PartnerAccountLinkPage.hs (the DSL has no HTML response).
+
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: PartnerAccountLink
+
+types:
+  # Partner-facing: field names are the ones agreed with the partner.
+  InitLinkReq:
+    partner_code: Text
+    user_mobile: Text
+
+  InitLinkRes:
+    weblink: Text
+    request_id: Text
+
+  # Hosted-page-facing: only our own page reads these.
+  PageStep:
+    enum: "ENTER_OTP,SIGNUP,DONE"
+
+  LinkPageInfo:
+    step: PageStep
+    partnerName: Text
+    maskedMobileNumber: Text
+
+  VerifyOtpReq:
+    otp: Text
+
+  SignupReq:
+    firstName: Text
+    lastName: Maybe Text
+
+apis:
+  # Partner: partner_code + the rider's number -> a one-time weblink and a request id.
+  # The OTP is sent to the number now. The token arrives later, only on the webhook.
+  - POST:
+      endpoint: /partnerOrg/accountLink
+      auth: NoAuth
+      request:
+        type: InitLinkReq
+      response:
+        type: InitLinkRes
+
+  # Hosted page calls. The link secret in the path is the only credential.
+  - GET:
+      endpoint: /partnerOrg/accountLink/page/{linkSecret}/info
+      auth: NoAuth
+      params:
+        linkSecret: Text
+      response:
+        type: LinkPageInfo
+
+  - POST:
+      endpoint: /partnerOrg/accountLink/page/{linkSecret}/resendOtp
+      auth: NoAuth
+      params:
+        linkSecret: Text
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /partnerOrg/accountLink/page/{linkSecret}/verifyOtp
+      auth: NoAuth
+      params:
+        linkSecret: Text
+      request:
+        type: VerifyOtpReq
+      response:
+        type: LinkPageInfo
+
+  - POST:
+      endpoint: /partnerOrg/accountLink/page/{linkSecret}/signup
+      auth: NoAuth
+      params:
+        linkSecret: Text
+      request:
+        type: SignupReq
+      response:
+        type: LinkPageInfo
