@@ -120,7 +120,7 @@ mkPaymentParams paymentMethodInfo _paymentUrl merchant bppConfig booking = do
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
       -- Echo the resolved instrument; omitting it lets the far side default to Cash.
       mPaymentInstrument = show <$> booking.paymentInstrument
-  mkPayment (show merchant.city) (Utils.resolvePaymentCollectedBy paymentMethodInfo bppConfig) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  Utils.withBapPaymentStatus booking.paymentStatus $ mkPayment (show merchant.city) (Utils.resolvePaymentCollectedBy paymentMethodInfo bppConfig) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 mkPaymentParamsSoftUpdate :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> HighPrecMoney -> Currency -> Spec.Payment
 mkPaymentParamsSoftUpdate paymentMethodInfo _paymentUrl merchant bppConfig estimatedFare currency = do

@@ -170,6 +170,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
@@ -1031,12 +1032,15 @@ sendRideCompletedUpdateToBAP ::
   Maybe Maps.LatLong ->
   Bool ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = unlessSharedRun booking "sendRideCompletedUpdateToBAP" $ do
+sendRideCompletedUpdateToBAP bookingAtEnd ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = unlessSharedRun bookingAtEnd "sendRideCompletedUpdateToBAP" $ do
+  merchant <-
+    CQM.findById bookingAtEnd.providerId
+      >>= fromMaybeM (MerchantNotFound bookingAtEnd.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory bookingAtEnd.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  -- Everything below (RIDE_ENDED on_update, and later on_status from the stored row) reports the updated status.
+  booking <- markBppCollectedPaymentPaid bookingAtEnd paymentMethodInfo bppConfig
   fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  merchant <-
-    CQM.findById booking.providerId
-      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   mbVehicle <- QVeh.findById ride.driverId
@@ -1048,7 +1052,6 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
         rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
         pure $ buildVehicleFromRideDetailsSnapshot booking ride rideDetails
       | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
-  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   let bookingDetails = ACL.BookingDetails {..}
@@ -1061,6 +1064,20 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True booking.addOnData rideCompletedMsgV2'.onUpdateReqMessage
   let rideCompletedMsgV2 = rideCompletedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
+
+-- | BPP-collected payment (the driver takes the fare at drop): once the ride has ended the fare is
+-- settled, so mark the booking PAID and report that in RIDE_ENDED and every callback after it.
+-- collected_by is resolved exactly as the on_* payment builders do (payment method, else BecknConfig).
+-- BAP-collected bookings are left alone: their status is whatever the BAP sent (init / confirm / update).
+markBppCollectedPaymentPaid :: (CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> m DRB.Booking
+markBppCollectedPaymentPaid booking paymentMethodInfo bppConfig
+  | Utils.resolvePaymentCollectedBy paymentMethodInfo bppConfig == show DBC.BPP && booking.paymentStatus /= Just paidStatus = do
+    logTagInfo "markBppCollectedPaymentPaid" ("bookingId " <> booking.id.getId <> ": " <> show booking.paymentStatus <> " -> " <> paidStatus)
+    QRB.updatePaymentStatus (Just paidStatus) booking.id
+    pure booking {DRB.paymentStatus = Just paidStatus}
+  | otherwise = pure booking
+  where
+    paidStatus = show Enums.PAID
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,

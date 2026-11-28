@@ -278,7 +278,7 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just fulfillmentState),
         orderItems = items,
         orderPayments = Just [payment],
-        orderProvider = Utils.tfProvider becknConfig,
+        orderProvider = Utils.tfProvider (Just merchant) becknConfig,
         orderQuote = quote,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
@@ -309,7 +309,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just EventEnum.RIDE_STARTED),
         orderItems = items,
         orderPayments = Just [payment],
-        orderProvider = Utils.tfProvider becknConfig,
+        orderProvider = Utils.tfProvider (Just merchant) becknConfig,
         orderQuote = quote,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
@@ -344,7 +344,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
         orderCancellation = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just EventEnum.RIDE_ENDED),
         orderItems = items,
-        orderProvider = Utils.tfProvider becknConfig,
+        orderProvider = Utils.tfProvider (Just merchant) becknConfig,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
       }
@@ -359,6 +359,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
     let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
     Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing (Just $ show EventEnum.RIDE_CANCELLED) isValueAddNP riderPhone False 0
   let payment = fmap (\bd -> L.singleton $ UtilsOU.mkPaymentParams bd.paymentMethodInfo Nothing bd.merchant becknConfig booking) bookingDetails
+  mbProvider <- Utils.tfProviderM becknConfig
   pure
     Spec.Order
       { orderDocuments = UtilsV2.mkInvoiceDocuments <$> mbInvoiceDocumentUrl,
@@ -376,7 +377,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms cancellationFee (Just EventEnum.RIDE_CANCELLED),
         orderItems = Nothing,
         orderPayments = payment,
-        orderProvider = Utils.tfProvider becknConfig,
+        orderProvider = mbProvider,
         orderQuote = quote,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
@@ -402,7 +403,7 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing (Just EventEnum.RIDE_ARRIVED_PICKUP),
         orderItems = items,
         orderPayments = Just [payment],
-        orderProvider = Utils.tfProvider becknConfig,
+        orderProvider = Utils.tfProvider (Just merchant) becknConfig,
         orderQuote = quote,
         orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.ACTIVE,

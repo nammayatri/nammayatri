@@ -117,6 +117,7 @@ oneShotAssign OneShotAssignReq {..} = do
               displayBookingId = Nothing,
               discountAmount = offerDiscountForEstimate driverQuote.estimateId.getId searchTry.estimateOfferDiscounts,
               paymentChargeDetails = searchTry.paymentChargeDetails,
+              paymentStatus = Nothing, -- no init on this path; NOT_PAID until confirm / update says otherwise
               initialStatus = DRB.TRIP_ASSIGNED,
               riderId = searchReq.riderId,
               riderName = searchReq.riderName

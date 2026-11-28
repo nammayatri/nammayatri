@@ -133,6 +133,7 @@ Booking:
     cancellationDuesCommission: Maybe HighPrecMoney
     cancellationDuesCommissionTaxBreakup: Maybe TaxBreakup
     paymentCharge: Maybe HighPrecMoney
+    paymentStatus: Maybe Text # Payment status as last sent by the BAP (init / confirm / PAYMENT_COMPLETED update); echoed back in on_init, on_confirm, on_status, on_update, on_cancel. Nothing = NOT_PAID
     paymentChargeBearer: Maybe Text
     discountAmount: Maybe HighPrecMoney
     displayBookingId: Maybe Text
@@ -317,6 +318,10 @@ Booking:
     updateRiderCallIdentity:
       kvFunction: updateOneWithKV
       params: [riderCallIdentity]
+      where: id
+    updatePaymentStatus:
+      kvFunction: updateOneWithKV
+      params: [paymentStatus]
       where: id
 
   constraints:

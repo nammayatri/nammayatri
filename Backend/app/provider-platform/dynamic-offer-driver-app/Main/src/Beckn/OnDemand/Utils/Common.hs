@@ -79,6 +79,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -1273,25 +1274,41 @@ pickAdvertisedPaymentInstrument collectedBy methods =
 resolvePaymentCollectedBy :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Text
 resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig = maybe (show bppConfig.collectedBy) (show . (.collectedBy)) mbPaymentMethodInfo
 
+-- | Echo back the payment status the BAP last sent us (on confirm or a PAYMENT_COMPLETED update),
+-- verbatim; when it never sent one, keep the payment's own status (NOT_PAID).
+withBapPaymentStatus :: Maybe Text -> Spec.Payment -> Spec.Payment
+withBapPaymentStatus mbBapPaymentStatus payment = payment {Spec.paymentStatus = mbBapPaymentStatus <|> payment.paymentStatus}
+
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe DMPM.PaymentMethodInfo -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig mbPaymentMethodInfo = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: Maybe DT.BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
       mPaymentInstrument = show <$> booking.paymentInstrument
-  Just . List.singleton $ mkPayment (show transporter.city) (resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  Just . List.singleton . withBapPaymentStatus booking.paymentStatus $ mkPayment (show transporter.city) (resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
-tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
-tfProvider becknConfig =
+-- | The order's provider: id = BPP subscriber id, descriptor = merchant name + short id (same as the on_search catalog provider).
+tfProvider :: Maybe DM.Merchant -> DBC.BecknConfig -> Maybe Spec.Provider
+tfProvider mbMerchant becknConfig =
   return $
     Spec.Provider
       { providerCategories = Nothing, -- populated at call site if categories are known
-        providerDescriptor = Nothing,
+        providerDescriptor = mkProviderDescriptor <$> mbMerchant,
         providerFulfillments = Nothing,
         providerId = Just $ becknConfig.subscriberId,
         providerItems = Nothing,
         providerLocations = Nothing,
         providerPayments = Nothing
       }
+
+-- | 'tfProvider' for builders that don't have the merchant in hand: looks it up (cached) from the BecknConfig.
+tfProviderM :: (CacheFlow m r, EsqDBFlow m r) => DBC.BecknConfig -> m (Maybe Spec.Provider)
+tfProviderM becknConfig = do
+  mbMerchant <- maybe (pure Nothing) CQM.findById becknConfig.merchantId
+  pure $ tfProvider mbMerchant becknConfig
+
+-- | provider.descriptor: name = merchant name, code = merchant short id.
+mkProviderDescriptor :: DM.Merchant -> Spec.Descriptor
+mkProviderDescriptor merchant = emptyDescriptor {Spec.descriptorName = Just merchant.name, Spec.descriptorCode = Just merchant.shortId.getShortId}
 
 mkFulfillmentV2SoftUpdate ::
   (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>

@@ -51,7 +51,7 @@ mkOnSelectMessageV2FromQuote isValueAddNP bppConfig merchant searchRequest quote
             Spec.orderItems = Just [mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy hasStops],
             Spec.orderQuote = Just $ mkQuoteFromQuote isValueAddNP quote now,
             Spec.orderPayments = Just [paymentV2],
-            Spec.orderProvider = mkProviderFromQuote bppConfig
+            Spec.orderProvider = mkProviderFromQuote merchant bppConfig
           }
   patchedOrder <- OSRCommon.applyOnSelectOrderOverrides searchRequest.transactionId quote.addOnData order
   pure $ Spec.OnSelectReqMessage (Just patchedOrder)
@@ -153,6 +153,6 @@ mkQuoteBreakupFromQuote isValueAddNP quote = do
       Nothing -> Nothing
       Just newTitle -> Just breakup {Spec.quotationBreakupInnerTitle = Just newTitle}
 
-mkProviderFromQuote :: DBC.BecknConfig -> Maybe Spec.Provider
-mkProviderFromQuote becknConfig =
-  return $ emptyProvider {Spec.providerId = Just $ becknConfig.subscriberId}
+mkProviderFromQuote :: DM.Merchant -> DBC.BecknConfig -> Maybe Spec.Provider
+mkProviderFromQuote merchant becknConfig =
+  return $ emptyProvider {Spec.providerId = Just $ becknConfig.subscriberId, Spec.providerDescriptor = Just $ Utils.mkProviderDescriptor merchant}

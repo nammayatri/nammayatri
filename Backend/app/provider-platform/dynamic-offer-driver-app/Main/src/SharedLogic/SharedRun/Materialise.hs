@@ -427,6 +427,7 @@ materialiseTrip merchant moc transporterConfig fareProduct integratedBppConfig d
                 paymentUrl = Nothing,
                 paymentId = Nothing,
                 paymentCharge = Nothing,
+                paymentStatus = Nothing,
                 paymentChargeBearer = Nothing,
                 paymentChargeDetails = Nothing,
                 tollCharges = Nothing,

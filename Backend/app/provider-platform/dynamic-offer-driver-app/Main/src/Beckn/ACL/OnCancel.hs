@@ -189,8 +189,8 @@ tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReas
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms grossCancellationFee,
       orderItems = tfItems booking merchant mbFarePolicy,
-      orderPayments = map (\payment -> payment {Spec.paymentTags = payment.paymentTags <> (mbCancellationDuesDetails' >>= cancellationSettlementTags)}) <$> tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId (show <$> booking.paymentInstrument) mbPaymentMethodInfo,
-      orderProvider = BUtils.tfProvider becknConfig,
+      orderPayments = map (\payment -> payment {Spec.paymentTags = payment.paymentTags <> (mbCancellationDuesDetails' >>= cancellationSettlementTags)}) <$> tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId (show <$> booking.paymentInstrument) mbPaymentMethodInfo booking.paymentStatus,
+      orderProvider = BUtils.tfProvider (Just merchant) becknConfig,
       orderQuote = tfQuotation booking mbCancellationDuesDetails',
       orderCreatedAt = Just booking.createdAt,
       orderUpdatedAt = Just booking.updatedAt
@@ -277,11 +277,11 @@ mkQuotationBreakup booking mbCancellationDuesDetails' =
           quotationBreakupInnerTitle = Just title
         }
 
-tfPayments :: Price -> DM.Merchant -> DBC.BecknConfig -> Maybe Text -> Maybe Text -> Maybe DMPM.PaymentMethodInfo -> Maybe [Spec.Payment]
-tfPayments estimatedFare merchant bppConfig mbPaymentId mPaymentInstrument mbPaymentMethodInfo = do
+tfPayments :: Price -> DM.Merchant -> DBC.BecknConfig -> Maybe Text -> Maybe Text -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe [Spec.Payment]
+tfPayments estimatedFare merchant bppConfig mbPaymentId mPaymentInstrument mbPaymentMethodInfo mbBapPaymentStatus = do
   let mPrice = Just estimatedFare
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show merchant.city) (BUtils.resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  Just . L.singleton . BUtils.withBapPaymentStatus mbBapPaymentStatus $ mkPayment (show merchant.city) (BUtils.resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Item]
 tfItems booking merchant mbFarePolicy =

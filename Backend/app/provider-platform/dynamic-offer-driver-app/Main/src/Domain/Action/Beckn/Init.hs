@@ -104,6 +104,7 @@ data InitReq = InitReq
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
+    paymentStatus :: Maybe Text, -- payment.status as sent by the BAP at init; stored on the booking and echoed back
     displayBookingId :: Maybe Text,
     riderGender :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
@@ -265,6 +266,7 @@ handler merchantId req validatedReq = do
           displayBookingId = req.displayBookingId,
           discountAmount = req.discountAmount,
           paymentChargeDetails = req.paymentChargeDetails,
+          paymentStatus = req.paymentStatus,
           initialStatus = initialStatus',
           riderId = riderId',
           riderName = riderName'
@@ -294,6 +296,7 @@ data BuildBookingReq = BuildBookingReq
     displayBookingId :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
     paymentChargeDetails :: Maybe PaymentChargeDetails,
+    paymentStatus :: Maybe Text, -- payment.status the BAP sent (Nothing => NOT_PAID on the wire)
     initialStatus :: DRB.BookingStatus,
     riderId :: Maybe (Id DRD.RiderDetails),
     riderName :: Maybe Text
@@ -429,6 +432,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         cancellationDuesCommission = cancellationDuesCommission,
         cancellationDuesCommissionTaxBreakup = FC.calculateCancellationDuesCommissionTax searchRequest.customerCancellationDuesCommissionTaxBreakup driverQuote.fareParams,
         paymentCharge = chargeRes.paymentCharge,
+        paymentStatus = bArgs.paymentStatus,
         paymentChargeBearer = chargeRes.paymentChargeBearer,
         paymentChargeDetails = bArgs.paymentChargeDetails,
         taxRates = (\tc -> driverTaxRates tc (mbFarePolicy >>= (.rideTaxConfig)) (mbFarePolicy >>= (.tollTaxConfig)) (mbFarePolicy >>= (.parkingTaxConfig)) (mbFarePolicy >>= (.commissionTaxConfig)) bArgs.paymentChargeDetails) <$> mbTransporterConfig,
