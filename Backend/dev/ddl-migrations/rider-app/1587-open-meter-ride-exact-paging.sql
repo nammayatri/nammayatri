@@ -6,20 +6,27 @@
 --
 -- Rollout: apply to each environment's atlas_app.system_configs before the app pages trip history by
 -- offset. Riders see duplicate and missing trips past the first page until then. rider-app reloads
--- kv_configs on its own refresh interval, so no restart is needed. Idempotent.
-UPDATE atlas_app.system_configs
+-- kv_configs on its own refresh interval, so no restart is needed. Idempotent. A tablesForExactPaging
+-- that is not an array (rider-app could not decode it) is replaced by one. Without a kv_configs row
+-- this changes nothing, and nothing needs it: the kernel's default KV config (allTablesDisabled)
+-- keeps every table out of KV, so trip history reads Postgres alone and pages exactly.
+UPDATE atlas_app.system_configs AS sc
 SET config_value = jsonb_set(
-    config_value::jsonb,
+    sc.config_value::jsonb,
     '{tablesForExactPaging}',
-    (CASE
-       WHEN jsonb_typeof(config_value::jsonb -> 'tablesForExactPaging') = 'array'
-         THEN config_value::jsonb -> 'tablesForExactPaging'
-       ELSE '[]'::jsonb
-     END)
-      || (
-        SELECT COALESCE(jsonb_agg(t), '[]'::jsonb)
-        FROM (VALUES ('open_meter_ride')) AS missing(t)
-        WHERE NOT COALESCE(config_value::jsonb -> 'tablesForExactPaging', '[]'::jsonb) @> to_jsonb(t)
-      )
+    CASE
+      WHEN normalized.tables @> '["open_meter_ride"]'::jsonb THEN normalized.tables
+      ELSE normalized.tables || '["open_meter_ride"]'::jsonb
+    END
   )::text
-WHERE id = 'kv_configs';
+FROM (
+  SELECT id,
+         CASE
+           WHEN jsonb_typeof(config_value::jsonb -> 'tablesForExactPaging') = 'array'
+             THEN config_value::jsonb -> 'tablesForExactPaging'
+           ELSE '[]'::jsonb
+         END AS tables
+  FROM atlas_app.system_configs
+  WHERE id = 'kv_configs'
+) AS normalized
+WHERE sc.id = normalized.id;

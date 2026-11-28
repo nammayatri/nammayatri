@@ -5,6 +5,8 @@ module SharedLogic.OpenMeter
     isValidRideId,
     decideStart,
     isStale,
+    negativeHeartbeatField,
+    negativeEndField,
     applyHeartbeat,
     applyEnd,
     applyCancel,
@@ -40,8 +42,10 @@ data StartDecision
 -- | The client generates the ride id (a UUID v4) and it becomes the primary key, a
 -- varchar(36) column. Start accepts nothing else: KV would take a longer id, but the
 -- drainer's insert into Postgres would fail and the ride would be lost when KV expires it.
+-- Only the canonical lowercase spelling is taken (both natives write it), so one ride can
+-- never be stored or looked up under two spellings of the same UUID.
 isValidRideId :: Id OpenMeterRide -> Bool
-isValidRideId = isJust . UUID.fromText . getId
+isValidRideId (Id rideId) = maybe False ((== rideId) . UUID.toText) (UUID.fromText rideId)
 
 -- | Arguments: caller, allowMultiple, now, maxIdleHours, the ride already stored under the
 -- requested id, and the caller's RUNNING rides. A known id is idempotent for its owner and
@@ -58,12 +62,36 @@ decideStart caller allowMultiple now maxIdleHours mbExisting running =
   where
     (stale, active) = partition (isStale now maxIdleHours) $ filter ((== RUNNING) . (.status)) running
 
--- | A RUNNING ride with no heartbeat, or no start if it never sent one, for over maxIdleHours.
+-- | A RUNNING ride the server has not written for over maxIdleHours: no heartbeat applied, or
+-- no start if it never got one. updatedAt is the server's clock, while a heartbeat's sampledAt
+-- is the phone's, so a phone clock running behind cannot make a live ride look stale. A
+-- maxIdleHours below 1 counts as 1, so a misconfigured value cannot end live rides on start.
 isStale :: UTCTime -> Int -> OpenMeterRide -> Bool
 isStale now maxIdleHours ride =
-  ride.status == RUNNING && diffUTCTime now lastActivityAt > fromIntegral (maxIdleHours * 3600)
-  where
-    lastActivityAt = fromMaybe ride.serverStartedAt ride.lastHeartbeatAt
+  ride.status == RUNNING && diffUTCTime now ride.updatedAt > fromIntegral (max 1 maxIdleHours * 3600)
+
+-- | The first total of a heartbeat that is negative, if any. Such a heartbeat is refused.
+negativeHeartbeatField :: API.OpenMeterRideHeartbeatReq -> Maybe Text
+negativeHeartbeatField req =
+  firstNegative
+    [ ("distanceMeters", req.distanceMeters.getMeters < 0),
+      ("waitingTimeSeconds", req.waitingTimeSeconds.getSeconds < 0),
+      ("fare", maybe False (< 0) req.fare)
+    ]
+
+-- | The first total of an END that is negative, if any. Such an END is refused.
+negativeEndField :: API.OpenMeterRideEndReq -> Maybe Text
+negativeEndField req =
+  firstNegative
+    [ ("distanceMeters", req.distanceMeters.getMeters < 0),
+      ("waitingTimeSeconds", req.waitingTimeSeconds.getSeconds < 0),
+      ("fare", maybe False (< 0) req.fare),
+      ("pointsCount", req.pointsCount < 0),
+      ("estimatedGapMeters", req.estimatedGapMeters.getMeters < 0)
+    ]
+
+firstNegative :: [(Text, Bool)] -> Maybe Text
+firstNegative = fmap fst . find snd
 
 -- | Heartbeats carry absolute totals and only move a RUNNING ride forward. One that is not
 -- newer than the stored heartbeat is a no-op. sampledAt comes from the phone's clock, so it is
@@ -88,7 +116,9 @@ applyHeartbeat now req ride
 
 -- | The Meters argument is the server's linear distance along the uploaded polyline. Ending an
 -- ENDED ride is a no-op. An AUTO_ENDED ride takes the client's data: the server only stopped
--- it for want of heartbeats, while the phone kept measuring.
+-- it for want of heartbeats, while the phone kept measuring. An end time before the start (the
+-- phone's clock moved back during the ride) is stored as the start time. Refusing it would
+-- leave the ride RUNNING with no way to close it.
 applyEnd :: UTCTime -> API.OpenMeterRideEndReq -> Meters -> OpenMeterRide -> Either OpenMeterError (Maybe OpenMeterRide)
 applyEnd now req serverLinear ride = case ride.status of
   ENDED -> Right Nothing
@@ -99,7 +129,7 @@ applyEnd now req serverLinear ride = case ride.status of
     ended =
       ride
         { status = ENDED,
-          endTime = Just req.endTime,
+          endTime = Just (max ride.startTime req.endTime),
           endLatLong = req.endLatLong,
           distanceMeters = req.distanceMeters,
           serverLinearDistanceMeters = Just serverLinear,
@@ -139,13 +169,17 @@ invalidState ride = OpenMeterRideInvalidState (show ride.status)
 -- | Haversine length of an encoded polyline (precision 5). Nothing when the text is not a
 -- well-formed polyline: Kernel's decoder takes the 'head' of each chunk's terminator and
 -- crashes on a truncated string, so every character must be in '?'..'~' and the last one must
--- end a chunk (below '_').
+-- end a chunk (below '_'). Each value ends with such a character, and values come in latitude
+-- and longitude pairs: the decoder silently drops an unpaired one, so an odd count is refused.
 serverLinearDistance :: Text -> Maybe Meters
 serverLinearDistance polyline
   | wellFormed = Just . highPrecMetersToMeters $ getRouteLinearLength (PolyLinePoints.decode polyline) Nothing
   | otherwise = Nothing
   where
-    wellFormed = T.all (\c -> c >= '?' && c <= '~') polyline && maybe True ((< '_') . snd) (T.unsnoc polyline)
+    wellFormed =
+      T.all (\c -> c >= '?' && c <= '~') polyline
+        && maybe True ((< '_') . snd) (T.unsnoc polyline)
+        && even (T.length (T.filter (< '_') polyline))
 
 -- | True when the client's distance is more than 30% off the server's linear distance. A
 -- zero server distance (empty or single-point route) is never reported.
