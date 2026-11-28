@@ -35,6 +35,11 @@ RiderDriverCorrelation:
       where:
         and: [riderDetailId, favourite]
 
+    findBlackListedDriversForRider:
+      kvFunction: findAllWithKV
+      where:
+        and: [riderDetailId, blackListed]
+
     checkRiderFavDriver:
       kvFunction: findOneWithKV
       where:
