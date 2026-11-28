@@ -2,18 +2,21 @@
 
 module Lib.Finance.Settlement.Store
   ( storeParseResult,
+    storeParseResultWithFileId,
     IngestionResult (..),
     emptyIngestionResult,
   )
 where
 
 import qualified Data.Aeson as Aeson
+import qualified Data.List as List
 import qualified Data.Text as T
 import Kernel.Beam.Functions (ToTType' (..))
 import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..), TxnType (..))
 import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import qualified Kernel.Types.ActorInfo as Fields
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common (logInfo, logWarning)
 import Lib.Finance.Audit.Interface (AuditInput (..))
@@ -29,18 +32,24 @@ import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgRep
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReport as QPgReport
 import qualified Lib.Finance.Utils.SensitiveData as SD
 
+chunkSize :: Int
+chunkSize = 128
+
 data IngestionResult = IngestionResult
   { totalParsed :: Int,
     totalStored :: Int,
     totalDuplicates :: Int,
     totalFailed :: Int,
     parseErrors :: [Text],
-    storeErrors :: [Text]
+    storeErrors :: [Text],
+    totalPaidAmount :: HighPrecMoney,
+    totalRefundAmount :: HighPrecMoney,
+    totalChargebackAmount :: HighPrecMoney
   }
   deriving (Show, Generic, ToJSON)
 
 emptyIngestionResult :: IngestionResult
-emptyIngestionResult = IngestionResult 0 0 0 0 [] []
+emptyIngestionResult = IngestionResult 0 0 0 0 [] [] 0 0 0
 
 storeParseResult ::
   (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
@@ -50,7 +59,18 @@ storeParseResult ::
   (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   ParsePaymentSettlementResult ->
   m IngestionResult
-storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType parseResult = do
+storeParseResult = storeParseResultWithFileId Nothing
+
+storeParseResultWithFileId ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  Maybe Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
+  ParsePaymentSettlementResult ->
+  m IngestionResult
+storeParseResultWithFileId mbFileId merchantId merchantOperatingCityId mbBankCode resolveOrderType parseResult = do
   actorInfo <- asks (.actorInfo)
   logInfo $
     "Parse complete. Total rows: " <> show (totalRows parseResult)
@@ -62,33 +82,51 @@ storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType 
   when (not $ null $ errors parseResult) $
     logWarning $ "Parse errors: " <> show (errors parseResult)
 
-  results <- forM (reports parseResult) $ \report -> do
-    orderId' <-
-      if report.txnType == CHARGEBACK && T.null report.orderId
-        then case report.txnId of
-          Just refTxnId -> maybe report.orderId (.orderId) <$> QPgReport.findOrderByTxnId refTxnId
-          Nothing -> pure report.orderId
-        else pure report.orderId
-    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode resolveOrderType (report {Ext.orderId = orderId'})
-    let isDuplicate = case (pgReport.txnId, pgReport.utr) of
-          (Just tId, Just utr) -> isJust <$> QPgReport.findByTxnIdUtrRefundIdDisputeId tId utr pgReport.refundId pgReport.disputeId
-          _ -> pure False
-    isDup <- isDuplicate
-    if isDup
-      then do
-        logInfo $ "Duplicate skipped for orderId=" <> pgReport.orderId <> " txnId=" <> fromMaybe "" pgReport.txnId <> " utr=" <> fromMaybe "" pgReport.utr
-        pure (False, Nothing, True)
-      else do
-        result <- try @_ @SomeException $ QPgReport.create pgReport
-        case result of
-          Right _ -> do
-            auditCreate actorInfo pgReport
-            pure (True, Nothing, False)
-          Left err -> pure (False, Just $ "Store error for orderId " <> report.orderId <> ": " <> show err, False)
+  let indexedReports = zip [0 :: Int ..] (reports parseResult)
+      chunks = chunksOf chunkSize indexedReports
 
-  let stored = length [() | (True, _, _) <- results]
-      storeErrs = [e | (_, Just e, _) <- results]
-      duplicates = length [() | (_, _, True) <- results]
+  chunkResults <- forM chunks $ \chunk -> do
+    pgReports <- forM chunk $ \(idx, report) -> do
+      orderId' <-
+        if report.txnType == CHARGEBACK && T.null report.orderId
+          then case report.txnId of
+            Just refTxnId -> maybe report.orderId (.orderId) <$> QPgReport.findOrderByTxnId refTxnId
+            Nothing -> pure report.orderId
+          else pure report.orderId
+      let deterministicId = case mbFileId of
+            Just fId -> Just $ fId <> "_" <> T.pack (show idx)
+            Nothing -> Nothing
+      Transformer.toPgPaymentSettlementReportWithId
+        deterministicId
+        merchantId
+        merchantOperatingCityId
+        Nothing
+        Nothing
+        mbBankCode
+        resolveOrderType
+        (report {Ext.orderId = orderId'})
+
+    results <- forM pgReports $ \pgReport -> do
+      result <- try @_ @SomeException $ QPgReport.create pgReport
+      case result of
+        Right _ -> do
+          auditCreate actorInfo pgReport
+          pure (True, Nothing, False, pgReport)
+        Left err ->
+          let errMsg = show err
+           in if isUniqueViolation errMsg
+                then pure (False, Nothing, True, pgReport)
+                else pure (False, Just $ "Store error for orderId " <> pgReport.orderId <> ": " <> T.pack errMsg, False, pgReport)
+    pure results
+
+  let allResults = concat chunkResults
+      stored = length [() | (True, _, _, _) <- allResults]
+      storeErrs = [e | (_, Just e, _, _) <- allResults]
+      duplicates = length [() | (_, _, True, _) <- allResults]
+      storedReports = [r | (True, _, _, r) <- allResults]
+      paidAmt = sum [r.settlementAmount | r <- storedReports, r.txnType == Dom.ORDER]
+      refundAmt = sum [fromMaybe 0 r.refundAmount | r <- storedReports, r.txnType == Dom.REFUND]
+      chargebackAmt = sum [fromMaybe 0 r.chargebackAmount | r <- storedReports, r.txnType == Dom.CHARGEBACK]
 
   logInfo $
     "Ingestion complete. Stored: " <> show stored
@@ -96,6 +134,12 @@ storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType 
       <> show duplicates
       <> ", Store errors: "
       <> show (length storeErrs)
+      <> ", Paid: "
+      <> show paidAmt
+      <> ", Refunds: "
+      <> show refundAmt
+      <> ", Chargebacks: "
+      <> show chargebackAmt
 
   pure
     IngestionResult
@@ -104,8 +148,25 @@ storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType 
         totalDuplicates = duplicates,
         totalFailed = failedRows parseResult + length storeErrs,
         parseErrors = errors parseResult,
-        storeErrors = storeErrs
+        storeErrors = storeErrs,
+        totalPaidAmount = paidAmt,
+        totalRefundAmount = refundAmt,
+        totalChargebackAmount = chargebackAmt
       }
+
+isUniqueViolation :: String -> Bool
+isUniqueViolation msg =
+  "unique" `List.isInfixOf` map toLower msg
+    || "duplicate key" `List.isInfixOf` map toLower msg
+    || "already exists" `List.isInfixOf` map toLower msg
+  where
+    toLower c
+      | c >= 'A' && c <= 'Z' = toEnum (fromEnum c + 32)
+      | otherwise = c
+
+chunksOf :: Int -> [a] -> [[a]]
+chunksOf _ [] = []
+chunksOf n xs = let (chunk, rest) = splitAt n xs in chunk : chunksOf n rest
 
 auditCreate ::
   BeamFlow.BeamFlow m r =>

@@ -64,6 +64,7 @@ library
       Lib.Finance.Settlement.ParserTypeMap
       Lib.Finance.Settlement.Pipeline
       Lib.Finance.Settlement.Sources.BillDeskApi
+      Lib.Finance.Settlement.Sources.CsvUpload
       Lib.Finance.Settlement.Sources.Email
       Lib.Finance.Settlement.Sources.JuspayApi
       Lib.Finance.Settlement.Sources.SFTP

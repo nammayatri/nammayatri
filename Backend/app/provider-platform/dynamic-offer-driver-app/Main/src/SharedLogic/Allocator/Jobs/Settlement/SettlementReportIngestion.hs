@@ -30,7 +30,7 @@ import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Juspay.Config as Fields
-import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), SettlementService (..), SettlementServiceConfig (..))
+import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), SettlementService (..), SettlementServiceConfig (..), SettlementSourceConfig (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -210,6 +210,30 @@ runPgSettlementIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
                   getJuspayOrderStatusConfig merchantOperatingCityId svcName
               _ -> pure Nothing
             pipelineResult <- runSettlementPipeline cfg mbJuspayCfg merchantId.getId merchantOperatingCityId.getId jobData.startTime jobData.endTime resolveOrderType
+
+            -- Juspay API lookback: also process T-3 and T-7 windows to catch late corrections
+            case cfg.sourceConfig of
+              JuspayApiSourceConfig _ -> do
+                let lookbackDays = [3, 7] :: [Int]
+                forM_ lookbackDays $ \d -> do
+                  now <- getCurrentTime
+                  let ist = 19800
+                      nowIst = addUTCTime ist now
+                      todayIst = utctDay nowIst
+                      lookbackDay = addDays (negate $ fromIntegral d) todayIst
+                      lbStart = addUTCTime (negate ist) $ UTCTime lookbackDay 0
+                      lbEnd = addUTCTime (negate ist) $ UTCTime (addDays 1 lookbackDay) 0
+                  logInfo $ "Juspay lookback T-" <> show d <> ": " <> show lbStart <> " to " <> show lbEnd
+                  lbResult <-
+                    try @_ @SomeException $
+                      runSettlementPipeline cfg mbJuspayCfg merchantId.getId merchantOperatingCityId.getId lbStart lbEnd resolveOrderType
+                  case lbResult of
+                    Left ex -> logWarning $ "Juspay lookback T-" <> show d <> " failed: " <> show ex
+                    Right (PipelineSkipped _) -> logInfo $ "Juspay lookback T-" <> show d <> " skipped (already done)"
+                    Right (PipelineSuccess r) -> logInfo $ "Juspay lookback T-" <> show d <> " success: stored=" <> show r.totalStored
+                    Right r -> logInfo $ "Juspay lookback T-" <> show d <> " result: " <> show r
+              _ -> pure ()
+
             case pipelineResult of
               PipelineSuccess ingResult -> do
                 logInfo $ "Pipeline success for " <> providerName <> ": " <> show ingResult
@@ -224,8 +248,14 @@ runPgSettlementIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
                 logInfo $ "Pipeline skipped for " <> providerName <> ": " <> reason
                 pure (Just True)
               PipelineFailed err -> do
-                logError $ "Pipeline failed for " <> providerName <> ": " <> err
+                logError $ "Pipeline FAILED (terminal) for " <> providerName <> ": " <> err
+                pure (Just False)
+              PipelineTransientFailed err -> do
+                logWarning $ "Pipeline transient failure for " <> providerName <> ": " <> err <> " (will retry next run)"
                 pure Nothing
+              PipelineBudgetExceeded ingResult -> do
+                logInfo $ "Pipeline budget exceeded for " <> providerName <> ", processed " <> show ingResult.totalStored <> " rows (will continue next run)"
+                pure (Just True)
           case mbResult of
             Left () -> do
               logWarning $ "Settlement ingestion lock contention, will retry: " <> lockKey

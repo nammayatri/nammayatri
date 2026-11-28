@@ -17,12 +17,20 @@ data SettlementFileInfo = SettlementFileInfo
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     paymentGatewayName :: Kernel.Prelude.Text,
+    retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
 
-data SettlementFileStatus = PENDING | IN_PROGRESS | COMPLETED | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SettlementFileStatus
+  = PENDING
+  | IN_PROGRESS
+  | COMPLETED
+  | FAILED
+  | LANDED
+  | TRANSIENT_FAILED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementFileStatus)
 

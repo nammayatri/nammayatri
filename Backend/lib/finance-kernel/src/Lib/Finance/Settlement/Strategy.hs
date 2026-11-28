@@ -150,7 +150,7 @@ finalizeCsvTracking (Just SftpFetchMeta {..}) hadNoReports
         <> show trackedFileId
         <> " newIndex="
         <> show newIndex
-    QSFI.updateProgress PENDING newIndex trackedFileId
+    QSFI.updateProgress IN_PROGRESS newIndex (Just 0) trackedFileId
   | otherwise = do
     logInfo $
       "finalizeCsvTracking: updateStatus(COMPLETED) trackedFileId="

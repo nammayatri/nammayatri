@@ -16,15 +16,16 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.SettlementFileInfo as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ())
+create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ()
 create = createWithKV
 
-createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo] -> m ())
+createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo] -> m ()
 createMany = traverse_ create
 
 findAllByPaymentGatewayMerchantCityAndStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus -> m [Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus -> m [Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo])))
 findAllByPaymentGatewayMerchantCityAndStatus paymentGatewayName merchantId merchantOperatingCityId status = do
   findAllWithKV
     [ Se.And
@@ -37,12 +38,14 @@ findAllByPaymentGatewayMerchantCityAndStatus paymentGatewayName merchantId merch
 
 findById ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo))
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo ->
+  m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByMerchantCityGatewayAndFileName ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo))
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo))))
 findByMerchantCityGatewayAndFileName merchantId merchantOperatingCityId paymentGatewayName fileName = do
   findOneWithKV
     [ Se.And
@@ -55,27 +58,45 @@ findByMerchantCityGatewayAndFileName merchantId merchantOperatingCityId paymentG
 
 findByPaymentGatewayNameAndFileName ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo))
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo))
 findByPaymentGatewayNameAndFileName paymentGatewayName fileName = do findOneWithKV [Se.And [Se.Is Beam.paymentGatewayName $ Se.Eq paymentGatewayName, Se.Is Beam.fileName $ Se.Eq fileName]]
 
 updateProgress ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ())
-updateProgress status lastProcessedIndex id = do
+  Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus ->
+  (Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ())))
+updateProgress status lastProcessedIndex retryCount id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.status status, Se.Set Beam.lastProcessedIndex lastProcessedIndex, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV
+    [ Se.Set Beam.status status,
+      Se.Set Beam.lastProcessedIndex lastProcessedIndex,
+      Se.Set Beam.retryCount retryCount,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ())
+  Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus ->
+  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatusAndRetryCount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ()))
+updateStatusAndRetryCount status retryCount id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.retryCount retryCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo))
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo ->
+  m (Maybe Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ())
+updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo -> m ()
 updateByPrimaryKey (Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -84,6 +105,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileIn
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.paymentGatewayName paymentGatewayName,
+      Se.Set Beam.retryCount retryCount,
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now
     ]
@@ -101,6 +123,7 @@ instance FromTType' Beam.SettlementFileInfo Lib.Finance.Domain.Types.SettlementF
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             paymentGatewayName = paymentGatewayName,
+            retryCount = retryCount,
             status = status,
             updatedAt = updatedAt
           }
@@ -115,6 +138,7 @@ instance ToTType' Beam.SettlementFileInfo Lib.Finance.Domain.Types.SettlementFil
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.paymentGatewayName = paymentGatewayName,
+        Beam.retryCount = retryCount,
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }

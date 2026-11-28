@@ -17,6 +17,7 @@ import Kernel.External.Settlement.Types (JuspayOrderStatusConfig, SettlementServ
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.ActorInfo as Fields
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Id as Fields
 import Kernel.Utils.Common (logInfo, logWarning)
 import Kernel.Utils.Logging (logDebug)
@@ -80,7 +81,10 @@ data IngestionResult = IngestionResult
     totalDuplicates :: Int,
     totalFailed :: Int,
     parseErrors :: [Text],
-    storeErrors :: [Text]
+    storeErrors :: [Text],
+    totalPaidAmount :: HighPrecMoney,
+    totalRefundAmount :: HighPrecMoney,
+    totalChargebackAmount :: HighPrecMoney
   }
   deriving (Show, Generic, ToJSON)
 
@@ -113,7 +117,10 @@ ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId
             totalDuplicates = 0,
             totalFailed = 1,
             parseErrors = [err],
-            storeErrors = []
+            storeErrors = [],
+            totalPaidAmount = 0,
+            totalRefundAmount = 0,
+            totalChargebackAmount = 0
           }
     Right (csvBytes, mbSftpMeta, mbSplitCustomerTy) -> do
       logDebug $ "ingestPaymentSettlementReport: csvBytes=" <> show csvBytes
@@ -152,7 +159,10 @@ ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId
                       totalDuplicates = 0,
                       totalFailed = max 1 (failedRows parseResult + length (errors parseResult)),
                       parseErrors = errors parseResult,
-                      storeErrors = []
+                      storeErrors = [],
+                      totalPaidAmount = 0,
+                      totalRefundAmount = 0,
+                      totalChargebackAmount = 0
                     }
               else do
                 -- Empty payload from fetch (or CSV with header only). Treat as success: nothing to ingest.
@@ -164,7 +174,10 @@ ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId
                       totalDuplicates = 0,
                       totalFailed = 0,
                       parseErrors = [],
-                      storeErrors = []
+                      storeErrors = [],
+                      totalPaidAmount = 0,
+                      totalRefundAmount = 0,
+                      totalChargebackAmount = 0
                     }
           else storeParseResult merchantId merchantOperatingCityId cfg.bankCode resolveOrderType parseResult
       finalizeSftpFileCursor mbSftpMeta parseHadNoReports
@@ -197,7 +210,7 @@ finalizeSftpFileCursor mbMeta parseHadNoReports = do
             <> show dataRowsDelivered
             <> " newLastProcessedIndex="
             <> show newIndex
-        QSFI.updateProgress PENDING newIndex trackedFileId
+        QSFI.updateProgress IN_PROGRESS newIndex (Just 0) trackedFileId
         logInfo $ "finalizeSftpFileCursor: updateProgress done meta=" <> show meta
       | otherwise = do
         logInfo $
@@ -255,5 +268,8 @@ storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType 
         totalDuplicates = 0,
         totalFailed = failedRows parseResult + length storeErrs,
         parseErrors = errors parseResult,
-        storeErrors = storeErrs
+        storeErrors = storeErrs,
+        totalPaidAmount = 0,
+        totalRefundAmount = 0,
+        totalChargebackAmount = 0
       }

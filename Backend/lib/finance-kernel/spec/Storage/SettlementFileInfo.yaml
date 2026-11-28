@@ -13,7 +13,7 @@ SettlementFileInfo:
 
   types:
     SettlementFileStatus:
-      enum: "PENDING,IN_PROGRESS,COMPLETED,FAILED"
+      enum: "PENDING,IN_PROGRESS,COMPLETED,FAILED,LANDED,TRANSIENT_FAILED"
       derive: "HttpInstance"
 
   fields:
@@ -22,15 +22,17 @@ SettlementFileInfo:
     fileName: Text
     status: SettlementFileStatus
     lastProcessedIndex: Int
+    retryCount: Maybe Int
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
   default:
-    status: "'PENDING'"
+    status: “'PENDING'”
     # Next row to read = lastProcessedIndex + 1; -1 means “no data rows ingested yet”.
-    lastProcessedIndex: "-1"
+    lastProcessedIndex: “-1”
+    retryCount: “0”
 
   constraints:
     id: PrimaryKey
@@ -64,7 +66,12 @@ SettlementFileInfo:
 
     updateProgress:
       kvFunction: updateWithKV
-      params: [status, lastProcessedIndex, updatedAt]
+      params: [status, lastProcessedIndex, retryCount, updatedAt]
+      where: id
+
+    updateStatusAndRetryCount:
+      kvFunction: updateWithKV
+      params: [status, retryCount, updatedAt]
       where: id
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
