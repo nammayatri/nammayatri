@@ -18,15 +18,16 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PersonOfferFrequencyStats as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats] -> m ()
 createMany = traverse_ create
 
 findByEntityIdOfferIdEntityType ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m (Maybe Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats))
+  Kernel.Prelude.Text ->
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> (Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m (Maybe Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats)))
 findByEntityIdOfferIdEntityType entityId offerId entityType = do
   findOneWithKV
     [ Se.And
@@ -38,10 +39,11 @@ findByEntityIdOfferIdEntityType entityId offerId entityType = do
 
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats -> m (Maybe Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats ->
+  m (Maybe Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.PersonOfferFrequencyStats.PersonOfferFrequencyStats {..}) = do
   _now <- getCurrentTime
   updateWithKV

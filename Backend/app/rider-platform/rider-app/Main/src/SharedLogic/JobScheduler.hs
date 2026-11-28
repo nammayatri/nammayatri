@@ -50,6 +50,7 @@ data RiderJobType
   | SafetyCSAlert
   | ExecutePaymentIntent
   | ExecuteCashRideCashbackPayout
+  | ExpireOfferCashback
   | OtherJobTypes
   | MetroIncentivePayout
   | ScheduledRidePopupToRider
@@ -108,6 +109,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SBookingDepositExpiry jobData = AnyJobInfo <$> restoreJobInfo SBookingDepositExpiry jobData
   restoreAnyJobInfo SExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SExecutePaymentIntent jobData
   restoreAnyJobInfo SExecuteCashRideCashbackPayout jobData = AnyJobInfo <$> restoreJobInfo SExecuteCashRideCashbackPayout jobData
+  restoreAnyJobInfo SExpireOfferCashback jobData = AnyJobInfo <$> restoreJobInfo SExpireOfferCashback jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
   restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
   restoreAnyJobInfo SMonthly jobData = AnyJobInfo <$> restoreJobInfo SMonthly jobData
@@ -360,6 +362,19 @@ data ExecuteCashRideCashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData
 instance JobInfoProcessor 'ExecuteCashRideCashbackPayout
 
 type instance JobContent 'ExecuteCashRideCashbackPayout = ExecuteCashRideCashbackPayoutJobData
+
+-- | Forfeit a ride's offer cashback that is still unpaid at its redeem deadline.
+data ExpireOfferCashbackJobData = ExpireOfferCashbackJobData
+  { personId :: Id Person,
+    rideId :: Id DRide.Ride,
+    redeemBy :: UTCTime,
+    attempt :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ExpireOfferCashback
+
+type instance JobContent 'ExpireOfferCashback = ExpireOfferCashbackJobData
 
 data PostRideSafetyNotificationJobData = PostRideSafetyNotificationJobData
   { rideId :: Id DRide.Ride,

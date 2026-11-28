@@ -274,6 +274,7 @@ mkGateFeeMetadata items =
     LedgerEntryMetadata
       { d2cReferralEarnings = Nothing,
         d2dReferralEarnings = Nothing,
+        cashbackRedeemBy = Nothing,
         dailyStatsId = Nothing,
         driverPayable = Nothing,
         payoutOrderId = Nothing,

@@ -24,6 +24,11 @@ data OfferStats = OfferStats
   }
   deriving (Generic, Show, Read, ToJSON, FromJSON)
 
-data OfferStatsEntityType = Person | StaticPerson | Device | Offer deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data OfferStatsEntityType
+  = Person
+  | StaticPerson
+  | Device
+  | Offer
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OfferStatsEntityType)

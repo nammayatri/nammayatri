@@ -353,6 +353,7 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
             subscriptionAllocations = Nothing,
             d2cReferralEarnings = Nothing,
             d2dReferralEarnings = Nothing,
+            cashbackRedeemBy = Nothing,
             dailyStatsId = Nothing
           }
       initiatedPush = do

@@ -12,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Offer = Offer
   { autoApply :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    cashbackRedeemWindowInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -39,11 +40,22 @@ data Offer = Offer
   }
   deriving (Generic, Show)
 
-data DiscountType = FLAT | PERCENTAGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data DiscountType
+  = FLAT
+  | PERCENTAGE
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data OfferFrequency = HOURLY | DAILY | WEEKLY | MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data OfferFrequency
+  = HOURLY
+  | DAILY
+  | WEEKLY
+  | MONTHLY
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data OfferType = DISCOUNT | CASHBACK deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data OfferType
+  = DISCOUNT
+  | CASHBACK
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DiscountType)
 

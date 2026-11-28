@@ -51,3 +51,8 @@ ALTER TABLE atlas_app.offer ADD COLUMN valid_from timestamp with time zone ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.offer ADD COLUMN show_milestone_card boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.offer ADD COLUMN cashback_redeem_window_in_hours integer ;

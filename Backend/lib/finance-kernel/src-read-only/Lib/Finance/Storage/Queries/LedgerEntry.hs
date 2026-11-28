@@ -20,15 +20,16 @@ import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ()
 create = createWithKV
 
-createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry] -> m ())
+createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry] -> m ()
 createMany = traverse_ create
 
 findByEntityReference ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+  Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
 findByEntityReference entityReferenceType entityReferenceId = do
   findAllWithKV
     [ Se.And
@@ -37,12 +38,13 @@ findByEntityReference entityReferenceType entityReferenceId = do
         ]
     ]
 
-findByFromAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+findByFromAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]
 findByFromAccount fromAccountId = do findAllWithKV [Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId fromAccountId)]
 
 findByFromAccountAndStatusAndReferenceType ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByFromAccountAndStatusAndReferenceType fromAccountId status referenceType = do
   findAllWithKV
     [ Se.And
@@ -52,15 +54,16 @@ findByFromAccountAndStatusAndReferenceType fromAccountId status referenceType = 
         ]
     ]
 
-findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry))
+findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByReference :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+findByReference :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Prelude.Text -> (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
 findByReference referenceType referenceId = do findAllWithKV [Se.And [Se.Is Beam.referenceType $ Se.Eq referenceType, Se.Is Beam.referenceId $ Se.Eq referenceId]]
 
 findByReferenceAndFromAccount ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByReferenceAndFromAccount referenceType referenceId fromAccountId = do
   findAllWithKV
     [ Se.And
@@ -72,7 +75,8 @@ findByReferenceAndFromAccount referenceType referenceId fromAccountId = do
 
 findByReferenceAndToAccount ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByReferenceAndToAccount referenceType referenceId toAccountId = do
   findAllWithKV
     [ Se.And
@@ -82,20 +86,22 @@ findByReferenceAndToAccount referenceType referenceId toAccountId = do
         ]
     ]
 
-findByStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+findByStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]
 findByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
-findByToAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
+findByToAccount :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]
 findByToAccount toAccountId = do findAllWithKV [Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId toAccountId)]
 
 findReversalOf ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) -> m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry))
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) ->
+  m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry)
 findReversalOf reversalOf = do findOneWithKV [Se.Is Beam.reversalOf $ Se.Eq (Kernel.Types.Id.getId <$> reversalOf)]
 
 updateReversedBy ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry) ->
+  (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())))
 updateReversedBy reversedBy updatedBy updatedById id = do
   _now <- getCurrentTime
   updateWithKV
@@ -108,7 +114,8 @@ updateReversedBy reversedBy updatedBy updatedById id = do
 
 updateSettled ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+  Lib.Finance.Domain.Types.LedgerEntry.EntryStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ()))))
 updateSettled status settledAt updatedBy updatedById id = do
   _now <- getCurrentTime
   updateWithKV
@@ -122,14 +129,16 @@ updateSettled status settledAt updatedBy updatedById id = do
 
 updateStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+  Lib.Finance.Domain.Types.LedgerEntry.EntryStatus ->
+  (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())))
 updateStatus status updatedBy updatedById id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedBy updatedBy, Se.Set Beam.updatedById updatedById, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateVoided ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+  Lib.Finance.Domain.Types.LedgerEntry.EntryStatus ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ()))))
 updateVoided status voidReason updatedBy updatedById id = do
   _now <- getCurrentTime
   updateWithKV
@@ -143,10 +152,11 @@ updateVoided status voidReason updatedBy updatedById id = do
 
 findByPrimaryKey ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry))
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry ->
+  m (Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
+updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ()
 updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
   _now <- getCurrentTime
   updateWithKV

@@ -17,20 +17,22 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.OfferStats as Beam
 import qualified Sequelize as Se
 
-create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.OfferStats.OfferStats -> m ())
+create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.OfferStats.OfferStats -> m ()
 create = createWithKV
 
-createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.OfferStats.OfferStats] -> m ())
+createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.Payment.Domain.Types.OfferStats.OfferStats] -> m ()
 createMany = traverse_ create
 
 findAllByEntityIdAndEntityType ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m [Lib.Payment.Domain.Types.OfferStats.OfferStats])
+  Kernel.Prelude.Text ->
+  (Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m [Lib.Payment.Domain.Types.OfferStats.OfferStats])
 findAllByEntityIdAndEntityType entityId entityType = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq (Kernel.Prelude.Just entityType)]]
 
 findByOfferIdAndEntityIdAndEntityType ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> Kernel.Prelude.Text -> Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m (Maybe Lib.Payment.Domain.Types.OfferStats.OfferStats))
+  Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer ->
+  (Kernel.Prelude.Text -> (Lib.Payment.Domain.Types.OfferStats.OfferStatsEntityType -> m (Maybe Lib.Payment.Domain.Types.OfferStats.OfferStats)))
 findByOfferIdAndEntityIdAndEntityType offerId entityId entityType = do
   findOneWithKV
     [ Se.And
@@ -40,10 +42,10 @@ findByOfferIdAndEntityIdAndEntityType offerId entityId entityType = do
         ]
     ]
 
-findByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfferStats.OfferStats -> m (Maybe Lib.Payment.Domain.Types.OfferStats.OfferStats))
+findByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfferStats.OfferStats -> m (Maybe Lib.Payment.Domain.Types.OfferStats.OfferStats)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.OfferStats.OfferStats -> m ())
+updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.Payment.Domain.Types.OfferStats.OfferStats -> m ()
 updateByPrimaryKey (Lib.Payment.Domain.Types.OfferStats.OfferStats {..}) = do
   _now <- getCurrentTime
   updateWithKV

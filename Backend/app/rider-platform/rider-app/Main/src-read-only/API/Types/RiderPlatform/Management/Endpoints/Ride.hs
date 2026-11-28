@@ -299,6 +299,7 @@ data RideOfferStatus
   | CASHBACK_PROCESSING
   | CASHBACK_PAID
   | CASHBACK_FAILED
+  | CASHBACK_EXPIRED
   | UNKNOWN
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

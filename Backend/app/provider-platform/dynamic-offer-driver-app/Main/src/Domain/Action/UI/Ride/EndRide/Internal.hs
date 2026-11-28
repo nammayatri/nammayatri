@@ -517,6 +517,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
                   payoutOrderId = Nothing,
                   d2cReferralEarnings = Nothing,
                   d2dReferralEarnings = Nothing,
+                  cashbackRedeemBy = Nothing,
                   dailyStatsId = Nothing
                 }
 

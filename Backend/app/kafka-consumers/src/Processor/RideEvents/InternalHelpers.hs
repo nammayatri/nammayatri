@@ -412,6 +412,7 @@ creditReferralWallet amount driverId_ dailyStatsId refereeId earningKey currency
               payoutOrderId = Nothing,
               d2cReferralEarnings,
               d2dReferralEarnings,
+              cashbackRedeemBy = Nothing,
               dailyStatsId = Just dailyStatsId
             }
     resp <-
