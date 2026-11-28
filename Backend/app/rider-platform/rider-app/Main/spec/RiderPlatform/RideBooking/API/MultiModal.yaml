@@ -5,7 +5,10 @@ imports:
   BookingListResV2: Domain.Action.UI.Booking
   Integer: EulerHS.Prelude
   JourneyStatus: Domain.Types.Journey
+  Journey: Domain.Types.Journey
   BookingRequestType: Domain.Types.Booking.API
+  MultimodalCancelStatusResp: API.Types.UI.MultimodalConfirm
+  FRFSRescheduleReq: API.Types.UI.FRFSTicketService
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
@@ -13,6 +16,8 @@ importPackageOverrides:
   Domain.Action.UI.Booking: "rider-app"
   Domain.Types.Journey: "rider-app"
   Domain.Types.BookingStatus: "beckn-spec"
+  API.Types.UI.MultimodalConfirm: "rider-app"
+  API.Types.UI.FRFSTicketService: "rider-app"
 
 module: MultiModal
 
@@ -71,6 +76,53 @@ apis:
         customerId: Text
       response:
         type: CustomerCommentsResp
+  - POST:
+      endpoint: /customer/{customerId}/multimodal/{journeyId}/order/{legOrder}/softCancel
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+      migrate:
+        capability: city-operations.multimodal.execute
+  - GET:
+      endpoint: /customer/{customerId}/multimodal/{journeyId}/order/{legOrder}/cancel/status
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: MultimodalCancelStatusResp
+      migrate:
+        capability: city-operations.multimodal.execute
+  - POST:
+      endpoint: /customer/{customerId}/multimodal/{journeyId}/order/{legOrder}/cancel
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+      migrate:
+        capability: city-operations.multimodal.execute
+  - POST:
+      endpoint: /customer/{customerId}/multimodal/{journeyId}/order/{legOrder}/reschedule
+      auditRequestBody: false
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: FRFSRescheduleReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+      migrate:
+        capability: city-operations.multimodal.execute
 types:
   CustomerSendMessageReq:
     title: Text
@@ -91,4 +143,4 @@ types:
     body: Text
   CustomerCommentsResp:
     customerId: Id Person
-    comments: Maybe [Text]
+    comments: Maybe [TranslatedText]
