@@ -88,6 +88,7 @@ import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
+import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.IncentiveJourney as IncentiveJourney
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
@@ -163,6 +164,7 @@ type API =
            :<|> ExotelEndRide.API
            :<|> LeaderBoard.API
            :<|> OnMessage.API
+           :<|> GoogleTranslateProxy.API
            :<|> RideRoute.API
            :<|> CallEvent.API
            :<|> Sos.API
@@ -260,6 +262,7 @@ handler =
     :<|> ExotelEndRide.handler
     :<|> LeaderBoard.handler
     :<|> OnMessage.handler
+    :<|> GoogleTranslateProxy.handler
     :<|> RideRoute.handler
     :<|> CallEvent.handler
     :<|> Sos.handler
