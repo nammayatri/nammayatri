@@ -9,7 +9,6 @@
   Ports doReconciliationDsrVsSubscription + processDsrVsSubscription from the
   retired SharedLogic.Finance.Reconciliation module.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsSubscription
   ( recipe,

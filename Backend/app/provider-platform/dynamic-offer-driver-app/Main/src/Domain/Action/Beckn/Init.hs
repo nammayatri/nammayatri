@@ -30,6 +30,7 @@ import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPaymentMethod as MerchantPaymentMethodD (MerchantPaymentMethodD (..))
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
@@ -276,7 +277,7 @@ handler merchantId req validatedReq = do
         let mbPaymentMethod = find (compareMerchantPaymentMethod (DMPM.bookablePaymentMethodInfo paymentMethodInfo)) allPaymentMethods
         paymentMethod <- mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
         -- Keep the requested instrument: Online books against the UPI method but stays Online on the booking.
-        pure (paymentMethod :: DMPM.MerchantPaymentMethod) {DMPM.paymentInstrument = paymentMethodInfo.paymentInstrument}
+        pure paymentMethod {MerchantPaymentMethodD.paymentInstrument = paymentMethodInfo.paymentInstrument}
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
 -- | Formerly-closure-captured inputs of buildBooking, so both Beckn init and the

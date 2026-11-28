@@ -24,6 +24,7 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface.Types as CreateOrderReq (CreateOrderReq (..))
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (ServiceFlow)
@@ -256,7 +257,7 @@ createTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = do
       -- CLIENT_AUTH_TOKEN_EXPIRED. Retry once with a fresh orderId.
       newOrderId <- generateGUID
       newOrderShortId <- generateShortId
-      let retryReq = (createOrderReq :: Payment.CreateOrderReq) {Payment.orderId = newOrderId, Payment.orderShortId = newOrderShortId.getShortId}
+      let retryReq = createOrderReq {CreateOrderReq.orderId = newOrderId, CreateOrderReq.orderShortId = newOrderShortId.getShortId}
       mbRetryResp <-
         DPayment.createOrderService
           commonMerchantId

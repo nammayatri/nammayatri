@@ -38,6 +38,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.ConditionalCharges as Fields
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as DFullFarePolicy (FullFarePolicyD (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -538,8 +539,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
             let farePolicy' =
                   farePolicy
-                    { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
-                      DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+                    { DFullFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+                      DFullFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
                     } ::
                     DFP.FullFarePolicy
             rcParkingFeeExempt <-

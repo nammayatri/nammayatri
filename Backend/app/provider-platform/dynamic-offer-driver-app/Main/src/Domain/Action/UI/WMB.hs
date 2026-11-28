@@ -36,6 +36,7 @@ import qualified Domain.Types.FleetBadge as Fields
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
 import Domain.Types.FleetDriverAssociation
+import qualified Domain.Types.FleetDriverAssociation as DFleetDriverAssociation (FleetDriverAssociation (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPushNotification as Fields
@@ -537,7 +538,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     -- A fleet driver drives the fleet's vehicle when the city blocks own RCs for fleet drivers.
     when (transporterConfig.blockDriverOwnRCForFleetDrivers == Just True) $
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
-    FDV.updateByPrimaryKey (pendingInvite {isActive = True})
+    FDV.updateByPrimaryKey (pendingInvite {DFleetDriverAssociation.isActive = True})
     SOnboardingComms.setOnboardingAsWithoutLock transporterConfig driver DDI.FLEET_DRIVER
     fork "applyFleetSettings" $ FDS.applyFleetSettingsToDriver driverId merchantOperatingCityId
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId

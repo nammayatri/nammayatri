@@ -38,7 +38,6 @@
   PR #15484's @calculateSubscriptionConsumedAmount@, extended to include
   @remaining@ so long-running ACTIVE subs are reconciled continuously.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
   ( recipe,

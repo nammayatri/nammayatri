@@ -5,7 +5,6 @@
   Implements LAW 2: Immutability of History (append-only).
   Uses generated Beam queries internally.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Audit.Service
   ( -- * Audit operations

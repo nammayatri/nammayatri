@@ -37,6 +37,7 @@ import Domain.Types.RouteDetails
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import qualified Domain.Types.RouteStopMapping as Fields
 import Domain.Types.RouteStopTimeTable
+import qualified Domain.Types.RouteStopTimeTable as DRouteStopTimeTable (RouteStopTimeTable (..))
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.SeatLayout as SeatLayout
 import qualified Domain.Types.Trip as DTrip
@@ -66,6 +67,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder (PaymentOrderE (..))
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
@@ -376,7 +378,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
     processRoute equivalentStopCodes routeWithTrains =
       let filteredTrains = filter (\train -> train.stationCode `elem` equivalentStopCodes) (routeWithTrains.trains)
           baseStopTimes = map createRouteStopTimeTable filteredTrains
-       in baseStopTimes ++ map (\rt -> (rt {serviceTierType = Spec.FIRST_CLASS}) :: RouteStopTimeTable) baseStopTimes
+       in baseStopTimes ++ map (\rt -> rt {DRouteStopTimeTable.serviceTierType = Spec.FIRST_CLASS}) baseStopTimes
 
     createRouteStopTimeTable train =
       RouteStopTimeTable
@@ -723,7 +725,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
       then do
         mbVehicleMetadata <- getVehicleMetadataFromInMem integratedBPPConfigs vehicleId
         let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
-        pure $ (info {serviceSubTypes = mbServiceSubTypes} :: UpcomingVehicleInfo)
+        pure $ (info :: UpcomingVehicleInfo) & field' @"serviceSubTypes" .~ mbServiceSubTypes
       else pure info
 
   logDebug $ "tripTimingsWithCalendars after filtering on current time : " <> show tripTimingsWithSubTypes
@@ -1548,8 +1550,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
             void $
               TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion Nothing updateReq
           QOrder.updateAmount paymentOrder.id amountUpdated
-          let updatedOrder :: DOrder.PaymentOrder
-              updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
+          let updatedOrder = paymentOrder {DPaymentOrder.amount = amountUpdated}
           return $ Just updatedOrder
     else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails baskets isMockPayment skipCreateOrderCall
 

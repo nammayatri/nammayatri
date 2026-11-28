@@ -28,6 +28,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers as Handlers
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOnboarding as DMO
+import qualified Domain.Types.MerchantOnboarding as DMerchantOnboarding (MerchantOnboarding (..))
 import qualified "this" Domain.Types.MerchantOnboarding
 import qualified Domain.Types.MerchantOnboarding.Handler as Fields
 import qualified Domain.Types.MerchantOnboardingStep as DMOS
@@ -150,7 +151,7 @@ merchantOnboardingInfo _merchantShortId _opCity onboardingType' requestorId mbRe
   if (onboarding.status /= DMO.COMPLETED && all (\step -> step.status == DMOS.COMPLETED) steps)
     then do
       QMO.updateOnboardingStatus DMO.COMPLETED onboarding.id
-      return $ mkMerchantOnboardingAPI (onboarding {DMO.status = DMO.COMPLETED}) steps
+      return $ mkMerchantOnboardingAPI (onboarding {DMerchantOnboarding.status = DMO.COMPLETED}) steps
     else return $ mkMerchantOnboardingAPI onboarding steps
 
 merchantOnboardingStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)

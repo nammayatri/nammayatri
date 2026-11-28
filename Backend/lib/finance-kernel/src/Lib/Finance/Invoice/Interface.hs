@@ -4,7 +4,6 @@
   Input types for invoice operations.
   The actual operations are in Lib.Finance.Invoice.Service
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Invoice.Interface
   ( InvoiceInput (..),

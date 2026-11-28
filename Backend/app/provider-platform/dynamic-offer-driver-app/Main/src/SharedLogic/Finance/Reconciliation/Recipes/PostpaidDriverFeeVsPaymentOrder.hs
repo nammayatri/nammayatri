@@ -15,7 +15,6 @@
     * MANDATE_REGISTRATION       -> "PENNY_DROP"
     * RECURRING_INVOICE / other  -> "SUBSCRIPTION_INVOICE"
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
   ( recipe,

@@ -85,6 +85,53 @@ import Kernel.Utils.Common
 import Kernel.Prelude
 ```
 
+### Ambiguous record updates (GHC-02256 / `-Wambiguous-fields`)
+
+With `DuplicateRecordFields`, an update like `x {field = …}` is ambiguous when several in-scope types share `field`. Prefer **module qualification of the rarer type**. Use **lenses only when qualification is impractical**.
+
+Keep the common import; add a second qualified import aliased as the rarer type, and qualify fields at that type's update sites:
+
+```haskell
+import Kernel.External.Notification.FCM.Types
+import qualified Kernel.External.Notification.FCM.Types as FCMAlert (FCMAlert (..))
+
+def{FCMAlert.fcmBody = ..., FCMAlert.fcmTitle = ...}
+```
+
+**`Domain.Types.*`:** alias with a `D` prefix (repo convention), not the bare type name:
+
+```haskell
+import Domain.Types.RouteStopTimeTable
+import qualified Domain.Types.RouteStopTimeTable as DRouteStopTimeTable (RouteStopTimeTable (..))
+
+rt {DRouteStopTimeTable.serviceTierType = ...}
+```
+
+Choose which type to qualify by **usage frequency** (qualify the one used less). Many constructions of both types are fine — still prefer qualify. Same-module types (both defined in one imported module) are also fine: dual-import under an alias for the rarer type, as above.
+
+If qualify does not fit, prefer splitting types into separate modules over reaching for lenses.
+
+**Aeson `Options` vs OpenApi / FormUrlEncoded:** when `fieldLabelModifier` / `omitNothingFields` clash with `SchemaOptions` or `FormOptions`, keep the unqualified Aeson import and add a short synonym:
+
+```haskell
+import Data.Aeson
+import qualified Data.Aeson as Aeson
+
+defaultOptions { Aeson.fieldLabelModifier = ..., Aeson.omitNothingFields = True }
+```
+
+**Fallback — lenses (`field'` / `setField`):** only when both types are already unqualified **and** that cannot be fixed simply (e.g. both are defined in the module being edited):
+
+```haskell
+logEnv
+  & field' @"level" .~ newLogLevel
+  & field' @"logRawSql" .~ (newLogLevel == DEBUG)
+```
+
+**Avoid:**
+- Type annotations `(x :: T){field = ...}` — GHC-02256; type-directed disambiguation is going away
+- Blanket `-Wno-ambiguous-fields` for these updates
+
 ## Naming Conventions
 
 | Element | Convention | Example |

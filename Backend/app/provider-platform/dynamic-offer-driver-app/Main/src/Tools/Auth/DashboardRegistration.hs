@@ -53,6 +53,7 @@ import qualified "lib-dashboard" Domain.Action.Dashboard.Registration as DRegist
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified Domain.Types.MerchantPair as Fields
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
+import qualified "lib-dashboard" Domain.Types.Person.Type as DDashboardPersonE (PersonE (..))
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DTServer
 import Kernel.Beam.Functions (runInDashboardDb)
@@ -261,11 +262,11 @@ updateDashboardPersonProfile personId mbFirstName mbLastName mbEmail mbMobileNo 
         newEmail <- maybe (pure person.email) (fmap Just . encrypt . T.toLower) mbEmail
         let updatedPerson =
               person
-                { DDashboardPerson.firstName = fromMaybe person.firstName mbFirstName,
-                  DDashboardPerson.lastName = fromMaybe person.lastName mbLastName,
-                  DDashboardPerson.email = newEmail,
-                  DDashboardPerson.mobileNumber = newMobileNumber,
-                  DDashboardPerson.mobileCountryCode = fromMaybe person.mobileCountryCode mbMobileCountryCode
+                { DDashboardPersonE.firstName = fromMaybe person.firstName mbFirstName,
+                  DDashboardPersonE.lastName = fromMaybe person.lastName mbLastName,
+                  DDashboardPersonE.email = newEmail,
+                  DDashboardPersonE.mobileNumber = newMobileNumber,
+                  DDashboardPersonE.mobileCountryCode = fromMaybe person.mobileCountryCode mbMobileCountryCode
                 } ::
                 DDashboardPerson.Person
         QDashboardPerson.updatePerson (Id personId) updatedPerson

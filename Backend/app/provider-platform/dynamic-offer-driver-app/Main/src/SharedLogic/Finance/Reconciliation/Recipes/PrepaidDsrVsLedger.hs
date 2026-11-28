@@ -18,7 +18,6 @@
   expected/actual; Cancelled → cust-total / driver-penalty; else → gross
   + toll + parking).
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Reconciliation.Recipes.PrepaidDsrVsLedger
   ( recipe,

@@ -15,7 +15,6 @@
   New entity types get their own helper here — keep the framework's Recipe
   API generic; recipes stay one line to wire.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Reconciliation.EntitySync
   ( syncBookingStatus,

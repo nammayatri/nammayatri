@@ -26,6 +26,8 @@ module Domain.Action.DashboardAuth.Management.FarePolicyV2
 where
 
 import qualified API.Types.ProviderPlatform.Management.FarePolicyV2
+import qualified API.Types.ProviderPlatform.Management.FarePolicyV2 as FPV2DecideChangeRequestReq (FPV2DecideChangeRequestReq (..))
+import qualified API.Types.ProviderPlatform.Management.FarePolicyV2 as FPV2RemoveProductReq (FPV2RemoveProductReq (..))
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Management.FarePolicyV2
 import qualified Domain.Types.Merchant
@@ -42,7 +44,7 @@ import Tools.Auth.DashboardUserAuth
 postFarePolicyV2ProductRemove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FareProduct -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2RemoveProductReq -> Environment.Flow API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2ChangeRequestRes)
 postFarePolicyV2ProductRemove a5 a4 a3 a2 a1 =
   Domain.Action.Dashboard.Management.FarePolicyV2.postFarePolicyV2ProductRemove a5 a4 a2 $
-    a1 {API.Types.ProviderPlatform.Management.FarePolicyV2.requestedBy = Kernel.Prelude.Just (dashboardRequestorId a3)}
+    a1 {FPV2RemoveProductReq.requestedBy = Kernel.Prelude.Just (dashboardRequestorId a3)}
 
 -- | Who approved or rejected it. The application server rejects a decision
 -- whose checkedBy equals the request's requestedBy, which only holds when both
@@ -50,4 +52,4 @@ postFarePolicyV2ProductRemove a5 a4 a3 a2 a1 =
 postFarePolicyV2ChangeRequestDecide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FarePolicyChangeRequest -> API.Types.ProviderPlatform.Management.FarePolicyV2.FPV2DecideChangeRequestReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postFarePolicyV2ChangeRequestDecide a5 a4 a3 a2 a1 =
   Domain.Action.Dashboard.Management.FarePolicyV2.postFarePolicyV2ChangeRequestDecide a5 a4 a2 $
-    a1 {API.Types.ProviderPlatform.Management.FarePolicyV2.checkedBy = Kernel.Prelude.Just (dashboardRequestorId a3)}
+    a1 {FPV2DecideChangeRequestReq.checkedBy = Kernel.Prelude.Just (dashboardRequestorId a3)}

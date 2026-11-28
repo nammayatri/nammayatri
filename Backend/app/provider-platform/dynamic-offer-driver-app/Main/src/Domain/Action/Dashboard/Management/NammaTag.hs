@@ -140,6 +140,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNammaTag
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as SQTANC
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as AppDynamicLogicResp (AppDynamicLogicResp (..))
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as Fields
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
@@ -562,7 +563,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       verified <- YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DTT.TransporterConfig)) req logicData
-      pure (verified :: LYT.AppDynamicLogicResp) {LYT.errors = verified.errors <> map Text.unpack walletErrors}
+      pure (verified :: LYT.AppDynamicLogicResp) {AppDynamicLogicResp.errors = verified.errors <> map Text.unpack walletErrors}
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
@@ -628,7 +629,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DRFCfg.RideFeedbackConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       verified <- YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DRFCfg.RideFeedbackConfig)) req logicData
-      pure (verified :: LYT.AppDynamicLogicResp) {LYT.errors = verified.errors <> map Text.unpack cityErrors}
+      pure (verified :: LYT.AppDynamicLogicResp) {AppDynamicLogicResp.errors = verified.errors <> map Text.unpack cityErrors}
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
   when resp.isRuleUpdated $ case req.domain of

@@ -136,6 +136,7 @@ import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Extra.TransporterConfig as DTCExtra
+import qualified Domain.Types.FarePolicy as DFarePolicy (FarePolicyD (..))
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.Common as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
@@ -4576,11 +4577,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           newFpId <- generateGUID
           let cloned =
                 (sourcePolicy :: FarePolicy.FarePolicy)
-                  { FarePolicy.id = newFpId,
-                    FarePolicy.merchantId = Just mId,
-                    FarePolicy.merchantOperatingCityId = Just newCityId,
-                    FarePolicy.createdAt = currentTime,
-                    FarePolicy.updatedAt = currentTime
+                  { DFarePolicy.id = newFpId,
+                    DFarePolicy.merchantId = Just mId,
+                    DFarePolicy.merchantOperatingCityId = Just newCityId,
+                    DFarePolicy.createdAt = currentTime,
+                    DFarePolicy.updatedAt = currentTime
                   }
           return (Just cloned, newFpId)
       return

@@ -33,8 +33,9 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DYNAMIC_PRICING))
 import qualified Domain.Types.FareAdjustment as Fields
 import qualified Domain.Types.FareParameters as DFareParameters
+import qualified Domain.Types.FarePolicy as DFarePolicy (FarePolicyD (..))
+import qualified Domain.Types.FarePolicy as DFullFarePolicy (FullFarePolicyD (..))
 import qualified Domain.Types.FarePolicy as FarePolicyD
-import qualified Domain.Types.FarePolicy as FullFarePolicyD (FullFarePolicyD (..))
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
@@ -368,7 +369,7 @@ addSpotRidePolicies vehicleServiceTierMap isScheduled farePolicies
             DTC.OneWay mode
               | mode `elem` [DTC.OneWayOnDemandDynamicOffer, DTC.OneWayOnDemandStaticOffer],
                 (HM.lookup fp.vehicleServiceTier vehicleServiceTierMap >>= (.isSpotRideEnabled)) == Just True ->
-                Just fp {FarePolicyD.tripCategory = DTC.OneWay DTC.OneWayRideOtp, FarePolicyD.isDerived = Just True}
+                Just fp {DFullFarePolicy.tripCategory = DTC.OneWay DTC.OneWayRideOtp, DFullFarePolicy.isDerived = Just True}
             _ -> Nothing
      in farePolicies <> derived
 
@@ -376,7 +377,7 @@ addSpotRidePolicies vehicleServiceTierMap isScheduled farePolicies
 -- policy's per-state charges. Same-state trips and states without a charge pay nothing.
 applyStateEntryPermitCharges :: Maybe Context.IndianState -> FarePolicyD.FullFarePolicy -> FarePolicyD.FullFarePolicy
 applyStateEntryPermitCharges mbInterStateDestination fp =
-  (fp {FarePolicyD.farePolicyDetails = setStateEntryPermitCharges permitCharge fp.farePolicyDetails} :: FarePolicyD.FullFarePolicy)
+  (fp {DFullFarePolicy.farePolicyDetails = setStateEntryPermitCharges permitCharge fp.farePolicyDetails} :: FarePolicyD.FullFarePolicy)
   where
     permitCharge det = do
       destinationState <- mbInterStateDestination
@@ -386,7 +387,7 @@ applyStateEntryPermitCharges mbInterStateDestination fp =
 -- takes the permit the trip was priced with.
 withPricedStateEntryPermitCharges :: DFareParameters.FareParameters -> FarePolicyD.FarePolicy -> FarePolicyD.FarePolicy
 withPricedStateEntryPermitCharges fareParams fp =
-  (fp {FarePolicyD.farePolicyDetails = setStateEntryPermitCharges (const pricedPermitCharge) fp.farePolicyDetails} :: FarePolicyD.FarePolicy)
+  (fp {DFarePolicy.farePolicyDetails = setStateEntryPermitCharges (const pricedPermitCharge) fp.farePolicyDetails} :: FarePolicyD.FarePolicy)
   where
     pricedPermitCharge = case fareParams.fareParametersDetails of
       DFareParameters.InterCityDetails det -> det.stateEntryPermitCharges
@@ -506,7 +507,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
             if (mbVehicleServiceTierItem >>= (.driverCancellationNotAllowed)) == Just True && farePolicy.driverCancellationNotAllowed /= Just False
               then Just True
               else Nothing
-      let fullFarePolicyBeforeAdjustment = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed, FarePolicyD.disableDownwardRecompute = fareProduct.disableDownwardRecompute}
+      let fullFarePolicyBeforeAdjustment = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {DFullFarePolicy.mbArea = Just fareProduct.area, DFullFarePolicy.fareSettlementType = mbFareSettlementType, DFullFarePolicy.parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled, DFullFarePolicy.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed, DFullFarePolicy.disableDownwardRecompute = fareProduct.disableDownwardRecompute}
       -- overlay the pinned fare adjustment: treatment scales the progressive
       -- fields (and congestion when targeted); both arms stamp id + arm so the
       -- estimate stream carries the experiment's control population too. The
@@ -525,7 +526,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
               if fareWithAddition > estimatedFare
                 then do
                   logWarning $ "Fare with addition: " <> show fareWithAddition <> " is greater than estimated fare: " <> show estimatedFare
-                  let fullFarePolicy' = fullFarePolicy{FullFarePolicyD.additionalCongestionCharge = fareWithAddition - estimatedFare}
+                  let fullFarePolicy' = fullFarePolicy{DFullFarePolicy.additionalCongestionCharge = fareWithAddition - estimatedFare}
                   return $ Just fullFarePolicy'
                 else return $ Just fullFarePolicy
             else return $ Just fullFarePolicy

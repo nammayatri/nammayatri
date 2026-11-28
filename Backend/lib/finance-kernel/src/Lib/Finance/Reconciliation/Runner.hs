@@ -12,7 +12,6 @@
   keeps the framework in finance-kernel where both apps can consume it,
   without dragging AllocatorJobType or other app-specific typeclasses in.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Reconciliation.Runner
   ( -- * Run one chunk

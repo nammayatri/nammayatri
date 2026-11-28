@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
-
 -- {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Types.DBSync.Update where

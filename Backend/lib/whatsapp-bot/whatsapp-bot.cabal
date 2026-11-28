@@ -110,7 +110,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       OverloadedRecordDot
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -124,7 +124,7 @@ library
     , unordered-containers
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
 
@@ -174,7 +174,7 @@ test-suite whatsapp-bot-tests
       TypeSynonymInstances
       UndecidableInstances
       OverloadedRecordDot
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -Wwarn=ambiguous-fields -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -192,6 +192,6 @@ test-suite whatsapp-bot-tests
     , whatsapp-bot
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -j4
+    ghc-options: -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -j4
   else
     ghc-options: -O2 -j4

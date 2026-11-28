@@ -31,6 +31,7 @@ module Dashboard.Common
 where
 
 import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, toJSONKeyText)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
@@ -320,7 +321,7 @@ instance ToSchema ListItemResult where
 listItemOptions :: Options
 listItemOptions =
   defaultOptions
-    { sumEncoding = listItemTaggedObject
+    { Aeson.sumEncoding = listItemTaggedObject
     }
 
 listItemTaggedObject :: SumEncoding
@@ -434,7 +435,7 @@ data UpdateTagBulkRes = UpdateTagBulkRes
   deriving anyclass (FromJSON, ToSchema)
 
 instance ToJSON UpdateTagBulkRes where
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+  toJSON = genericToJSON defaultOptions {Aeson.omitNothingFields = True}
 
 instance FromMultipart Tmp UpdateTagBulkReq where
   fromMultipart form = do

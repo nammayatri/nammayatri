@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.List (group, sort)
 import Data.OpenApi hiding (Header, description, email)
 import qualified Data.OpenApi as OpenApi hiding (Header)
@@ -75,8 +76,8 @@ instance ToSchema SearchReq where
 fareProductOptions :: Options
 fareProductOptions =
   defaultOptions
-    { sumEncoding = J.fareProductTaggedObject,
-      constructorTagModifier = fareProductConstructorModifier
+    { Aeson.sumEncoding = J.fareProductTaggedObject,
+      Aeson.constructorTagModifier = fareProductConstructorModifier
     }
 
 fareProductSchemaOptions :: OpenApi.SchemaOptions

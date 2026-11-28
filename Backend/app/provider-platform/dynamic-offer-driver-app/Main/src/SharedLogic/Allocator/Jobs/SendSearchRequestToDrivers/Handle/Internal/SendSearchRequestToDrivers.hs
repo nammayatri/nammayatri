@@ -50,6 +50,7 @@ import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.DriverStats as Fields
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as DFullFarePolicy (FullFarePolicyD (..))
 import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
@@ -412,8 +413,8 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
   mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage searchReq.merchantOperatingCityId searchTry.emailDomain searchTry.businessEmailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
   let farePolicy' =
         farePolicy
-          { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
-            DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+          { DFullFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+            DFullFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
           } ::
           DFP.FullFarePolicy
   addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData

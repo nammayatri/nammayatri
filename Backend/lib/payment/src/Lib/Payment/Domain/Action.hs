@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Lib.Payment.Domain.Action
@@ -96,6 +95,8 @@ import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
+import qualified Kernel.External.Payment.Interface.Types as CreateOrderReq (CreateOrderReq (..))
+import qualified Kernel.External.Payment.Interface.Types as OfferResp (OfferResp (..))
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Interface as PT
@@ -865,7 +866,7 @@ createOrderService ::
 createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType isTestTransaction createOrderRequest createOrderCall _mbCreateWalletCall _isMockPayment mbGroupId skipCreateOrderCall = do
   logInfo $ "CreateOrderService: skipCreateOrderCall-" <> show skipCreateOrderCall
   let updatedOrderShortId = updateShortId (Just paymentServiceType) isTestTransaction createOrderRequest.orderShortId
-      createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
+      createOrderReq = createOrderRequest {CreateOrderReq.orderShortId = updatedOrderShortId}
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing | skipCreateOrderCall -> do
@@ -1399,9 +1400,9 @@ splitOfferRespByProduct products resp =
           ( \pd ->
               ( pd.productId,
                 [ offer
-                    { PInterface.discountAmount = pd.discountAmount,
-                      PInterface.cashbackAmount = pd.cashbackAmount,
-                      PInterface.finalOrderAmount = fromMaybe 0 (Map.lookup pd.productId amountMap) - pd.discountAmount
+                    { OfferResp.discountAmount = pd.discountAmount,
+                      OfferResp.cashbackAmount = pd.cashbackAmount,
+                      OfferResp.finalOrderAmount = fromMaybe 0 (Map.lookup pd.productId amountMap) - pd.discountAmount
                     }
                 ]
               )

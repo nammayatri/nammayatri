@@ -94,12 +94,10 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
-    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O0
@@ -110,7 +108,6 @@ library:
           - -j4
       else:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2
@@ -130,7 +127,6 @@ executables:
     - condition: flag(Local)
       then:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O0
@@ -141,7 +137,6 @@ executables:
           - -j4
       else:
         ghc-options:
-          - -Wno-ambiguous-fields
           - -Wno-incomplete-uni-patterns
           - -Wno-incomplete-record-updates
           - -O2

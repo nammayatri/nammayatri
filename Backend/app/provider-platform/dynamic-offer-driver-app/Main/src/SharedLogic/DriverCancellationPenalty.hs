@@ -41,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance hiding (runFinance)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.FinanceM as FinanceCtx (FinanceCtx (..))
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
@@ -188,7 +189,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
           mbPanCard <- QPanCard.findByDriverId ride.driverId
           mbDriverInfo <- QDI.findById (cast ride.driverId)
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
-          creditResult <- runFinance ctx {entityReferenceId = rideEntity} $ void $ transfer OwnerExpense OwnerLiability (abs signedAmount) walletReferenceDriverCancellationCharges Nothing
+          creditResult <- runFinance ctx {FinanceCtx.entityReferenceId = rideEntity} $ void $ transfer OwnerExpense OwnerLiability (abs signedAmount) walletReferenceDriverCancellationCharges Nothing
           case creditResult of
             Left err -> logError $ "Failed to credit driver cancellation compensation: " <> show err <> " bookingId: " <> booking.id.getId
             Right _ -> logInfo $ "Credited driver cancellation compensation ₹" <> show (abs signedAmount) <> " bookingId: " <> booking.id.getId
@@ -201,7 +202,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
           mbDriverInfo <- QDI.findById (cast ride.driverId)
           (partyName, partyAddress) <- driverInvoiceParty ride.merchantOperatingCityId ride.driverId ride.fleetOwnerId
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True Nothing
-          result <- runFinance ctx {entityReferenceId = rideEntity} $ do
+          result <- runFinance ctx {FinanceCtx.entityReferenceId = rideEntity} $ do
             _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
             invoice
               InvoiceConfig

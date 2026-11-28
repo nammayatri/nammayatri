@@ -46,6 +46,7 @@ import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as SDP
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
+import qualified SharedLogic.DriverPool.Types as DriverPoolResult (DriverPoolResult (..))
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.PassengerLuggage as SPL
 import qualified SharedLogic.ScheduledRideTopDrivers as SRTD
@@ -101,7 +102,7 @@ assignTagsToDrivers driverIds driverTag =
             dp
               { driverPoolResult =
                   (driverPoolResult dp :: DriverPoolResult)
-                    { driverTags =
+                    { DriverPoolResult.driverTags =
                         insertInObject
                           (((.driverTags) . driverPoolResult) dp)
                           [driverTag]
@@ -547,7 +548,7 @@ assignDriverGateTags poolType searchReq pool = do
               ( \(dp :: DriverPoolWithActualDistResult) ->
                   let dpResult = dp.driverPoolResult
                       updatedTags = insertInObject dpResult.driverTags [SpecialZoneQueueDriver]
-                      dprWithTags = (dpResult :: DriverPoolResult) {driverTags = updatedTags}
+                      dprWithTags = (dpResult :: DriverPoolResult) {DriverPoolResult.driverTags = updatedTags}
                    in dp {driverPoolResult = dprWithTags}
               )
               onGateDrivers'
@@ -626,7 +627,7 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                 dp
                   { driverPoolResult =
                       (driverPoolResult dp :: DriverPoolResult)
-                        { driverTags =
+                        { DriverPoolResult.driverTags =
                             insertInObject
                               (((.driverTags) . driverPoolResult) dp)
                               [driverTag]

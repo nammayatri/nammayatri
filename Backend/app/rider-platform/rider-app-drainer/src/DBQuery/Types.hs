@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
 
 module DBQuery.Types where
 

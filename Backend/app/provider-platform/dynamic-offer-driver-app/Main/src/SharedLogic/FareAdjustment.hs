@@ -44,6 +44,10 @@ import Domain.Types.Common (ServiceTierType)
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FareAdjustment
 import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.FarePolicy as FullFarePolicy (FullFarePolicyD (..))
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as FPProgressiveDetails (FPProgressiveDetailsD (..))
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FPProgressiveDetailsPerExtraKmRateSection (FPProgressiveDetailsPerExtraKmRateSectionD (..))
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as FPProgressiveDetailsPerMinRateSection (FPProgressiveDetailsPerMinRateSection (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -192,12 +196,12 @@ applyFareAdjustmentToPolicy (Just (adjustment, arm)) fullFarePolicy =
             if adjustmentTargetsCongestion adjustment
               then
                 fullFarePolicy
-                  { FarePolicyD.congestionChargeMultiplier =
+                  { FullFarePolicy.congestionChargeMultiplier =
                       Just $ FarePolicyD.BaseFareAndExtraDistanceFare $ scaleCentesimal adjustment.congestionScalePct (staticMultiplier fullFarePolicy.congestionChargeMultiplier),
-                    FarePolicyD.dpVersion = Just (mkAdjustmentDpVersion adjustment)
+                    FullFarePolicy.dpVersion = Just (mkAdjustmentDpVersion adjustment)
                   }
               else fullFarePolicy
-      pure (withCongestion {FarePolicyD.farePolicyDetails = FarePolicyD.ProgressiveDetails scaledDetails} :: FarePolicyD.FullFarePolicy)
+      pure (withCongestion {FullFarePolicy.farePolicyDetails = FarePolicyD.ProgressiveDetails scaledDetails} :: FarePolicyD.FullFarePolicy)
     (Treatment, _) -> do
       logWarning $ "FARE_ADJUSTMENT_SCOPE_MISMATCH: adjustment " <> adjustment.id.getId <> " matched a non-Progressive policy " <> fullFarePolicy.id.getId <> "; stamping only"
       pure fullFarePolicy
@@ -209,11 +213,11 @@ applyFareAdjustmentToPolicy (Just (adjustment, arm)) fullFarePolicy =
 scaleProgressiveDetails :: FareAdjustment -> FarePolicyD.FPProgressiveDetails -> FarePolicyD.FPProgressiveDetails
 scaleProgressiveDetails adjustment details =
   details
-    { FarePolicyD.baseFare = scaleMoney adjustment.baseFareScalePct details.baseFare,
-      FarePolicyD.perExtraKmRateSections =
-        NE.map (\section -> section {FarePolicyD.perExtraKmRate = scaleMoney adjustment.perKmRateScalePct section.perExtraKmRate} :: FarePolicyD.FPProgressiveDetailsPerExtraKmRateSection) details.perExtraKmRateSections,
-      FarePolicyD.perMinRateSections =
-        (NE.map (\section -> section {FarePolicyD.perMinRate = modifyPrice section.perMinRate (scaleMoney adjustment.perMinRateScalePct)} :: FarePolicyD.FPProgressiveDetailsPerMinRateSection)) <$> details.perMinRateSections
+    { FPProgressiveDetails.baseFare = scaleMoney adjustment.baseFareScalePct details.baseFare,
+      FPProgressiveDetails.perExtraKmRateSections =
+        NE.map (\section -> section {FPProgressiveDetailsPerExtraKmRateSection.perExtraKmRate = scaleMoney adjustment.perKmRateScalePct section.perExtraKmRate} :: FarePolicyD.FPProgressiveDetailsPerExtraKmRateSection) details.perExtraKmRateSections,
+      FPProgressiveDetails.perMinRateSections =
+        (NE.map (\section -> section {FPProgressiveDetailsPerMinRateSection.perMinRate = modifyPrice section.perMinRate (scaleMoney adjustment.perMinRateScalePct)} :: FarePolicyD.FPProgressiveDetailsPerMinRateSection)) <$> details.perMinRateSections
     }
 
 scaleMoney :: Maybe Double -> HighPrecMoney -> HighPrecMoney

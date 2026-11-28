@@ -4,6 +4,7 @@
 module Domain.Types.Extra.PersonFlowStatus where
 
 import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.OpenApi
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking.API as SRB
@@ -53,10 +54,10 @@ $(mkBeamInstancesForJSON ''FlowStatus)
 flowStatusCustomJSONOptions :: Options
 flowStatusCustomJSONOptions =
   defaultOptions
-    { sumEncoding =
+    { Aeson.sumEncoding =
         TaggedObject
-          { tagFieldName = "status",
-            contentsFieldName = "info"
+          { Aeson.tagFieldName = "status",
+            Aeson.contentsFieldName = "info"
           }
     }
 

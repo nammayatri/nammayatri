@@ -4,7 +4,6 @@
   Concrete invoice operations for domain use.
   Uses generated Beam queries internally.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Invoice.Service
   ( -- * Invoice operations

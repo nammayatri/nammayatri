@@ -28,6 +28,7 @@ import Lib.BehaviorTracker.Accumulator (buildCounterValuesWithEligible)
 import Lib.BehaviorTracker.BlockTracker (isEntityInCooldown)
 import qualified Lib.BehaviorTracker.EventsWindow as EventsWindow
 import Lib.BehaviorTracker.Types
+import qualified Lib.BehaviorTracker.Types as BehaviorSnapshot (BehaviorSnapshot (..))
 
 -- | Build a snapshot from existing counters without recording a new action
 -- Cooldowns field is empty (backward compatible)
@@ -109,7 +110,7 @@ buildSnapshotWithEvents config event entityState cooldownTags = \case
       Right stored -> do
         snapshot <- buildSnapshotWithCooldowns config event entityState cooldownTags
         let (counts, mbOversized) = EventsWindow.countLast window.readLastX stored
-        pure $ Right ((snapshot :: BehaviorSnapshot) {counters = Map.insert EventsWindow.eventsCounterName counts snapshot.counters}, mbOversized)
+        pure $ Right ((snapshot :: BehaviorSnapshot) {BehaviorSnapshot.counters = Map.insert EventsWindow.eventsCounterName counts snapshot.counters}, mbOversized)
 
 buildSnapshotInternal ::
   ( Redis.HedisFlow m r,

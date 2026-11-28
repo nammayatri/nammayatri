@@ -114,6 +114,7 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
 import Storage.Beam.IncentiveJourney ()
+import qualified SharedLogic.DriverOnboarding.VehicleDocs as DocumentStatusItem (DocumentStatusItem (..))
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -519,7 +520,7 @@ refreshVehicleOnboardingFlags mbTransporterConfig makeSelfieAadhaarPanMandatory 
 
 forceBotApprovalDocValid :: DocumentStatusItem -> DocumentStatusItem
 forceBotApprovalDocValid d
-  | d.documentType == DVC.BotApproval = d {verificationStatus = VALID}
+  | d.documentType == DVC.BotApproval = d {DocumentStatusItem.verificationStatus = VALID}
   | otherwise = d
 
 loadPersonStatusContext ::

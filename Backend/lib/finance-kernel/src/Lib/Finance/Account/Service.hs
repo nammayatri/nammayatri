@@ -4,7 +4,6 @@
   Concrete account operations for domain use.
   Uses generated Beam queries internally.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Account.Service
   ( -- * Account operations

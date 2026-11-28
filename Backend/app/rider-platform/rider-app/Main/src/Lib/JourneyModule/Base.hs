@@ -51,6 +51,8 @@ import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
+import qualified Kernel.External.MultiModal.Interface.Types as MultiModalLeg (MultiModalLeg (..))
+import qualified Kernel.External.MultiModal.Interface.Types as MultiModalRoute (MultiModalRoute (..))
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude as KP
 import Kernel.Storage.Clickhouse.Config
@@ -515,13 +517,13 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
     -- Process a route to convert walk legs that exceed maximum distance to taxi
     processRoute :: Meters -> MultiModalRoute -> MultiModalRoute
     processRoute maxWalkDistance route =
-      route {legs = map (processLeg maxWalkDistance) route.legs}
+      route {MultiModalRoute.legs = map (processLeg maxWalkDistance) route.legs}
 
     -- Process a leg to check if walk mode needs to be converted to taxi
     processLeg :: Meters -> MultiModalLeg -> MultiModalLeg
     processLeg maxWalkDistance leg =
       if leg.mode == MultiModalTypes.Walk && distanceToMeters leg.distance > maxWalkDistance
-        then leg {mode = MultiModalTypes.Unspecified} -- Use Unspecified to represent Taxi (similar to init function)
+        then leg {MultiModalLeg.mode = MultiModalTypes.Unspecified} -- Use Unspecified to represent Taxi (similar to init function)
         else leg
 
     extractOptionFromRoute :: MultiModalRoute -> APITypes.MultimodalTransitOptionData

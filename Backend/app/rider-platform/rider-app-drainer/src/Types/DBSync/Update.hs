@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
-
 module Types.DBSync.Update where
 
 import DBQuery.Types

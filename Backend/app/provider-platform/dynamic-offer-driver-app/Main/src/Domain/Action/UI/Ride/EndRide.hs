@@ -60,6 +60,7 @@ import qualified Domain.Types.ConditionalCharges as Fields
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as DFullFarePolicy (FullFarePolicyD (..))
 import qualified Domain.Types.GoHomeConfig as Fields
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -1235,8 +1236,8 @@ recalculateFareForDistance mode useEstimatedDuration ServiceHandle {..} booking 
                     logInfo $ "End ride congestion recompute result: " <> show details
                     let updatedFarePolicy =
                           farePolicy
-                            { DFP.congestionChargeMultiplier = details.congestionChargeMultiplier,
-                              DFP.congestionChargePerMin = details.congestionChargePerMin
+                            { DFullFarePolicy.congestionChargeMultiplier = details.congestionChargeMultiplier,
+                              DFullFarePolicy.congestionChargePerMin = details.congestionChargePerMin
                             }
                     return (updatedFarePolicy, Nothing) -- Pass Nothing so fare calculator recomputes from updated fare policy
                   Nothing -> do
@@ -1245,8 +1246,8 @@ recalculateFareForDistance mode useEstimatedDuration ServiceHandle {..} booking 
               else return (farePolicy, booking.estimatedCongestionCharge)
       let farePolicy' =
             farePolicyWithCongestion
-              { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
-                DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+              { DFullFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
+                DFullFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
               } ::
               DFP.FullFarePolicy
       rcParkingFeeExempt <-

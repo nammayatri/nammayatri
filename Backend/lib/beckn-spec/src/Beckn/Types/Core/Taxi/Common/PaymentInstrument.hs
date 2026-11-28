@@ -15,6 +15,7 @@
 
 module Beckn.Types.Core.Taxi.Common.PaymentInstrument where
 
+import qualified Data.Aeson as Aeson
 import Data.Aeson.Types
 import Data.OpenApi
 import Kernel.Prelude
@@ -34,7 +35,7 @@ instance ToSchema PaymentInstrument where
 paymentInstrumentOptions :: Options
 paymentInstrumentOptions =
   defaultOptions
-    { sumEncoding = paymentInstrumentTaggedObject
+    { Aeson.sumEncoding = paymentInstrumentTaggedObject
     }
 
 paymentInstrumentTaggedObject :: SumEncoding

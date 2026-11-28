@@ -4,7 +4,6 @@
   Input types for account operations.
   The actual operations are in Lib.Finance.Account.Service
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Account.Interface
   ( AccountInput (..),

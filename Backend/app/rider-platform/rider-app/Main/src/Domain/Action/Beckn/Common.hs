@@ -273,6 +273,7 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     -- | The BPP activated this scheduled ride (its ride is NEW), so it is no longer upcoming.
     isScheduledRideActivated :: Bool
   }
+  deriving stock (Generic)
 
 data RideStartedReq = RideStartedReq
   { bookingDetails :: BookingDetails,
@@ -579,7 +580,7 @@ rideAssignedReqHandler req = do
         when req.isDriverBirthDay $
           Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
       withLongRetry $ CallBPP.callTrack booking ride
-    Nothing -> assignRideUpdate req {booking = booking} mbMerchant rideStatus now
+    Nothing -> assignRideUpdate (req & field' @"booking" .~ booking) mbMerchant rideStatus now
   where
     notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do
       rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just timeDiffEvent}) Nothing

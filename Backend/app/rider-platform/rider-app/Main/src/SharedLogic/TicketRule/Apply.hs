@@ -17,13 +17,18 @@ import Data.Time
   )
 import qualified Data.Time as Time
 import Domain.Types.ServiceCategory (ServiceCategory (..))
+import qualified Domain.Types.ServiceCategory as DServiceCategory (ServiceCategory (..))
 import Domain.Types.ServicePeopleCategory (ServicePeopleCategory (..))
+import qualified Domain.Types.ServicePeopleCategory as DServicePeopleCategory (ServicePeopleCategory (..))
 import Domain.Types.TicketPlace (PlaceStatus (..), TicketPlace (..))
+import qualified Domain.Types.TicketPlace as DTicketPlace (TicketPlace (..))
 import Domain.Types.TicketService (TicketService (..))
+import qualified Domain.Types.TicketService as DTicketService (TicketService (..))
 import qualified Environment
 import GHC.Generics
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Kernel.Types.Price as DPrice (Price (..))
 import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Time
 import SharedLogic.TicketRule.Core
@@ -137,12 +142,12 @@ instance HasRules TicketPlace where
 instance Applicable TicketPlace where
   applyRule = applyRuleGeneric
   applyAction actionType place = case actionType of
-    Open -> place {status = Domain.Types.TicketPlace.Active}
-    Closed -> place {status = Domain.Types.TicketPlace.Inactive}
+    Open -> place {DTicketPlace.status = Domain.Types.TicketPlace.Active}
+    Closed -> place {DTicketPlace.status = Domain.Types.TicketPlace.Inactive}
     PricingIncreaseBy _ -> place
     PriceDecreaseBy _ -> place
     PriceSet _ -> place
-    ChangeDescription description -> place {description = Just description}
+    ChangeDescription description -> place {DTicketPlace.description = Just description}
     _ -> place
 
 instance HasRules TicketService where
@@ -151,8 +156,8 @@ instance HasRules TicketService where
 instance Applicable TicketService where
   applyRule = applyRuleGeneric
   applyAction actionType service = case actionType of
-    Open -> service {isClosed = False}
-    Closed -> service {isClosed = True}
+    Open -> service {DTicketService.isClosed = False}
+    Closed -> service {DTicketService.isClosed = True}
     _ -> service
 
 instance HasRules ServiceCategory where
@@ -171,21 +176,21 @@ instance Applicable ServicePeopleCategory where
 
 applyActionToCategory :: ActionType -> ServiceCategory -> ServiceCategory
 applyActionToCategory actionType category = case actionType of
-  Open -> category {isClosed = False}
-  Closed -> category {isClosed = True}
-  OverrideBusinessHours _ -> category {remainingActions = pure $ (fromMaybe [] category.remainingActions) ++ [actionType]}
+  Open -> category {DServiceCategory.isClosed = False}
+  Closed -> category {DServiceCategory.isClosed = True}
+  OverrideBusinessHours _ -> category {DServiceCategory.remainingActions = pure $ (fromMaybe [] category.remainingActions) ++ [actionType]}
   _ -> category
 
 applyActionToPeopleCategory :: ActionType -> ServicePeopleCategory -> ServicePeopleCategory
 applyActionToPeopleCategory actionType category = case actionType of
-  Open -> category {isClosed = False}
-  Closed -> category {isClosed = True}
+  Open -> category {DServicePeopleCategory.isClosed = False}
+  Closed -> category {DServicePeopleCategory.isClosed = True}
   PricingIncreaseBy factor ->
-    category {pricePerUnit = category.pricePerUnit {Price.amount = category.pricePerUnit.amount + factor}}
+    category {DServicePeopleCategory.pricePerUnit = category.pricePerUnit {DPrice.amount = category.pricePerUnit.amount + factor}}
   PriceDecreaseBy factor ->
-    category {pricePerUnit = category.pricePerUnit {Price.amount = category.pricePerUnit.amount - factor}}
+    category {DServicePeopleCategory.pricePerUnit = category.pricePerUnit {DPrice.amount = category.pricePerUnit.amount - factor}}
   PriceSet setAmount ->
-    category {pricePerUnit = category.pricePerUnit {Price.amount = setAmount}}
+    category {DServicePeopleCategory.pricePerUnit = category.pricePerUnit {DPrice.amount = setAmount}}
   _ -> category
 
 toEnum' :: Weekday -> DayOfWeek

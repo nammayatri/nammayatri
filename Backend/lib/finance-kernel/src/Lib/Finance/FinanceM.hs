@@ -25,7 +25,6 @@
   - Manual catMaybes to collect entry IDs from transfers
 -}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.FinanceM
   ( -- * Context

@@ -68,6 +68,7 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as Fields
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleRegistrationCertificate as DVehicleRegistrationCertificate (VehicleRegistrationCertificateE (..))
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -1010,7 +1011,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput allFailures
   case mbNewRC of
     Just builtRC -> do
-      let newRC = builtRC {verified = Just True, approved = Just True} :: VehicleRegistrationCertificate
+      let newRC = builtRC {DVehicleRegistrationCertificate.verified = Just True, DVehicleRegistrationCertificate.approved = Just True} :: VehicleRegistrationCertificate
       let isInvalid = newRC.verificationStatus == Documents.INVALID
       when (isInvalid && null newRC.failedRules) $
         throwError

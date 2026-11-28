@@ -16,6 +16,7 @@ module Domain.Action.UI.FeedbackForm where
 
 import Data.List (groupBy, sortOn)
 import Domain.Types.FeedbackForm
+import qualified Domain.Types.FeedbackForm as DFeedbackForm (FeedbackForm (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified IssueManagement.Common as IMC
 import Kernel.External.Types (Language)
@@ -35,8 +36,8 @@ filterTranslationsByLanguage lang mbTranslations =
 filterFeedbackFormByLanguage :: Language -> FeedbackForm -> FeedbackForm
 filterFeedbackFormByLanguage lang form =
   form
-    { questionTranslations = filterTranslationsByLanguage lang form.questionTranslations,
-      badges = fmap (map (filterBadgeTranslations lang)) form.badges
+    { DFeedbackForm.questionTranslations = filterTranslationsByLanguage lang form.questionTranslations,
+      DFeedbackForm.badges = fmap (map (filterBadgeTranslations lang)) form.badges
     }
 
 filterBadgeTranslations :: Language -> BadgeDetail -> BadgeDetail

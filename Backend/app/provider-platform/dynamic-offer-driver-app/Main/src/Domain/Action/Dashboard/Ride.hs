@@ -33,6 +33,7 @@ where
 import qualified API.Types.Dashboard.RideBooking.Ride as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as MGMT
+import qualified "this" API.Types.ProviderPlatform.Management.Ride as RideListItem (RideListItem (..))
 import qualified Beckn.ACL.Common as BecknACL
 import BecknV2.OnDemand.FareBreakup.SubItems (FareUIComponentType (Deduction), FareUISubItem (..))
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
@@ -339,7 +340,7 @@ getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCur
         rideListItems' =
           if shouldShowCustomerInfo
             then rideListItems
-            else map (\item -> (item {MGMT.customerName = Nothing, MGMT.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
+            else map (\item -> (item {RideListItem.customerName = Nothing, RideListItem.customerPhoneNo = ""} :: Common.RideListItem)) rideListItems
     let count = length rideListItems'
     -- should we consider filters in totalCount, e.g. count all canceled rides?
     -- totalCount <- runInReplica $ QRide.countRides merchant.id

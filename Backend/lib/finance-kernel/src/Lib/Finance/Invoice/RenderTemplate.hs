@@ -5,7 +5,6 @@
   Orchestrator lives in each app's SharedLogic (finance-kernel cannot
   depend on yudhishthira/utils).
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Invoice.RenderTemplate
   ( InvoiceContext (..),

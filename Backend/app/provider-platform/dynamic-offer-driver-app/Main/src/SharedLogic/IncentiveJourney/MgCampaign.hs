@@ -48,6 +48,7 @@ import qualified Lib.IncentiveJourney.CampaignTag as CampaignTag
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
 import qualified Lib.IncentiveJourney.Domain.Types.Common as IJCommon
 import qualified Lib.IncentiveJourney.MgCampaign as Mg
+import qualified Lib.IncentiveJourney.MgCampaign as MgCampaignSnapshot (MgCampaignSnapshot (..))
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as LYT
@@ -377,12 +378,12 @@ mergePerkSources
         snap :: Mg.MgCampaignSnapshot
         snap =
           a
-            { Mg.allowCancellationByDriver = allowCancel,
-              Mg.autoAssign = (if aaA then a.autoAssign else Nothing) <|> (if aaB then b.autoAssign else Nothing) <|> a.autoAssign <|> b.autoAssign,
-              Mg.poolingPriority = (if poolA then a.poolingPriority else Nothing) <|> (if poolB then b.poolingPriority else Nothing) <|> a.poolingPriority <|> b.poolingPriority,
-              Mg.cancelEnableIn = if cancelA then a.cancelEnableIn else if cancelB then b.cancelEnableIn else a.cancelEnableIn,
-              Mg.autoAssignEnableIn = if aaA then a.autoAssignEnableIn else if aaB then b.autoAssignEnableIn else a.autoAssignEnableIn,
-              Mg.poolingEnableIn = if poolA then a.poolingEnableIn else if poolB then b.poolingEnableIn else a.poolingEnableIn
+            { MgCampaignSnapshot.allowCancellationByDriver = allowCancel,
+              MgCampaignSnapshot.autoAssign = (if aaA then a.autoAssign else Nothing) <|> (if aaB then b.autoAssign else Nothing) <|> a.autoAssign <|> b.autoAssign,
+              MgCampaignSnapshot.poolingPriority = (if poolA then a.poolingPriority else Nothing) <|> (if poolB then b.poolingPriority else Nothing) <|> a.poolingPriority <|> b.poolingPriority,
+              MgCampaignSnapshot.cancelEnableIn = if cancelA then a.cancelEnableIn else if cancelB then b.cancelEnableIn else a.cancelEnableIn,
+              MgCampaignSnapshot.autoAssignEnableIn = if aaA then a.autoAssignEnableIn else if aaB then b.autoAssignEnableIn else a.autoAssignEnableIn,
+              MgCampaignSnapshot.poolingEnableIn = if poolA then a.poolingEnableIn else if poolB then b.poolingEnableIn else a.poolingEnableIn
             }
      in CampaignMember
           { snapshot = snap,

@@ -26,6 +26,7 @@ where
 
 import Data.List (nub)
 import Domain.Action.UI.Person
+import qualified Domain.Action.UI.Person as PersonCityInformation (PersonCityInformation (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
@@ -94,7 +95,7 @@ cachePersonCityInfo :: (CacheFlow m r, MonadFlow m) => PersonCityInformation -> 
 cachePersonCityInfo personCityInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey personCityInfo.personId
-      tagsNubbed = (personCityInfo {customerNammaTags = nub <$> personCityInfo.customerNammaTags} :: PersonCityInformation)
+      tagsNubbed = personCityInfo {PersonCityInformation.customerNammaTags = nub <$> personCityInfo.customerNammaTags}
   Hedis.setExp idKey tagsNubbed expTime
 
 clearCityInfoCache :: (CacheFlow m r, MonadFlow m) => Id Person -> m ()

@@ -33,6 +33,11 @@ module Domain.Action.UI.DriverWallet
 where
 
 import qualified API.Types.UI.DriverWallet as DriverWallet
+import qualified API.Types.UI.DriverWallet as WalletAggregateBucket (WalletAggregateBucket (..))
+import qualified API.Types.UI.DriverWallet as WalletItem (WalletItem (..))
+import qualified API.Types.UI.DriverWallet as WalletItemGroup (WalletItemGroup (..))
+import qualified API.Types.UI.DriverWallet as WalletLedgerEntryItem (WalletLedgerEntryItem (..))
+import qualified API.Types.UI.DriverWallet as WalletPayoutConfig (WalletPayoutConfig (..))
 import qualified BecknV2.OnDemand.FareBreakup.Tax as Tax
 import Data.List (partition, span)
 import qualified Data.Map.Strict as Map
@@ -348,11 +353,30 @@ walletTransactionsFor language canWithdraw classCfg counterparty ownerId mbConce
           -- PENDING ride holds are still inside the wallet balance; Redis offer holds are too.
           redeemableBalance = max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance)
           rounded = roundAmountByCurrency' transporterConfig.currency
-          roundedItems = map (\item -> item {DriverWallet.itemValue = rounded item.itemValue, DriverWallet.redeemableBalance = rounded item.itemValue - rounded item.nonRedeemableBalance, DriverWallet.nonRedeemableBalance = rounded item.nonRedeemableBalance} :: DriverWallet.WalletItem)
-          additions = rawAdditions {DriverWallet.items = roundedItems rawAdditions.items, DriverWallet.totalAmount = sum (map (rounded . (.itemValue)) rawAdditions.items)} :: DriverWallet.WalletItemGroup
-          deductions = rawDeductions {DriverWallet.items = roundedItems rawDeductions.items, DriverWallet.totalAmount = sum (map (rounded . (.itemValue)) rawDeductions.items)} :: DriverWallet.WalletItemGroup
+          roundedItems =
+            map
+              ( \item ->
+                  item
+                    { WalletItem.itemValue = rounded item.itemValue,
+                      WalletItem.redeemableBalance = rounded item.itemValue - rounded item.nonRedeemableBalance,
+                      WalletItem.nonRedeemableBalance = rounded item.nonRedeemableBalance
+                    } ::
+                    DriverWallet.WalletItem
+              )
+          additions = rawAdditions {WalletItemGroup.items = roundedItems rawAdditions.items, WalletItemGroup.totalAmount = sum (map (rounded . (.itemValue)) rawAdditions.items)} :: DriverWallet.WalletItemGroup
+          deductions = rawDeductions {WalletItemGroup.items = roundedItems rawDeductions.items, WalletItemGroup.totalAmount = sum (map (rounded . (.itemValue)) rawDeductions.items)} :: DriverWallet.WalletItemGroup
           netEarningsBalance = additions.totalAmount - deductions.totalAmount
-          agg = map (\bucket -> bucket {DriverWallet.earnings = rounded bucket.earnings, DriverWallet.deductions = rounded bucket.deductions, DriverWallet.netEarnings = rounded bucket.earnings - rounded bucket.deductions} :: DriverWallet.WalletAggregateBucket) (bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows)
+          agg =
+            map
+              ( \bucket ->
+                  bucket
+                    { WalletAggregateBucket.earnings = rounded bucket.earnings,
+                      WalletAggregateBucket.deductions = rounded bucket.deductions,
+                      WalletAggregateBucket.netEarnings = rounded bucket.earnings - rounded bucket.deductions
+                    } ::
+                    DriverWallet.WalletAggregateBucket
+              )
+              (bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows)
           payoutConfig = buildWalletPayoutConfig canWithdraw classCfg transporterConfig.driverWalletConfig redeemableBalance
       pure $
         DriverWallet.WalletSummaryResponse
@@ -362,7 +386,11 @@ walletTransactionsFor language canWithdraw classCfg counterparty ownerId mbConce
             processingPayoutBalance = rounded eligibility.processingPayoutBalance,
             holdBalance = Just (rounded holdBalance),
             netEarningsBalance,
-            payoutConfig = payoutConfig {DriverWallet.minimumPayoutAmount = rounded payoutConfig.minimumPayoutAmount, DriverWallet.payoutFee = rounded payoutConfig.payoutFee},
+            payoutConfig =
+              payoutConfig
+                { WalletPayoutConfig.minimumPayoutAmount = rounded payoutConfig.minimumPayoutAmount,
+                  WalletPayoutConfig.payoutFee = rounded payoutConfig.payoutFee
+                },
             additions,
             deductions,
             agg
@@ -1171,9 +1199,9 @@ withOnlineTaxBreakup nameOf taxLegs items = case appliedLegs of
         | item.isCredit && not item.isReversal && isNothing item.entityReferenceType ->
           ( Map.delete item.itemReference pendingTax,
             item
-              { DriverWallet.itemName = if item.itemReference == walletReferenceBaseRide then nameOf walletItemOnlineRideFare "Ride Fare" else item.itemName,
-                DriverWallet.itemValue = item.itemValue + tax,
-                DriverWallet.isDisplayOnly = Just True
+              { WalletLedgerEntryItem.itemName = if item.itemReference == walletReferenceBaseRide then nameOf walletItemOnlineRideFare "Ride Fare" else item.itemName,
+                WalletLedgerEntryItem.itemValue = item.itemValue + tax,
+                WalletLedgerEntryItem.isDisplayOnly = Just True
               } ::
               DriverWallet.WalletLedgerEntryItem
           )

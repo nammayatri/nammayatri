@@ -16,7 +16,6 @@
 
   Ports doReconciliationPgPayoutVsPayoutRequest.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
   ( recipe,

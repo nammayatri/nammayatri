@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
-
 module SharedLogic.CallRSF (sendOnReceiverReconForDate) where
 
 import qualified Beckn.ACL.OnReceiverRecon as ACL

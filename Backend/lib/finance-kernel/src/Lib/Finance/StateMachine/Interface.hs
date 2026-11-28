@@ -4,7 +4,6 @@
   Input types and helpers for state machine operations.
   The actual operations are in Lib.Finance.StateMachine.Service
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.StateMachine.Interface
   ( defaultValidTransitions,

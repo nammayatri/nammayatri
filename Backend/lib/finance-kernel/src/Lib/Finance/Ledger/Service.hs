@@ -12,7 +12,6 @@
 
   All generic operations (status, voiding, querying, summing) are here.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Ledger.Service
   ( -- * Create operations

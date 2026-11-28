@@ -58,6 +58,9 @@ module Domain.Action.DashboardAuth.Fleet.Driver
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Driver
+import qualified API.Types.ProviderPlatform.Fleet.Driver as CreateDriverBusRouteMappingReq (CreateDriverBusRouteMappingReq (..))
+import qualified API.Types.ProviderPlatform.Fleet.Driver as CreateDriversReq (CreateDriversReq (..))
+import qualified API.Types.ProviderPlatform.Fleet.Driver as CreateVehiclesReq (CreateVehiclesReq (..))
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
@@ -92,7 +95,7 @@ postDriverFleetAddVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mer
 postDriverFleetAddVehicles a5 a4 a3 a2 a1 = do
   Tools.Auth.DashboardUserAuth.checkFleetOwnerVerification a3
   (mbFleetOwnerId, requestorId) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a3) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a3) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a2
-  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddVehicles a5 a4 a1 {API.Types.ProviderPlatform.Fleet.Driver.fleetOwnerId = mbFleetOwnerId, API.Types.ProviderPlatform.Fleet.Driver.requestorId = Kernel.Prelude.Just requestorId}
+  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddVehicles a5 a4 a1 {CreateVehiclesReq.fleetOwnerId = mbFleetOwnerId, CreateVehiclesReq.requestorId = Kernel.Prelude.Just requestorId}
 
 postDriverFleetAddVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Dashboard.Common.Role) -> API.Types.ProviderPlatform.Fleet.Driver.AddVehicleReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverFleetAddVehicle a8 a7 a6 a5 a4 a3 a2 a1 = do
@@ -244,12 +247,12 @@ postDriverFleetAddDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merc
 postDriverFleetAddDrivers a5 a4 a3 a2 a1 = do
   Tools.Auth.DashboardUserAuth.checkFleetOwnerVerification a3
   (mbFleetOwnerId, requestorId) <- SharedLogic.Fleet.getMbFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a3) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a3) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a2
-  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddDrivers a5 a4 (Kernel.Prelude.Just requestorId) a1 {API.Types.ProviderPlatform.Fleet.Driver.fleetOwnerId = mbFleetOwnerId}
+  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddDrivers a5 a4 (Kernel.Prelude.Just requestorId) a1 {CreateDriversReq.fleetOwnerId = mbFleetOwnerId}
 
 postDriverFleetAddDriverBusRouteMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Fleet.Driver.CreateDriverBusRouteMappingReq -> Environment.Flow API.Types.ProviderPlatform.Fleet.Driver.APISuccessWithUnprocessedEntities)
 postDriverFleetAddDriverBusRouteMapping a5 a4 a3 a2 a1 = do
   fleetOwnerId <- SharedLogic.Fleet.getFleetOwnerId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a2
-  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddDriverBusRouteMapping a5 a4 a1 {API.Types.ProviderPlatform.Fleet.Driver.fleetOwnerId = Kernel.Prelude.Just fleetOwnerId}
+  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetAddDriverBusRouteMapping a5 a4 a1 {CreateDriverBusRouteMappingReq.fleetOwnerId = Kernel.Prelude.Just fleetOwnerId}
 
 postDriverFleetLinkRCWithDriver :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Fleet.Driver.LinkRCWithDriverForFleetReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverFleetLinkRCWithDriver a5 a4 a3 a2 a1 = do

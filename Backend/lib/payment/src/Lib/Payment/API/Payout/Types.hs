@@ -1,5 +1,4 @@
 {-# LANGUAGE StandaloneDeriving #-}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Payment.API.Payout.Types where
 

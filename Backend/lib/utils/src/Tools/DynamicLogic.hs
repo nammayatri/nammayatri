@@ -24,6 +24,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as AppDynamicLogicRollout (AppDynamicLogicRollout (..))
 
 findOneConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => Id MerchantOperatingCity -> LogicDomain -> Maybe [ConfigVersionMap] -> Maybe Value -> (m (Maybe a)) -> m (Maybe a)
 findOneConfig merchantOpCityId cfgDomain mbConfigInExperimentVersions extraDimensions getConfigFromDBFunc = do
@@ -253,7 +254,7 @@ ungroupBaseRollouts :: [AppDynamicLogicRollout] -> [AppDynamicLogicRollout]
 ungroupBaseRollouts = map go
   where
     go :: AppDynamicLogicRollout -> AppDynamicLogicRollout
-    go r = if r.isBaseVersion == Just True then r {experimentGroup = Nothing} else r
+    go r = if r.isBaseVersion == Just True then r {AppDynamicLogicRollout.experimentGroup = Nothing} else r
 
 cumulativeRollout :: [AppDynamicLogicRollout] -> [(AppDynamicLogicRollout, Int)]
 cumulativeRollout logics = scanl1 addPercentages $ zip logics (map (.percentageRollout) logics)

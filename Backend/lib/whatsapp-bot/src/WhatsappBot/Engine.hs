@@ -60,6 +60,7 @@ import qualified WhatsappBot.I18n as Fields
 import WhatsappBot.Messages (formatDialable)
 import WhatsappBot.Ride (handleCallDriver, handleCancel, handleCancelConfirm, handleMarkSafeTrigger, handleSosTrigger, handleStatus, handleTracking)
 import WhatsappBot.Types
+import qualified WhatsappBot.Types as FlowContext (FlowContext (..))
 
 -- ---------------------------------------------------------------------------
 -- Entry point (engine.ts:46-494 + app.ts:34-58)
@@ -85,14 +86,14 @@ handleMessage env ev = do
       then env.persons.getPerson uk
       else pure Nothing
   let ctx1 = case mstored of
-        Just sp -> ctx0 {personId = ctx0.personId <|> Just sp.personId, language = ctx0.language <|> sp.language} :: FlowContext
+        Just sp -> ctx0 {FlowContext.personId = ctx0.personId <|> Just sp.personId, FlowContext.language = ctx0.language <|> sp.language} :: FlowContext
         Nothing -> ctx0
   -- First-contact language detection (engine.ts:91-98): runs once, only when
   -- unset; romanized/Latin input → Nothing → stays on default (English).
   ctx2 <- case (ctx1.language, detectLanguage input) of
     (Nothing, Just d) -> do
-      env.sessions.saveContext sid (ctx1 {language = Just d} :: FlowContext)
-      pure (ctx1 {language = Just d} :: FlowContext)
+      env.sessions.saveContext sid (ctx1 {FlowContext.language = Just d} :: FlowContext)
+      pure (ctx1 {FlowContext.language = Just d} :: FlowContext)
     _ -> pure ctx1
   runEngine env ev ctx2
 
@@ -120,7 +121,7 @@ runEngine env ev ctx = do
       -- whole message only, so typing exactly "cancel" still gets out.)
       | ctx.state /= SavingFavourite,
         any (`T.isInfixOf` lower) env.cfg.merchant.statusTriggers -> case ctx.personId of -- :131-140
-        Nothing -> handleIdle env ev ctx {pendingAction = Just PendingStatus} "book"
+        Nothing -> handleIdle env ev ctx {FlowContext.pendingAction = Just PendingStatus} "book"
         Just _ -> handleStatus env ev ctx
       | input == "main_menu" -> do
         -- :142-149
@@ -131,23 +132,23 @@ runEngine env ev ctx = do
       | input == "abort_cancel" -> handleStatus env ev ctx -- :180-183
       | input == "sos_confirm" && isJust ctx.personId -> do
         -- :186-194
-        save env ev ctx {state = ConfirmingSos}
+        save env ev ctx {FlowContext.state = ConfirmingSos}
         replyButtons env to s.sosConfirm [btn s.yesTriggerSOS "sos_trigger", btn s.noGoBack "sos_cancel"]
       | input == "sos_trigger" && isJust ctx.personId -> handleSosTrigger env ev ctx -- :197-223
       | input == "mark_safe_confirm" && isJust ctx.personId && isJust ctx.sosId -> do
         -- :226-234
-        save env ev ctx {state = ConfirmingMarkSafe}
+        save env ev ctx {FlowContext.state = ConfirmingMarkSafe}
         replyButtons env to s.markSafeConfirm [btn s.yesMarkSafe "mark_safe_trigger", btn s.noGoBack "mark_safe_cancel"]
       | input == "mark_safe_trigger" && isJust ctx.personId && isJust ctx.sosId -> handleMarkSafeTrigger env ev ctx -- :237-249
       | input == "mark_safe_cancel" -> do
         -- :252-257
-        save env ev ctx {state = Tracking}
-        handleTracking env ev ctx {state = Tracking}
+        save env ev ctx {FlowContext.state = Tracking}
+        handleTracking env ev ctx {FlowContext.state = Tracking}
       | input == "call_112" -> reply env to emergencyMsg -- :260-263
       | input == "sos_cancel" -> do
         -- :266-271
-        save env ev ctx {state = Tracking}
-        handleTracking env ev ctx {state = Tracking}
+        save env ev ctx {FlowContext.state = Tracking}
+        handleTracking env ev ctx {FlowContext.state = Tracking}
       | "ride_type:" `T.isPrefixOf` input -> handleRideType env ev ctx (T.drop 10 input) -- :276-292
       -- The ride-type chooser has no dedicated FlowState of its own (ctx.state
       -- stays Idle while it's shown -- see sendRideTypePrompt), unlike
@@ -237,14 +238,14 @@ handleIdle env ev ctx input = do
           replyButtons env to s'.welcome row
     else case ctx.personId of
       Nothing -> do
-        let ctx1 = if ctx.pendingAction == Just PendingStatus then ctx else ctx {pendingAction = Just PendingBook}
+        let ctx1 = if ctx.pendingAction == Just PendingStatus then ctx else ctx {FlowContext.pendingAction = Just PendingBook}
         save env ev ctx1
         mok <- ensureAuth env ev (prefetchSavedLocations env) ctx1
         case mok of
           Nothing -> pure ()
           Just ctx2 -> do
             let keepStatus = ctx2.pendingAction == Just PendingStatus
-                ctx3 = if keepStatus then ctx2 else ctx2 {pendingAction = Nothing}
+                ctx3 = if keepStatus then ctx2 else ctx2 {FlowContext.pendingAction = Nothing}
             unless keepStatus $ save env ev ctx3
             promptForBookingEntry env ev ctx3
       Just _ -> promptForBookingEntry env ev ctx
@@ -261,7 +262,7 @@ handleLang env ev ctx code = case parseLanguage code of
   Just l -> do
     let to = ev.fromPhone
         uk = mkUserKey env.cfg.merchant ev
-        ctx1 = ctx {language = Just l, state = Idle}
+        ctx1 = ctx {FlowContext.language = Just l, FlowContext.state = Idle}
     save env ev ctx1
     -- tokenStore.updateLanguage: a no-op until a person record exists.
     case ctx.personId of
@@ -278,7 +279,7 @@ handleChooseLanguage env ev ctx input = do
       to = ev.fromPhone
   if
       | input == "choose_language" -> do
-        save env ev ctx {state = ChoosingLanguage}
+        save env ev ctx {FlowContext.state = ChoosingLanguage}
         replyButtons
           env
           to

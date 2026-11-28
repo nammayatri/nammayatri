@@ -1,6 +1,7 @@
 module SharedLogic.FRFSStatus where
 
 import API.Types.UI.FRFSTicketService
+import qualified API.Types.UI.FRFSTicketService as FRFSBookingPaymentAPI (FRFSBookingPaymentAPI (..))
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
@@ -522,7 +523,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         status = booking.status,
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
-        payment = payment <&> (\p -> (p :: FRFSTicketService.FRFSBookingPaymentAPI) {transactionId = booking.paymentTxnId}),
+        payment = payment <&> (\p -> p {FRFSBookingPaymentAPI.transactionId = booking.paymentTxnId}),
         isFareChanged = booking.isFareChanged,
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         integratedBppConfigId = booking.integratedBppConfigId,

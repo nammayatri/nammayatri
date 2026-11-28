@@ -4,7 +4,6 @@
   Input types for ledger operations.
   The actual operations are in Lib.Finance.Ledger.Service
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Lib.Finance.Ledger.Interface
   ( LedgerEntryInput (..),

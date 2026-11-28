@@ -87,6 +87,7 @@ import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.MultiModal.Interface.Types as MultiModalLeg (MultiModalLeg (..))
+import qualified Kernel.External.MultiModal.Interface.Types as MultiModalRouteDetails (MultiModalRouteDetails (..))
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -950,8 +951,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               case res of
                 Right distResp -> do
                   let newDistance = if distResp.distance > 0 then convertMetersToDistance Meter distResp.distance else leg.distance
-                      updatedDurationLeg = updateDuration totalEstimatedDuration totalEstimatedDistance leg {distance = newDistance}
-                  return (updatedDurationLeg {duration = updatedDurationLeg.duration} :: MultiModalTypes.MultiModalLeg)
+                      updatedDurationLeg = updateDuration totalEstimatedDuration totalEstimatedDistance leg {MultiModalLeg.distance = newDistance}
+                  return updatedDurationLeg {MultiModalLeg.duration = updatedDurationLeg.duration}
                 Left err -> do
                   logError $ "OSRM/Maps.getMultimodalWalkDistance failed: " <> show err <> ", falling back to proportional duration and distance" <> "latlong: " <> show (leg.startLocation.latLng.latitude, leg.startLocation.latLng.longitude) <> " " <> show (leg.endLocation.latLng.latitude, leg.endLocation.latLng.longitude)
                   return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
@@ -990,17 +991,17 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                         routeDetail.toArrivalTime
                         routeDetail.toDepartureTime
                  in routeDetail
-                      { toArrivalTime = newToArrival,
-                        toDepartureTime = newToDeparture
+                      { MultiModalRouteDetails.toArrivalTime = newToArrival,
+                        MultiModalRouteDetails.toDepartureTime = newToDeparture
                       }
 
               -- Update leg timing
               (newLegToArrival, newLegToDeparture) = updateTimingWithBuffer leg.fromDepartureTime leg.toArrivalTime leg.toDepartureTime
            in leg'
-                { duration = proportionalDuration,
-                  toArrivalTime = newLegToArrival,
-                  toDepartureTime = newLegToDeparture,
-                  routeDetails = updatedRouteDetails
+                { MultiModalLeg.duration = proportionalDuration,
+                  MultiModalLeg.toArrivalTime = newLegToArrival,
+                  MultiModalLeg.toDepartureTime = newLegToDeparture,
+                  MultiModalLeg.routeDetails = updatedRouteDetails
                 }
 
     (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers

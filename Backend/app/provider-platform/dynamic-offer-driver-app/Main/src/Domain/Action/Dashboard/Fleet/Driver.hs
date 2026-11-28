@@ -95,7 +95,10 @@ module Domain.Action.Dashboard.Fleet.Driver
   )
 where
 
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as AddVehicleReq (AddVehicleReq (..))
 import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as FleetDriverEarningsStatsRes (FleetDriverEarningsStatsRes (..))
+import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as FleetDriverMetricsStatsRes (FleetDriverMetricsStatsRes (..))
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as RegV2
 import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common hiding (AddDriversResp, ProcessedDriverInfo)
 import "this" API.Types.ProviderPlatform.Management.Ride (CancellationReasonCode (..))
@@ -391,7 +394,7 @@ postDriverFleetAddVehicleHelper isBulkUpload callerMayAutoApprove merchantShortI
     if isBulkUpload
       then Just <$> createBulkRcPlaceholderImage getEntityData.id merchant.id merchantOpCityId
       else pure Nothing
-  let vehicleReq = maybe req (\imageId -> (req :: Common.AddVehicleReq) {Common.imageId = Just (cast imageId)}) mbPlaceholderImageId
+  let vehicleReq = maybe req (\imageId -> (req :: Common.AddVehicleReq) {AddVehicleReq.imageId = Just (cast imageId)}) mbPlaceholderImageId
   -- An admin's add is approved on the spot only where the city allows it and there is an image to approve through, as for a single document register.
   let autoApproved = callerMayAutoApprove && transporterConfig.autoApproveOnAdminUpload == Just True && isJust vehicleReq.imageId
   let register = case (getEntityData.role, getMbFleetOwnerId) of
@@ -2277,7 +2280,7 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
         let statsList = map (buildEarningsResponse transporterConfig) earningsStats
         forM statsList $ \(driverId, statRes) -> do
           let driverName = fromMaybe "Unknown" $ Map.lookup driverId nameMap
-          let statRes' = statRes {Common.driverName = driverName} :: Common.FleetDriverEarningsStatsRes
+          let statRes' = statRes {FleetDriverEarningsStatsRes.driverName = driverName} :: Common.FleetDriverEarningsStatsRes
           pure $ Common.EarningsList statRes'
       Common.METRICS_LIST -> do
         metricsStats <-
@@ -2288,7 +2291,7 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
         let statsList = map (buildMetricsResponse transporterConfig fromDay toDay) metricsStats
         forM statsList $ \(driverId, statRes) -> do
           let driverName = fromMaybe "Unknown" $ Map.lookup driverId nameMap
-          let statRes' = statRes {Common.driverName = driverName} :: Common.FleetDriverMetricsStatsRes
+          let statRes' = statRes {FleetDriverMetricsStatsRes.driverName = driverName} :: Common.FleetDriverMetricsStatsRes
           pure $ Common.MetricsList statRes'
 
   let count = length driverStats

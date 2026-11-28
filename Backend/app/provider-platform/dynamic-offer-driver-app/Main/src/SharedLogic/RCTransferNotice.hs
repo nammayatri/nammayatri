@@ -31,7 +31,7 @@ import qualified Domain.Types.DriverRCAssociation as Fields
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.External.Encryption
-import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Notification.FCM.Types as FCMOverlayReq (FCMOverlayReq (..))
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -123,11 +123,11 @@ notify previousDriverId newDriverId rc = do
           supportNumber = nonEmpty overlayReq.contactSupportNumber <|> nonEmpty mbCitySupportNumber
       Notify.sendOverlay cityId previousDriver $
         overlayReq
-          { FCM.title = fillRcNo <$> overlayReq.title,
-            FCM.description = fillRcNo <$> overlayReq.description,
-            FCM.toastMessage = fillRcNo <$> overlayReq.toastMessage,
-            FCM.contactSupportNumber = supportNumber,
+          { FCMOverlayReq.title = fillRcNo <$> overlayReq.title,
+            FCMOverlayReq.description = fillRcNo <$> overlayReq.description,
+            FCMOverlayReq.toastMessage = fillRcNo <$> overlayReq.toastMessage,
+            FCMOverlayReq.contactSupportNumber = supportNumber,
             -- The Call Support label only with a number to call: older APKs show any cancel button
             -- (buttonCancelVisibility = isJust cancelButtonText), which would do nothing without one.
-            FCM.cancelButtonText = overlayReq.cancelButtonText <* supportNumber
+            FCMOverlayReq.cancelButtonText = overlayReq.cancelButtonText <* supportNumber
           }

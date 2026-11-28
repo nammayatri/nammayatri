@@ -4,6 +4,7 @@ import qualified API.Types.UI.CRIS as Fields
 import qualified API.Types.UI.FRFSInternal as FRFSInternal
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import qualified API.Types.UI.FRFSTicketService as SeatWithStatus (SeatWithStatus (..))
 import qualified API.Types.UI.MultimodalConfirm
 import BecknV2.FRFS.Enums hiding (END, START)
 import qualified BecknV2.FRFS.Enums as Spec
@@ -1992,7 +1993,7 @@ getFrfsTripRouteSeats (mbPersonId, _merchantId) tripId routeId mbFromStopCode mb
     applyQuotaLogic fromIdx toIdx seatWithStatus =
       if JMU.meetsSeatQuota fromIdx toIdx seatWithStatus.seat
         then seatWithStatus
-        else seatWithStatus {status = BLOCKED}
+        else seatWithStatus {SeatWithStatus.status = BLOCKED}
 
 getFrfsRouteSeatLayout ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

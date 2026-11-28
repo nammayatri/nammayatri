@@ -31,6 +31,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Offer as SOffer
+import qualified SharedLogic.OfferTypes as CumulativeOfferResp (CumulativeOfferResp (..))
 import qualified SharedLogic.Settlement as Settlement
 
 data EstimateAPIEntity = EstimateAPIEntity
@@ -118,7 +119,7 @@ mkEstimateAPIEntity isReferredRide mbOffer mbPaymentCharge bppDetails valueAddNP
       gross fare = mkPrice (Just fare.currency) (roundAmountByCurrency' fare.currency (Settlement.grossTotalTaxInclusive mbPaymentCharge fare.amount))
       grossComponent component charge = mkPrice (Just charge.currency) (roundAmountByCurrency' charge.currency (Settlement.grossTaxExclusive component mbPaymentCharge riderTaxRates charge.amount))
       grossOffer o = let g = Settlement.grossTotalTaxInclusive mbPaymentCharge o.postOfferAmount in o {SOffer.postOfferAmount = g, SOffer.estimatedPostOfferAmount = g}
-      offer = (\offers -> (offers {SOffer.offerListResp = map grossOffer offers.offerListResp} :: SOffer.CumulativeOfferResp)) <$> mbOffer
+      offer = (\offers -> offers {CumulativeOfferResp.offerListResp = map grossOffer offers.offerListResp}) <$> mbOffer
   return
     EstimateAPIEntity
       { agencyName = bppDetails.name,

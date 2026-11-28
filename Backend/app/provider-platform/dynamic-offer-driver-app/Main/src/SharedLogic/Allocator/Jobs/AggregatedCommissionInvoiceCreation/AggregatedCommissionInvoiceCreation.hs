@@ -8,7 +8,6 @@
   must flip the offset on the last Sun of March (+2 -> +3) and last Sun of
   October (+3 -> +2); otherwise bounds drift 1h for half the year.
 -}
-{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
   ( runAggregatedCommissionInvoiceCreationJob,

@@ -22,6 +22,7 @@ module Domain.Action.UI.PartnerBookingStatement
 where
 
 import qualified API.Types.UI.PartnerBookingStatement
+import qualified API.Types.UI.PartnerBookingStatement as InvoiceDataRes (InvoiceDataRes (..))
 import qualified API.Types.UI.PartnerBookingStatement as PBSAPI
 import API.Types.UI.PartnerBookingStatementExtra ()
 -- import Data.Time.Format (defaultTimeLocale, formatTime)
@@ -107,7 +108,11 @@ postCorporateInvoiceData mbApiKey req = do
   void $ QPartnerInvoiceDataLog.create logEntry
 
   res <- buildInvoiceData person booking mbRide (req.emailId <|> email) req.mobileNumber
-  pure (res :: PBSAPI.InvoiceDataRes) {PBSAPI.responseCode = "200", PBSAPI.outcomeCode = "200", PBSAPI.responseMessage = "Success"}
+  pure
+    res{InvoiceDataRes.responseCode = "200",
+        InvoiceDataRes.outcomeCode = "200",
+        InvoiceDataRes.responseMessage = "Success"
+       }
 
 buildInvoiceData ::
   ( CacheFlow m r,
