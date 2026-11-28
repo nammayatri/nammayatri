@@ -11,6 +11,7 @@ Stage names match what SCC shows: preparing, sync, build, start, data, cc, ready
 from __future__ import annotations
 
 import json
+import uuid
 import time
 
 STAGES = ("preparing", "sync", "build", "start", "data", "cc", "ready")
@@ -22,6 +23,35 @@ def stage(name: str, state: str, **extra) -> None:
 
 def result(fields: dict) -> None:
     print("DEVBOX_RESULT " + json.dumps(fields), flush=True)
+
+
+def _escape(text: str, prop: bool = False) -> str:
+    """GitHub workflow-command escaping: % CR LF always, : and , in properties."""
+    text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    if prop:
+        text = text.replace(":", "%3A").replace(",", "%2C")
+    return text
+
+
+ANNOTATION_LINES = 15
+
+
+def annotate(title: str, msg: str) -> None:
+    """A GitHub Actions error annotation (shown at the top of the run, with the
+    whole reason) plus the full message in the log. The first line is what SCC's
+    poller reads back for the release page."""
+    lines = msg.strip().splitlines() or [title]
+    # The first line says what broke; the newest log lines (the real error) are at
+    # the end, so keep the head line and the last lines.
+    if len(lines) > ANNOTATION_LINES:
+        lines = lines[:1] + ["…"] + lines[-(ANNOTATION_LINES - 2):]
+    print(f"::error title={_escape(title, prop=True)}::{_escape(chr(10).join(lines))}", flush=True)
+    # The full message holds raw service log lines: stop GitHub from running any
+    # "::command::" in them while they are printed.
+    token = uuid.uuid4().hex
+    print(f"::stop-commands::{token}", flush=True)
+    print(msg, flush=True)
+    print(f"::{token}::", flush=True)
 
 
 class Stage:
