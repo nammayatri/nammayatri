@@ -56,3 +56,12 @@ ALTER TABLE atlas_app.ticket_service ADD COLUMN max_selection integer ;
 
 ALTER TABLE atlas_app.ticket_service ADD COLUMN priority integer ;
 ALTER TABLE atlas_app.ticket_service ADD COLUMN note text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN max_duration_minutes integer ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN lon double precision ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN lat double precision ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN geom_geo_json text ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN booking_mode text  default 'DayVisit';

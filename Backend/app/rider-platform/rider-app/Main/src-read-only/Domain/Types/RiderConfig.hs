@@ -182,6 +182,7 @@ data RiderConfig = RiderConfig
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerListCacheVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     openMeterMaxIdleHours :: Kernel.Prelude.Int,
+    parkingConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
     passExpiryReminderBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderNextRunLocalTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,

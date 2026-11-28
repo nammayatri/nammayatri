@@ -55,6 +55,7 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Action.UI.RidePayment as DRidePayment
+import qualified Domain.Action.UI.TicketService as TicketService
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingPayment as DBP
@@ -75,7 +76,7 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PlaceBasedServiceConfig as Fields
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
-import qualified Domain.Types.TicketBooking as Fields
+import qualified Domain.Types.TicketBooking as DTB
 import Environment
 import GHC.Generics ()
 import Kernel.Beam.Functions as B
@@ -1173,6 +1174,23 @@ rideBookingOrderStatusHandler orderId _merchantId paymentStatusResp = do
       confirmRideBookingFromPaymentOrder paymentOrder
     _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
+-- | Webhook path for ticket orders (the ticket booking id is the order id); other Normal orders, such as ride payments, keep the fallback.
+ticketBookingOrderStatusHandler :: Id DOrder.PaymentOrder -> Id DM.Merchant -> DPayment.PaymentStatusResp -> Flow (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+ticketBookingOrderStatusHandler orderId merchantId paymentStatusResp =
+  QTB.findById (cast orderId) >>= \case
+    Nothing -> SPayment.fallbackOrderStatusHandler paymentStatusResp
+    Just booking -> do
+      person <- QP.findById booking.personId >>= fromMaybeM (PersonNotFound booking.personId.getId)
+      TicketService.applyTicketPaymentStatus merchantId person booking.shortId paymentStatusResp
+      status <- DPayment.getTransactionStatus paymentStatusResp
+      updated <- QTB.findById booking.id >>= fromMaybeM (TicketBookingNotFound booking.shortId.getShortId)
+      case updated.status of
+        -- a refund reports as refunded whatever state the booking is in
+        _ | status == Payment.AUTO_REFUNDED -> SPayment.fallbackOrderStatusHandler paymentStatusResp
+        DTB.Booked -> pure (DPayment.FulfillmentSucceeded, Just booking.id.getId, Nothing)
+        DTB.RefundInitiated -> pure (DPayment.FulfillmentRefundInitiated, Just booking.id.getId, Nothing)
+        _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp
+
 mkFulfillmentHandler :: Payment.PaymentServiceType -> Id DM.Merchant -> Id DOrder.PaymentOrder -> SPayment.FulfillmentStatusHandler Flow
 mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = case paymentServiceType of
   DOrder.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
@@ -1189,6 +1207,7 @@ mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = c
     pure (paymentFulfillStatus, Nothing, Nothing)
   DOrder.RideBooking -> rideBookingOrderStatusHandler orderId merchantId paymentStatusResp
   DOrder.BookingDeposit -> bookingDepositOrderStatusHandler False orderId merchantId paymentStatusResp
+  DOrder.Normal -> ticketBookingOrderStatusHandler orderId merchantId paymentStatusResp
   _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text

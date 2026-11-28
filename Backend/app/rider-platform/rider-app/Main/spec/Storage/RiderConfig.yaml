@@ -265,6 +265,7 @@ RiderConfig:
     qrTicketRestrictionStartTime: Maybe TimeOfDay
     qrTicketRestrictionEndTime: Maybe TimeOfDay
     ticketingPermissionConfig: Maybe Value
+    parkingConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
     defaultServiceTierOrderConfig: "[ServiceTierType]"
     specialLocationTierOrderConfig: "Maybe [SpecialLocationTierOrderConfig]"
@@ -711,6 +712,7 @@ RiderConfig:
     blockedUntilInMins: int
     frfsDriverDetailsLeadTimeSeconds: int
     ticketingPermissionConfig: "json"
+    parkingConfig: "json"
     busTrackingConfig: "json"
     busTierSortingConfig: "json"
     specialVehicleNotificationConfigs: "json"

@@ -1,32 +1,51 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Domain.Action.UI.ParkingBooking (postMultimodalParkingBook, postMultimodalParkingMarshalCreate, parkingBookingOrderStatusHandler) where
+module Domain.Action.UI.ParkingBooking
+  ( postMultimodalParkingBook,
+    postMultimodalParkingMarshalCreate,
+    parkingBookingOrderStatusHandler,
+    postTicketBookingExtend,
+    postTicketBookingStop,
+  )
+where
 
 import qualified API.Types.UI.ParkingBooking
+import qualified API.Types.UI.TicketService as TicketAPI
 import qualified Data.Text
+import qualified Domain.Action.UI.TicketService as TicketService
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as Fields
 import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.ServiceCategory as Fields
+import qualified Domain.Types.TicketBooking as Fields
+import qualified Domain.Types.TicketBookingService as DTB
+import qualified Domain.Types.TicketService as Fields
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
-import qualified Kernel.Types.Id
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified SharedLogic.TimeWindowBooking as TWB
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.TicketBooking as QTB
+import qualified Storage.Queries.TicketBookingService as QTBS
+import qualified Storage.Queries.TicketService as QTicketService
 import qualified Tools.ActorInfo as ActorInfo
+import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Wallet as TWallet
 
@@ -286,3 +305,62 @@ parkingBookingOrderStatusHandler paymentOrderId _merchantId status = do
       Payment.CANCELLED -> Just DPT.Failed
       Payment.AUTO_REFUNDED -> Just DPT.Refunded
       _ -> Nothing
+
+type AuthInfo = (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant)
+
+-- | Pay to extend a paid parking booking. Creates an extension booking through the normal book flow; the stay ends later once it is paid.
+postTicketBookingExtend :: AuthInfo -> Id DTB.TicketBookingService -> API.Types.UI.ParkingBooking.ParkingExtendReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
+postTicketBookingExtend auth bookingServiceId req = do
+  row <- QTBS.findById bookingServiceId >>= fromMaybeM (InvalidRequest "Parking booking not found")
+  booking <- QTB.findById row.ticketBookingId >>= fromMaybeM (InvalidRequest "Parking booking not found")
+  chain@(root, _) <- TicketService.parkingChain row
+  (_, stayEnd) <- fromMaybeM (InvalidRequest "Only a paid parking booking can be extended") (TicketService.parkingChainWindow chain)
+  service <- QTicketService.findById root.ticketServiceId >>= fromMaybeM (TicketServiceNotFound root.ticketServiceId.getId)
+  (businessHourId, category, peopleCategoryId) <-
+    TicketService.parkingVehicleTypes service
+      >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId) . find (\(_, c, _) -> Just c.id == root.serviceCategoryId)
+  tz <- TicketService.cityTimeZone booking.merchantOperatingCityId
+  TicketService.postTicketPlacesBook auth booking.ticketPlaceId $
+    TicketAPI.TicketBookingReq
+      { visitDate = TWB.localDay tz stayEnd,
+        ticketSubPlaceId = Nothing,
+        services =
+          [ TicketAPI.TicketBookingServicesReq
+              { serviceId = service.id,
+                businessHourId,
+                categories = [TicketAPI.TicketBookingCategoryReq {categoryId = category.id, peopleCategories = [TicketAPI.TicketBookingPeopleCategoryReq {peopleCategoryId, numberOfUnits = 1}]}],
+                startTime = Nothing,
+                durationMinutes = Just req.durationMinutes,
+                vehicleNumber = Nothing,
+                extendsBookingServiceId = Just root.id
+              }
+          ]
+      }
+
+-- | End a running parking stay now and free its space. Reports the tariff for the time actually parked; nothing is refunded, as in ParkWise.
+postTicketBookingStop :: AuthInfo -> Id DTB.TicketBookingService -> Environment.Flow API.Types.UI.ParkingBooking.ParkingStopResp
+postTicketBookingStop (mbPersonId, _) bookingServiceId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  row <- QTBS.findById bookingServiceId >>= fromMaybeM (InvalidRequest "Parking booking not found")
+  booking <- QTB.findById row.ticketBookingId >>= fromMaybeM (InvalidRequest "Parking booking not found")
+  unless (booking.personId == personId) $ throwError $ InvalidRequest "Parking booking not found"
+  chain@(root, paid) <- TicketService.parkingChain row
+  (stayStart, stayEnd) <- fromMaybeM (InvalidRequest "Only a paid parking booking can be stopped") (TicketService.parkingChainWindow chain)
+  now <- getCurrentTime
+  when (stayStart > now) $ throwError $ InvalidRequest "Booking has not started yet"
+  unless (stayEnd > now) $ throwError $ InvalidRequest "This booking has already ended"
+  -- price the stop before shortening anything, so a missing tariff leaves the stay untouched
+  service <- QTicketService.findById root.ticketServiceId >>= fromMaybeM (TicketServiceNotFound root.ticketServiceId.getId)
+  (_, _, peopleCategoryId) <-
+    TicketService.parkingVehicleTypes service
+      >>= fromMaybeM (InternalError $ "Vehicle type of this booking is no longer set up in zone " <> service.id.getId) . find (\(_, c, _) -> Just c.id == root.serviceCategoryId)
+  tz <- TicketService.cityTimeZone booking.merchantOperatingCityId
+  tariff <- TicketService.parkingTariff peopleCategoryId (TWB.localDay tz stayStart)
+  forM_ paid $ \r ->
+    whenJust r.expiryDate $ \end ->
+      when (end > now) $ QTBS.updateExpiryDateById (Just (max now (fromMaybe now r.startTime))) r.id
+  pure
+    API.Types.UI.ParkingBooking.ParkingStopResp
+      { finalAmount = TWB.calculateFee tz tariff stayStart now,
+        durationMinutes = ceiling (realToFrac (diffUTCTime now stayStart) / 60 :: Double)
+      }

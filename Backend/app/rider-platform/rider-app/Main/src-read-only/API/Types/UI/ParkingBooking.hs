@@ -5,6 +5,11 @@ module API.Types.UI.ParkingBooking where
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceCategory
+import qualified Domain.Types.TicketBooking
+import qualified Domain.Types.TicketBookingService
+import qualified Domain.Types.TicketPlace
+import qualified Domain.Types.TicketService
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -47,4 +52,38 @@ data ParkingBookingResponse = ParkingBookingResponse
     paymentLink :: Data.Text.Text
   }
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ParkingExtendReq = ParkingExtendReq {durationMinutes :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ParkingStayResp = ParkingStayResp
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    bookingServiceId :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
+    categoryId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory),
+    endTime :: Kernel.Prelude.UTCTime,
+    placeId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    placeName :: Data.Text.Text,
+    serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
+    startTime :: Kernel.Prelude.UTCTime,
+    status :: ParkingStayStatus,
+    ticketBookingShortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
+    vehicleNumber :: Data.Text.Text,
+    vehicleType :: Kernel.Prelude.Maybe Data.Text.Text,
+    zoneName :: Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ParkingStayStatus
+  = Reserved
+  | PendingPayment
+  | Active
+  | Ended
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ParkingStopResp = ParkingStopResp {durationMinutes :: Kernel.Prelude.Int, finalAmount :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

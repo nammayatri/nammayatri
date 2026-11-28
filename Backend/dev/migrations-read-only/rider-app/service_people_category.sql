@@ -54,3 +54,8 @@ ALTER TABLE atlas_app.service_people_category ADD COLUMN is_closed boolean  defa
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.service_people_category ADD COLUMN icon_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_people_category ADD COLUMN duration_tariff json ;

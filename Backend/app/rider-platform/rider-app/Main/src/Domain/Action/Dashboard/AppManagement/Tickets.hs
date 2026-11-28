@@ -82,7 +82,7 @@ postTicketsServices ::
     [API.Types.UI.TicketService.TicketServiceResp]
 postTicketsServices merchantShortId _opCity ticketPlaceId date ticketSubPlaceId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.getTicketPlacesServices (Nothing, m.id) ticketPlaceId date ticketSubPlaceId
+  Domain.Action.UI.TicketService.getTicketPlacesServices (Nothing, m.id) ticketPlaceId date Nothing Nothing ticketSubPlaceId
 
 getTicketsPlaces ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -224,9 +224,13 @@ postTicketsTicketdashboardTicketplaceUpdate ::
   Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
   Domain.Types.TicketDashboard.TicketPlaceDashboardDetails ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postTicketsTicketdashboardTicketplaceUpdate _merchantShortId _opCity _requestorId' _requestorRole req = do
+postTicketsTicketdashboardTicketplaceUpdate _merchantShortId opCity _requestorId' _requestorRole req = do
   m <- findMerchantByShortId _merchantShortId
-  moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
+  -- The city a new place, and the rows under it, are created in. A PARKING cluster goes to the city of the URL (the one the
+  -- dashboard user's login is authorised for) and must be one the merchant has. Every other kind of ticket place keeps the old
+  -- rule, the merchant's default city, so other ticket places behave exactly as before.
+  let city = if req.placeType == Domain.Types.TicketPlace.Parking then opCity else m.defaultCity
+  moCity <- CQMOC.findByMerchantIdAndCity m.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "City " <> show city <> " is not set up for merchant " <> _merchantShortId.getShortId)
   void $ Domain.Action.UI.TicketDashboard.postUpsertTicketPlaceDashboardDetails (m.id, moCity.id) req _requestorId' _requestorRole
   return Kernel.Types.APISuccess.Success
 
@@ -280,6 +284,7 @@ postTicketPlacesBook ::
   Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
 postTicketPlacesBook merchantShortId _opCity placeId _mbRequestorId req = do
   m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.rejectParkingPlace placeId
   Domain.Action.UI.TicketService.postTicketPlacesBook (Nothing, m.id) placeId req
 
 getTicketPlaces ::
@@ -302,7 +307,7 @@ getTicketPlaceServices ::
   Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
 getTicketPlaceServices merchantShortId _opCity placeId date subPlaceId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.getTicketPlacesServices (Nothing, m.id) placeId date subPlaceId
+  Domain.Action.UI.TicketService.getTicketPlacesServices (Nothing, m.id) placeId date Nothing Nothing subPlaceId
 
 getTicketBookingDetails ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -352,6 +357,7 @@ postTicketPlacesDirectBook ::
   Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
 postTicketPlacesDirectBook merchantShortId _opCity placeId requestorId req = do
   m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.rejectParkingPlace placeId
   Domain.Action.UI.TicketService.postTicketPlacesDirectBook (Nothing, m.id) requestorId placeId req
 
 getTicketFleetVehiclesV2 ::
