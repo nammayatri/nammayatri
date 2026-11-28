@@ -27,6 +27,7 @@ module SharedLogic.SharedCab.Booking
     alignByKey,
     stopAddresses,
     recordBoardedFare,
+    boardWithoutCode,
     tripEarnings,
   )
 where
@@ -60,6 +61,19 @@ recordBoardedFare tripId booking = shared $ do
   forM_ (mfilter (/= tripId) booking.vehicleTripId) $ \previousTrip ->
     Redis.hSetExp (tripFaresKey previousTrip) booking.id.getId (0 :: HighPrecMoney) sessionTtlSec
   Redis.hSetExp (tripFaresKey tripId) booking.id.getId booking.totalPrice.amount sessionTtlSec
+
+-- | Boards the booking on the cab that holds it, with no code: the driver's tap, or an unanswered board prompt. The caller holds the
+-- booking lock and clears the alloc key.
+-- TODO: write the journey leg's finalBoardedBusNumber / busTagNumber as the code path does.
+boardWithoutCode :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
+boardWithoutCode tripId plate booking = do
+  tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+  forM_ (filter ((== DFRFSTicket.ACTIVE) . (.status)) tickets) $ \ticket ->
+    QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.INPROGRESS (Just plate) booking.id ticket.ticketNumber
+  QFRFSTicketBooking.updateVehicleTripId (Just tripId) booking.id
+  recordBoardedFare tripId booking
+  -- already on this plate, so already counted; a spot booking born in the cab may not be indexed yet
+  noteOnPlate plate booking.id
 
 tripEarnings :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe HighPrecMoney)
 tripEarnings tripId = do

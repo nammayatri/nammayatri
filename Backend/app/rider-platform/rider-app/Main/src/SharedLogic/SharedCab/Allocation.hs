@@ -23,14 +23,15 @@ import Data.List (nub, nubBy)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFallbackPush, claimFirst, liveBookingsOf)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFallbackPush, claimFirst, findLive, liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
-import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withRoomFor, withoutSkipped)
+import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, closable, eligibleCandidates, findingOf, groupAllOn, isFinding, isFreshPosition, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withRoomFor, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (cityLiveWindowSec, liveSince, partyOf, partySizes, plateBookings, withBookingLock)
+import SharedLogic.SharedCab.Booking (boardWithoutCode, cityLiveWindowSec, liveSince, partyOf, partySizes, plateBookings, readRiderFix, withBookingLock)
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
@@ -41,6 +42,7 @@ import SharedLogic.SharedCab.RateLimit (RiderAction (RiderSkip), recordRiderActi
 import qualified SharedLogic.SharedCab.RouteSnapshot as RouteSnapshot
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Seats as Seats
+import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session, SessionStatus (ACTIVE))
 import qualified SharedLogic.SharedCab.SessionState as Fields
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -171,11 +173,12 @@ readCity cityId = do
     nubOn f = nubBy ((==) `on` f)
 
 closeExpired :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
-closeExpired cfg now live positionsByRoute = expireTimers cfg now movingOn silentOn live
+closeExpired cfg now live positionsByRoute = expireTimers cfg now movingOn silentOn cabAt live
   where
     onRoute route = maybe [] (.positions) (lookup route positionsByRoute)
     movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
     silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
+    cabAt plate route = (.position) <$> find (\cab -> cab.vehicleNumber == plate && isFreshPosition now cfg.ltsMaxAgeSec cab) (onRoute route)
 
 claimFindings :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
 claimFindings cityId cfg now live positionsByRoute = do
@@ -231,29 +234,48 @@ narrowToPreferred cfg now sessions booking candidates =
       PrefOffRoute -> Just Notify.CAB_PULLED
 
 -- | A timed-out or key-less ALLOCATED booking goes back to FINDING, decided under the booking lock so a claim still writing its key is not mistaken for lost.
+-- Where the board prompt is on, a board countdown that ran out opens the prompt instead, and an unanswered prompt checks the rider in.
 expireTimers ::
   AllocFlow m r =>
   Config.SharedCabTunables ->
   UTCTime ->
   (Text -> Text -> Bool) -> -- plate moving on route, per fresh LTS positions
   (Text -> Text -> Bool) -> -- plate silent on route
+  (Text -> Text -> Maybe LatLong) -> -- plate's fresh position on route
   [LiveBooking] ->
   m ()
-expireTimers cfg now movingOn silentOn live =
+expireTimers cfg now movingOn silentOn cabAt live =
   eachIsolated (withTryCatch "sharedCabExpireTimer") failed expire [(lb.booking, plate) | lb <- live, Just plate <- [allocatedPlate lb]]
   where
     failed (b, _) e = logError $ "shared-cab tick: timer check failed for booking " <> b.id.getId <> ": " <> show e
     expire (b, plate) = do
       result <- withBookingLock b.id $ do
         mbState <- readAlloc b.id
-        case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of
-          Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
-          Nothing -> do
+        case (mbState >>= startBoardPrompt cfg.boardPromptSec now, timerExpiry now mbState <|> (CabSilent <$ guard (not (boardPromptOpen mbState) && maybe False (silentOn plate) b.routeCode))) of
+          (Just prompted, _) -> Nothing <$ (writeAlloc (allocKeyTtl cfg) b.id prompted >> Notify.notifyBoardPrompt plate cfg.boardPromptSec b)
+          (Nothing, Just BoardUnanswered) -> do
+            checkedIn <- checkInUnanswered (b.routeCode >>= cabAt plate) b.id plate
+            if checkedIn then pure Nothing else fmap (BoardUnanswered,) <$> closeLocked cfg b.id plate BoardUnanswered
+          (Nothing, Just outcome) -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
+          (Nothing, Nothing) -> do
             whenJust mbState $ \st ->
               when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
                 writeAlloc (allocKeyTtl cfg) b.id st {timer = clearOnMove st.timer}
             pure Nothing
       whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
+    -- inside the booking lock, on a fresh read: still on this cab and not boarded, the cab still has its session, and not left behind
+    checkInUnanswered mbCab bookingId plate = do
+      mbRiderFix <- readRiderFix bookingId
+      mbSession <- Session.readSession plate
+      mbLive <- findLive bookingId
+      case (mbSession, mbLive) of
+        (Just s, Just (LiveBooking fresh statuses))
+          | closable plate fresh.status fresh.vehicleNumber statuses && not (leftBehind cfg.boardProximityM cfg.ltsMaxAgeSec now mbCab mbRiderFix) -> do
+            boardWithoutCode s.vehicleTripId plate fresh
+            clearAlloc bookingId
+            logInfo $ "shared-cab: checked in booking " <> bookingId.getId <> " on " <> plate <> " after an unanswered board prompt"
+            pure True
+        _ -> pure False
 
 pushTimeFallbacks :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [(DFTB.FRFSTicketBooking, FindingBooking)] -> m ()
 pushTimeFallbacks cfg now findings =

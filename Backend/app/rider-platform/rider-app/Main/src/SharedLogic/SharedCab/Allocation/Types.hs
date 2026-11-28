@@ -11,6 +11,10 @@ module SharedLogic.SharedCab.Allocation.Types
     allocationDeadline,
     blockingTimerDeadline,
     clearOnMove,
+    startBoardPrompt,
+    boardPromptDeadline,
+    boardPromptOpen,
+    leftBehind,
     isOffered,
     usesRiderSkip,
     visiblePlate,
@@ -35,7 +39,7 @@ module SharedLogic.SharedCab.Allocation.Types
   )
 where
 
-import Data.Time.Clock (diffUTCTime)
+import Data.Time.Clock (addUTCTime, diffUTCTime)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -81,11 +85,13 @@ approachStageSent st = max st.approachStage (if arrivedTimer st.timer then Just 
     arrivedTimer = \case
       StandTimer _ -> True
       MovingTimer _ -> True
+      BoardPromptTimer _ -> True
       _ -> False
 
 -- | The armed timer and its deadline, as one value: a deadline always knows what it times out as.
 -- | OfferTimer: the claim waits for the driver's accept or decline (a city with driverAcceptEnabled); the rider is not told of the cab yet.
-data Timer = NoTimer | StandTimer UTCTime | MovingTimer UTCTime | AwayTimer UTCTime | OfferTimer UTCTime
+-- | BoardPromptTimer: the board countdown ran out and the rider is asked whether they boarded; unanswered by the deadline, the rider is checked in, or cancelled when `leftBehind`.
+data Timer = NoTimer | StandTimer UTCTime | MovingTimer UTCTime | AwayTimer UTCTime | OfferTimer UTCTime | BoardPromptTimer UTCTime
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 timerDeadline :: Timer -> Maybe UTCTime
@@ -95,6 +101,7 @@ timerDeadline = \case
   MovingTimer d -> Just d
   AwayTimer d -> Just d
   OfferTimer d -> Just d
+  BoardPromptTimer d -> Just d
 
 -- | The deadline the rider counts down to: a cab waiting at the stop (stand) or passing it (moving). An away timer only bounds how
 -- long the allocator holds a cab that is not at the stop, so it sets no boardDeadlineSec.
@@ -102,6 +109,7 @@ allocationDeadline :: AllocationState -> Maybe UTCTime
 allocationDeadline st = case st.timer of
   AwayTimer _ -> Nothing
   OfferTimer _ -> Nothing
+  BoardPromptTimer _ -> Nothing
   timer -> timerDeadline timer
 
 -- | The deadline of a timer the stop-progress tick must not replace when the cab reaches the board stop. An away timer only bounds
@@ -118,6 +126,34 @@ clearOnMove = \case
   StandTimer _ -> NoTimer
   AwayTimer _ -> NoTimer
   other -> other
+
+-- | A stand or moving timer that ran out becomes the board prompt, where the city has it on (`promptSec` > 0).
+startBoardPrompt :: Int -> UTCTime -> AllocationState -> Maybe AllocationState
+startBoardPrompt promptSec now st
+  | promptSec <= 0 = Nothing
+  | otherwise = case st.timer of
+    StandTimer d | now > d -> Just prompted
+    MovingTimer d | now > d -> Just prompted
+    _ -> Nothing
+  where
+    prompted = st {timer = BoardPromptTimer (addUTCTime (fromIntegral promptSec) now)}
+
+boardPromptDeadline :: AllocationState -> Maybe UTCTime
+boardPromptDeadline st = case st.timer of
+  BoardPromptTimer d -> Just d
+  _ -> Nothing
+
+boardPromptOpen :: Maybe AllocationState -> Bool
+boardPromptOpen = isJust . (>>= boardPromptDeadline)
+
+-- | An unanswered board prompt checks the rider in: a rider squeezed into a full cab cannot always reach the phone. The one exception
+-- is a fresh fix more than `radiusM` from the cab: the cab left without them. No fresh fix, or no cab position, checks in.
+leftBehind :: Int -> Int -> UTCTime -> Maybe LatLong -> Maybe RiderFix -> Bool
+leftBehind radiusM maxAgeSec now mbCab mbRiderFix = fromMaybe False $ do
+  cab <- mbCab
+  riderFix <- mbRiderFix
+  guard (diffUTCTime now riderFix.takenAt <= fromIntegral maxAgeSec)
+  pure (distanceBetweenInMeters riderFix.position cab > fromIntegral radiusM)
 
 -- | The claim still waits for the driver's answer.
 isOffered :: AllocationState -> Bool
@@ -168,6 +204,8 @@ data AllocationOutcome
     OfferTimeout
   | -- | the rider skipped the cab; that plate is then excluded from the booking's next claims
     RiderSkipped SkipReason
+  | -- | the rider did not say whether they boarded within boardPromptSec and the cab had left them behind: the booking is cancelled
+    BoardUnanswered
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 data SkipReason = SkipFull | SkipOther
@@ -209,6 +247,7 @@ outcomePolicy = \case
   OfferTimeout -> OutcomePolicy BlameNone False True
   RiderSkipped SkipFull -> OutcomePolicy BlameNone False False
   RiderSkipped SkipOther -> OutcomePolicy BlameNone False False
+  BoardUnanswered -> OutcomePolicy BlameRider True True
 
 blameFor :: AllocationOutcome -> Blame
 blameFor = policyBlame . outcomePolicy
@@ -224,6 +263,7 @@ timerExpiry now (Just st) = case st.timer of
   MovingTimer d | now > d -> Just MovingTimeout
   AwayTimer d | now > d -> Just AwayTimeout
   OfferTimer d | now > d -> Just OfferTimeout
+  BoardPromptTimer d | now > d -> Just BoardUnanswered
   _ -> Nothing
 
 isMovingSpeed :: Maybe Double -> Bool

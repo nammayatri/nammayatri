@@ -81,6 +81,8 @@ data SharedCabLegStatus = SharedCabLegStatus
     chatChannelId :: Maybe Text,
     cabsComing :: Int,
     boardDeadlineSec :: Maybe Int,
+    -- | Seconds left to answer "have you boarded?"; unanswered, the rider is checked in.
+    boardPromptSec :: Maybe Int,
     cancelReason :: Maybe CancelReason,
     preferredCab :: Maybe Text,
     preferredCabLost :: Bool,

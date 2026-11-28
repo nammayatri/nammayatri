@@ -327,6 +327,7 @@ data SharedCabConfig = SharedCabConfig
     atStopRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     autoEndAfterDropSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boardAttemptsPer10Min :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    boardPromptSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boardProximityM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     callEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     callMode :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.SharedCabCallMode,

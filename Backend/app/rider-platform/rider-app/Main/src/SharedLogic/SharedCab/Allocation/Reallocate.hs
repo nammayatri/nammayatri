@@ -79,7 +79,7 @@ closeLocked cfg bookingId expectedPlate outcome =
       case blameFor outcome of
         BlameRider -> QFRFSTicketBooking.releaseAllocatedVehicle Nothing (NoShow.noShowsAfter BlameRider b.sharedCabNoShows) b.id (Just expectedPlate)
         _ -> QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
-      if NoShow.actionAfterClose (blameFor outcome) cfg.maxNoShows b.sharedCabNoShows == NoShow.AutoCancel
+      if outcome == BoardUnanswered || NoShow.actionAfterClose (blameFor outcome) cfg.maxNoShows b.sharedCabNoShows == NoShow.AutoCancel
         then do
           cancelForNoShows b
           clearBookingState bookingId

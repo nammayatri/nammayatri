@@ -29,7 +29,7 @@ import qualified Lib.JourneyLeg.Types as JLTypes
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
-import SharedLogic.SharedCab.Allocation.Types (RiderFix (..), allocationDeadline, visiblePlate)
+import SharedLogic.SharedCab.Allocation.Types (RiderFix (..), allocationDeadline, boardPromptDeadline, visiblePlate)
 import qualified SharedLogic.SharedCab.Approach as Approach
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import SharedLogic.SharedCab.BookingState (readBookingState)
@@ -89,6 +89,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       arrivalDeadline = mbAllocState >>= allocationDeadline
       mbState = SharedCabLeg.deriveSharedCabState now bookingStatus' shown hasLiveSession (Just fallbackGate)
       boardDeadlineSec = guard (mbState == Just SharedCabLeg.ALLOCATED) *> arrivalDeadline <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
+      boardPromptSec = guard (mbState == Just SharedCabLeg.ALLOCATED) *> (mbAllocState >>= boardPromptDeadline) <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
       fallbackGate =
         SharedCabLeg.FallbackGate
           { attempts,
@@ -152,7 +153,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           fleetNo = journeyLeg.finalBoardedBusNumber,
           serviceTierType = Just Spec.SHARED_CAB,
           merchantOperatingCityId = booking.merchantOperatingCityId,
-          sharedCab = mkLegStatus visibleBooking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel mbCancelReason preference (upcomingCabs, skipAvailable) bookingState.driverPassed <$> mbState
+          sharedCab = mkLegStatus visibleBooking mbDriverInfo cabsComing (boardDeadlineSec, boardPromptSec) cabTrack maskedCall chatChannel mbCancelReason preference (upcomingCabs, skipAvailable) bookingState.driverPassed <$> mbState
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode
@@ -183,7 +184,7 @@ mkLegStatus ::
   DFRFSTicketBooking.FRFSTicketBooking ->
   Maybe SharedCabSession.CabDriverInfo ->
   Int ->
-  Maybe Int ->
+  (Maybe Int, Maybe Int) ->
   Maybe CabTrack ->
   Maybe Text ->
   Maybe Text ->
@@ -193,7 +194,7 @@ mkLegStatus ::
   Bool ->
   SharedCabLeg.SharedCabState ->
   SharedCabLeg.SharedCabLegStatus
-mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall chatChannel reason (preferredCab, preferredCabLost) (upcomingCabs, skipAvailable) driverPassed st =
+mkLegStatus booking mbDriverInfo cabsComing (boardDeadlineSec, boardPromptSec) cabTrack maskedCall chatChannel reason (preferredCab, preferredCabLost) (upcomingCabs, skipAvailable) driverPassed st =
   SharedCabLeg.SharedCabLegStatus
     { state = st,
       bookingId = booking.id.getId,
@@ -208,6 +209,7 @@ mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack maskedCall
       chatChannelId = chatChannel,
       cabsComing,
       boardDeadlineSec,
+      boardPromptSec,
       cancelReason = reason,
       preferredCab,
       preferredCabLost,
