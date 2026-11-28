@@ -294,7 +294,9 @@ startDBSync isCritical = do
           void $ publishDBSyncMetric $ Event.DrainerStopStatus 0
           dbStreamKey <- getStreamName $ T.pack dbSyncStream
           case dbStreamKey of
-            Nothing -> pure history
+            -- every stream lock is held by another thread: back off instead of immediately
+            -- re-hitting GET stop-key / INCR counter / SET NX lock (hot-key spin on Redis)
+            Nothing -> EL.runIO $ (delay =<< Env.getDrainerLockMissDelay) $> history
             Just streamName -> do
               EL.logDebug ("Stream name is: " <> show streamName :: Text) streamName
               history' <-

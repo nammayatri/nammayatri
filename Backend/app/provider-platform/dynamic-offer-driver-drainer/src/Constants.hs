@@ -178,6 +178,9 @@ dbFailureRetryDelayEnvKey = "DB_FAILURE_RETRY_DELAY"
 drainerFailureRetryDelayEnvKey :: String
 drainerFailureRetryDelayEnvKey = "DRAINER_FAILURE_RETRY_DELAY"
 
+drainerLockMissDelayEnvKey :: String
+drainerLockMissDelayEnvKey = "DRAINER_LOCK_MISS_DELAY"
+
 --                                  |
 maxDbFailureRetries :: String
 maxDbFailureRetries = "MAX_DB_FAILURE_RETRIES"
