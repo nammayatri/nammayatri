@@ -35,7 +35,6 @@ import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.BecknConfig as Fields
@@ -172,8 +171,6 @@ data AppCfg = AppCfg
     loginRateLimitOptions :: APIRateLimitOptions,
     merchantUserAccountNumber :: Int,
     enforceStrongPasswordPolicy :: Bool,
-    is2faMandatory :: Bool,
-    twoFaEnforcementDeadlineText :: Maybe Text, -- ISO 8601; parsed to UTCTime in buildAppEnv
     twoFaOtpTTLInSecs :: Maybe Int,
     twoFaMaxOtpVerifyAttempts :: Maybe Int,
     totpStepSize :: Maybe Int,
@@ -318,8 +315,6 @@ data AppEnv = AppEnv
     loginRateLimitOptions :: APIRateLimitOptions,
     merchantUserAccountNumber :: Int,
     enforceStrongPasswordPolicy :: Bool,
-    is2faMandatory :: Bool,
-    twoFaEnforcementDeadline :: Maybe UTCTime,
     twoFaOtpTTLInSecs :: Maybe Int,
     twoFaMaxOtpVerifyAttempts :: Maybe Int,
     totpStepSize :: Maybe Int,
@@ -505,23 +500,7 @@ buildAppEnv cfg@AppCfg {..} = do
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
-  -- AppCfg carries the ISO 8601 string, AppEnv wants UTCTime. Same parse as
-  -- lib-dashboard's buildAppEnv so a deadline behaves identically here.
-  let twoFaEnforcementDeadline = twoFaEnforcementDeadlineText >>= parseIso8601UTC
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
-  where
-    parseIso8601UTC :: Text -> Maybe UTCTime
-    parseIso8601UTC t =
-      let str = T.unpack t
-          tryFormats [] = Nothing
-          tryFormats (f : fs) = case parseTimeM True defaultTimeLocale f str of
-            Just v -> Just v
-            Nothing -> tryFormats fs
-       in tryFormats
-            [ "%Y-%m-%dT%H:%M:%SZ",
-              "%Y-%m-%dT%H:%M:%S%QZ",
-              "%Y-%m-%d %H:%M:%S%z"
-            ]
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

@@ -248,8 +248,7 @@ buildPersonCreateReq req role merchantId = do
         rejectedBy = Nothing,
         language = Nothing,
         secretKey = Nothing,
-        is2faEnabled = False,
-        twoFaExempt = False,
+        twoFaMode = DRole.AUTHENTICATOR_APP,
         tokenNo = Nothing,
         vpa = Nothing
       }

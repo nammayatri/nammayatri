@@ -45,11 +45,11 @@ markRoleAsDisabled roleId = do
     ]
     [Se.Is BeamR.id $ Se.Eq $ getId roleId]
 
-updateRoleTwoFaExempt :: BeamFlow m r => Id Role -> Bool -> m ()
-updateRoleTwoFaExempt roleId exempt = do
+updateRoleTwoFaMode :: BeamFlow m r => Id Role -> Role.TwoFaMode -> m ()
+updateRoleTwoFaMode roleId twoFaMode = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamR.twoFaExempt exempt,
+    [ Se.Set BeamR.twoFaMode twoFaMode,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id $ Se.Eq $ getId roleId]

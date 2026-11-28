@@ -90,7 +90,7 @@ buildRole req = do
         accessibleRoles = [],
         isBppSyncNeeded = req.isBppSyncNeeded,
         isDisabled = Just False,
-        twoFaExempt = False,
+        twoFaMode = DRole.AUTHENTICATOR_APP,
         createdAt = now,
         updatedAt = now
       }

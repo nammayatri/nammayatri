@@ -28,7 +28,7 @@ data RoleT f = RoleT
     accessibleRoles :: B.C f [Text],
     isBppSyncNeeded :: B.C f (Maybe Bool),
     isDisabled :: B.C f (Maybe Bool),
-    twoFaExempt :: B.C f Bool,
+    twoFaMode :: B.C f Domain.TwoFaMode,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

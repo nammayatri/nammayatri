@@ -32,6 +32,19 @@ $(mkBeamInstancesForEnum ''DashboardAccessType)
 
 genSingletons [''DashboardAccessType]
 
+-------- Two-factor delivery mode --------
+
+-- | The second-factor delivery mechanism for a dashboard login. Persisted on both Person and
+-- Role; MOBILE_OTP on either forces the mobile path (see Registration.resolve2FAMode).
+--
+--   * AUTHENTICATOR_APP (default): TOTP via an authenticator app, enrolled through the email-OTP
+--     setup flow and recorded by Person.secretKey.
+--   * MOBILE_OTP: a one-time code texted to the person's registered mobile number at login.
+data TwoFaMode = AUTHENTICATOR_APP | MOBILE_OTP
+  deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''TwoFaMode)
+
 -------- Person Role --------
 
 data Role = Role
@@ -42,9 +55,10 @@ data Role = Role
     accessibleRoles :: [Id Role],
     isBppSyncNeeded :: Maybe Bool,
     isDisabled :: Maybe Bool,
-    -- | Role-level 2FA exemption. Only a SUPER_ADMIN may flip it (Registration.setTwoFaExempt,
-    -- keyed by role name). Every holder of the role skips 2FA even when is2faMandatory=True.
-    twoFaExempt :: Bool,
+    -- | Role-level second-factor delivery. MOBILE_OTP forces the SMS path for every holder of the
+    -- role; AUTHENTICATOR_APP (default) leaves each person's own twoFaMode in effect. Only a
+    -- SUPER_ADMIN may change it (Registration.setTwoFaMode, keyed by role name).
+    twoFaMode :: TwoFaMode,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -57,7 +71,7 @@ data RoleAPIEntity = RoleAPIEntity
     description :: Text,
     isBppSyncNeeded :: Maybe Bool,
     isDisabled :: Maybe Bool,
-    twoFaExempt :: Bool
+    twoFaMode :: TwoFaMode
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 

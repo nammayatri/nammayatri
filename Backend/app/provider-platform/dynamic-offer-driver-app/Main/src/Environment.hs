@@ -20,7 +20,6 @@ import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Database.PostgreSQL.Simple as PG
 import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.External.LiveEKD
@@ -35,7 +34,7 @@ import qualified Kernel.External.Encryption as Fields
 import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.External.SocialLogin.Types (SocialLoginConfig)
-import Kernel.Prelude (NominalDiffTime, UTCTime)
+import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -150,8 +149,6 @@ data AppCfg = AppCfg
     loginRateLimitOptions :: APIRateLimitOptions,
     merchantUserAccountNumber :: Int,
     enforceStrongPasswordPolicy :: Bool,
-    is2faMandatory :: Bool,
-    twoFaEnforcementDeadlineText :: Maybe Text, -- ISO 8601; parsed to UTCTime in buildAppEnv
     twoFaOtpTTLInSecs :: Maybe Int,
     twoFaMaxOtpVerifyAttempts :: Maybe Int,
     totpStepSize :: Maybe Int,
@@ -310,8 +307,6 @@ data AppEnv = AppEnv
     loginRateLimitOptions :: APIRateLimitOptions,
     merchantUserAccountNumber :: Int,
     enforceStrongPasswordPolicy :: Bool,
-    is2faMandatory :: Bool,
-    twoFaEnforcementDeadline :: Maybe UTCTime,
     twoFaOtpTTLInSecs :: Maybe Int,
     twoFaMaxOtpVerifyAttempts :: Maybe Int,
     totpStepSize :: Maybe Int,
@@ -520,26 +515,10 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let url = Nothing
   masterCloudForwarderManager <- Http.newManager (setResponseTimeout cfg.httpClientOptions.timeoutMs HttpTLS.tlsManagerSettings)
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
-  -- AppCfg carries the ISO 8601 string, AppEnv wants UTCTime. Same parse as
-  -- lib-dashboard's buildAppEnv so a deadline behaves identically here.
-  let twoFaEnforcementDeadline = twoFaEnforcementDeadlineText >>= parseIso8601UTC
   -- Unlike provider-dashboard, an unset or unparseable AUTH_MAP is not fatal here:
   -- it just means no CAC tokens are configured and the shim denies every request.
   cacAclMap <- maybe [] (fromMaybe [] . readMaybe) <$> lookupEnv "AUTH_MAP"
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
-  where
-    parseIso8601UTC :: Text -> Maybe UTCTime
-    parseIso8601UTC t =
-      let str = T.unpack t
-          tryFormats [] = Nothing
-          tryFormats (f : fs) = case parseTimeM True defaultTimeLocale f str of
-            Just v -> Just v
-            Nothing -> tryFormats fs
-       in tryFormats
-            [ "%Y-%m-%dT%H:%M:%SZ",
-              "%Y-%m-%dT%H:%M:%S%QZ",
-              "%Y-%m-%d %H:%M:%S%z"
-            ]
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

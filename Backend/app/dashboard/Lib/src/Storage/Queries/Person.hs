@@ -586,7 +586,6 @@ updatePerson2FaSecret personId secretKey = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamP.secretKey $ Just secretKey,
-      Se.Set BeamP.is2faEnabled True,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id $ Se.Eq $ getId personId]
@@ -596,16 +595,15 @@ clearPerson2Fa personId = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamP.secretKey Nothing,
-      Se.Set BeamP.is2faEnabled False,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
-updatePersonTwoFaExempt :: BeamFlow m r => Id Person -> Bool -> m ()
-updatePersonTwoFaExempt personId exempt = do
+updatePersonTwoFaMode :: BeamFlow m r => Id Person -> Role.TwoFaMode -> m ()
+updatePersonTwoFaMode personId twoFaMode = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamP.twoFaExempt exempt,
+    [ Se.Set BeamP.twoFaMode twoFaMode,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id $ Se.Eq $ getId personId]
