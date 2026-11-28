@@ -17,13 +17,15 @@ module App where
 
 import qualified Client.Main as CM
 import qualified Control.Concurrent.MVar as MVar
+import qualified Control.Exception as E
 import qualified Data.Bool as B
-import Data.Singletons (SingI)
+import Data.Singletons (SingI, fromSing)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as Fields
 import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
 import qualified Environment as Fields
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
+import qualified EulerHS.Extra.IOProfile as EIOP
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
@@ -38,6 +40,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Queries.SystemConfigs as QSC
+import qualified Kernel.Tools.IOProfiler as IOP
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
@@ -46,6 +49,7 @@ import Kernel.Utils.App (getPodName, handleLeft)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
+import Kernel.Utils.IOLogging (LoggerEnv (..))
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import Lib.Scheduler.InMemManagement (withInMemManagement)
@@ -109,6 +113,7 @@ import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import System.Environment (lookupEnv)
 import qualified Tools.ActorInfo as ActorInfo
 import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
@@ -143,10 +148,23 @@ putJobHandlerInListWrapper ::
   JobHandlersList t ->
   JobHandlersList t
 putJobHandlerInListWrapper flowRt env jobHandler =
-  putJobHandlerInList $ \job -> liftIO $ do
+  putJobHandlerInList $ \job@Job {id = jobId, jobInfo = JobInfo {jobType}} -> liftIO $ do
     optionsLocal <- MVar.newMVar mempty
-    runFlowR flowRt {R._optionsLocal = optionsLocal} env $
-      ActorInfo.withJobIdActorInfoWrapper jobHandler job
+    let flowRt' = flowRt {R._optionsLocal = optionsLocal}
+    -- Per-job IO profile, only when IO_PROFILE_DIR is set (see Kernel.Tools.IOProfiler): one file per job,
+    -- named by job id, closed once the job and every fork it started have finished.
+    mbProfileDir <- lookupEnv "IO_PROFILE_DIR"
+    mbProfiler <- case mbProfileDir of
+      Nothing -> pure Nothing
+      Just dir ->
+        IOP.newIOProfiler dir jobId.getId ("job/" <> show (fromSing jobType)) $ \summary ->
+          runFlowR flowRt' env $ logTagInfo "IO_PROFILE" summary
+    let env' = env {Fields.loggerEnv = env.loggerEnv {ioProfiler = mbProfiler}}
+    ( runFlowR flowRt' env' $ do
+        whenJust mbProfiler $ \profiler -> L.setOptionLocal EIOP.IOProfileSinkKey (IOP.profilerSink profiler)
+        ActorInfo.withJobIdActorInfoWrapper jobHandler job
+      )
+      `E.finally` whenJust mbProfiler IOP.markResponded
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
 allocatorHandle flowRt env =
