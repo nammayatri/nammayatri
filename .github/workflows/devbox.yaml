@@ -1,9 +1,9 @@
 # Devbox releases: run Backend/dev/devbox_core on the office runner against a
 # fleet dev-box. System Control Centre ("Devbox Releases") dispatches this.
 #
-#   ping   the runner can SSH into the dev-box (DEVBOX_SSH_KEY; its public half
-#          is on the dev-box, restricted to the runner's overlay IP 100.64.0.1,
-#          so the runner reaches dev-boxes over the hopper tailnet)
+#   ping   the runner can SSH into the dev-box. SSH goes to the dev-box's
+#          tailnet address, where Tailscale SSH answers (hopper turns it on):
+#          Headscale's ACL decides who gets in, so there is no SSH key here.
 #   spawn  nammayatri@backend_ref (+ control-center@cc_ref inside it) → a
 #          workspace on a dev-box, one step per SCC stage: Preparing, Sync,
 #          Build, Start, Data, Control centre, Result. GitHub reports each
@@ -137,21 +137,12 @@ jobs:
         if: env.ACTION == 'spawn' && inputs.cc_ref != ''
         run: echo "CC_COMMIT=$(git -C "$SRC/control-center" rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
-      - name: Dev-box key
-        env:
-          DEVBOX_SSH_KEY: ${{ secrets.DEVBOX_SSH_KEY }}
-        run: |
-          key="$RUNNER_TEMP/devbox_key"
-          (umask 077; printf '%s\n' "$DEVBOX_SSH_KEY" > "$key")
-          echo "DEVBOX_SSH_KEY_FILE=$key" >> "$GITHUB_ENV"
-
       - name: Ping
         if: env.ACTION == 'ping'
         working-directory: tools/Backend/dev
         run: |
           python3 -m devbox_core ping --host "$DEVBOX_HOST" --user "$DEVBOX_USER"
-          ssh -i "$DEVBOX_SSH_KEY_FILE" -o IdentitiesOnly=yes -o BatchMode=yes \
-              -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 \
               "$DEVBOX_USER@$DEVBOX_HOST" \
               'echo "runner address as seen by $(hostname): ${SSH_CONNECTION%% *}"'
 
@@ -207,12 +198,12 @@ jobs:
       - name: Result
         if: env.ACTION == 'spawn'
         working-directory: tools/Backend/dev
-        # DEVBOX_HOST is how the runner reaches the dev-box (overlay). Testers'
-        # URLs (rider, driver, control centre) go through hopper's gateway;
-        # only office_url uses its office address, DEVBOX_URL_HOST.
+        # DEVBOX_HOST is how the runner reaches the dev-box (its tailnet
+        # address). Testers' URLs (rider, driver, control centre) go through
+        # hopper's gateway.
         run: |
           python3 -m devbox_core result --host "$DEVBOX_HOST" --user "$DEVBOX_USER" --name "$WORKSPACE" \
-            --devbox "$DEVBOX_NAME" --url-host "${DEVBOX_URL_HOST:-}"
+            --devbox "$DEVBOX_NAME"
 
       - name: Stop
         if: env.ACTION == 'stop'
@@ -223,4 +214,4 @@ jobs:
 
       - name: Clean up
         if: always()
-        run: rm -rf "$RUNNER_TEMP/devbox_key" "${{ github.workspace }}/ws"
+        run: rm -rf "${{ github.workspace }}/ws"

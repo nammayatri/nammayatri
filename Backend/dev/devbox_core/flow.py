@@ -33,13 +33,12 @@ def _hopper_name(t: ssh.Target) -> str:
 
 
 def pick_target(user: str | None, host: str | None,
-                key: str | None) -> tuple[ssh.Target, str, str]:
+                key: str | None) -> tuple[ssh.Target, str]:
     """The devbox to use: the given host, else the least-loaded reachable one
     of the machines `hopper list` names that has a
     front desk and is published to hopper. Returns (target, devbox
-    name, url host): the target is how we reach it (the overlay address when it
-    answers), the devbox name is the one hopper's gateway URLs use, the url host
-    is its office address, for the office-only URLs."""
+    name): the target is how we reach it (its tailnet address), the devbox name
+    is the one hopper's gateway URLs use."""
     if host:
         if not _has_frontdesk(host):
             raise RuntimeError(f"{host} has no front desk on :{stack.FRONTDESK_PORT} "
@@ -48,7 +47,7 @@ def pick_target(user: str | None, host: str | None,
         devbox = _hopper_name(t) or host
         if not stack.is_public(devbox):
             raise RuntimeError(_not_public(devbox))
-        return t, devbox, host
+        return t, devbox
     res = fleet.fetch_machines()
     if res.get("error"):
         raise RuntimeError(res["error"])
@@ -60,21 +59,20 @@ def pick_target(user: str | None, host: str | None,
     m = fleet.pick(public)
     if m is None:
         raise RuntimeError(_not_public(", ".join(b.get("name", b["bestIp"]) for b in boxes)))
-    return (ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()),
-            m["name"], m.get("localIp") or m["bestIp"])
+    return ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()), m["name"]
 
 
-def _cc_url(c: dict, url_host: str, public: str) -> str:
+def _cc_url(c: dict, host: str, public: str) -> str:
     """Through hopper's gateway when the control centre runs under its public
     path (a dev-box workspace, data/cc-prefix); else its direct address."""
     if c.get("state") != "running" or not c.get("port"):
         return ""
     if c.get("base"):
         return f"{public}/control-centre/"
-    return f"http://{url_host}:{c['port']}"
+    return f"http://{host}:{c['port']}"
 
 
-def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = "") -> dict:
+def result_fields(t: ssh.Target, name: str, devbox: str = "") -> dict:
     """The DEVBOX_RESULT fields, read from the workspace as it is now: its URLs,
     the control centre's URL, the data it holds and the build cache it used.
     Needs nothing from earlier steps, so a workflow can call it last. Raises
@@ -82,13 +80,13 @@ def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = ""
 
     "host" is how we reach the devbox (Stop uses it again). backend_url and the
     rider/driver URLs go through hopper's gateway, so testers open them on any
-    network; office_url and cc_url use url_host (default: the same as host)."""
+    network; cc_url falls back to the tailnet address when the control centre
+    is not under its public path."""
     if name not in (workspace.read_registry(t).get("users") or {}):
         raise RuntimeError(f"no workspace {name!r} on {t.host}")
-    url_host = url_host or t.host
     devbox = devbox or _hopper_name(t) or t.host
     wdir = workspace.workspace_dir(name)
-    held = (data.ctx(stack.office_base(t.host, name), "/api/config-sync/status",
+    held = (data.ctx(stack.tailnet_base(t.host, name), "/api/config-sync/status",
                      timeout=5).get("last_synced") or {})
     c = cc.status(t, wdir)
     commit = ssh.run(t, f"cat {shlex.quote(wdir)}/Backend/.ci-cache-sha 2>/dev/null").stdout.strip()
@@ -98,8 +96,7 @@ def result_fields(t: ssh.Target, name: str, devbox: str = "", url_host: str = ""
         "devbox": devbox, "host": t.host, "user": t.user, "workspace": name,
         "backend_url": public,
         "rider_url": rider, "driver_url": driver,
-        "office_url": stack.office_base(url_host, name),
-        "cc_url": _cc_url(c, url_host, public),
+        "cc_url": _cc_url(c, t.host, public),
         "data": f"{held.get('from')} {held.get('version')}" if held.get("from") else "",
         "cache_commit": commit,
         "grpc_address": _grpc_address(t, wdir),
@@ -138,7 +135,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
     error is raised); the workspace is left as it is for a look, and `stop`
     cleans it up. Returns the DEVBOX_RESULT fields."""
     with output.Stage("preparing"):
-        t, devbox, url_host = pick_target(user, host, key)
+        t, devbox = pick_target(user, host, key)
         workspace.register(t, name, owner)
     wdir = workspace.workspace_dir(name)
 
@@ -179,7 +176,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
                 if not pick:
                     raise RuntimeError(f"no usable {source} version published")
                 version = f"v{pick['version']}"
-            data.sync_and_wait(stack.office_base(t.host, name), source, version)
+            data.sync_and_wait(stack.tailnet_base(t.host, name), source, version)
             data_label = f"{source} {version}"
 
     cc_url = ""
@@ -191,7 +188,7 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
         elif r.get("error"):
             raise RuntimeError(r["error"])
         else:
-            cc_url = _cc_url(cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT), url_host,
+            cc_url = _cc_url(cc.wait_running(t, wdir, timeout=CC_READY_TIMEOUT), t.host,
                              stack.public_base(devbox, name))
 
     public = stack.public_base(devbox, name)
@@ -200,7 +197,6 @@ def spawn(name: str, src: str, owner: dict | None, *, host: str | None = None,
         "devbox": devbox, "host": t.host, "user": t.user, "workspace": name,
         "backend_url": public,
         "rider_url": rider, "driver_url": driver,
-        "office_url": stack.office_base(url_host, name),
         "cc_url": cc_url, "data": data_label, "cache_commit": synced.get("cacheCommit", ""),
     }
     output.stage("ready", "done")

@@ -133,8 +133,10 @@ def _answers(url: str) -> bool:
         return False
 
 
-def office_base(host: str, name: str) -> str:
-    """The workspace through the front desk: office network / tailnet only."""
+def tailnet_base(host: str, name: str) -> str:
+    """The workspace through the front desk, every service: tailnet only (the
+    dev-box's firewall opens :8888 on tailscale0 alone). `host` is the dev-box's
+    tailnet address."""
     return f"http://{host}:{FRONTDESK_PORT}/{name}"
 
 
@@ -185,7 +187,7 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
             raise RuntimeError("stack is not running\n" + tail(t, wdir, 40))
         if until == "services" and seen == "services":
             return {"services": True}
-        urls = ready_urls(office_base(t.host, name))
+        urls = ready_urls(tailnet_base(t.host, name))
         if seen == "services" and all(_answers(u) for u in urls):
             out("[stack] stage: ready")
             return {"ready": True, "urls": urls}
