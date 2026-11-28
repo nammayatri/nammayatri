@@ -366,15 +366,25 @@ getMultimodalBookingList (mbPersonId, _) mbCursor mbFromDate mbLimit mbScope mbT
     (Just ApiTypes.CURRENT, Just (JMTypes.PastAfter _ _)) -> throwError $ InvalidRequest "Cursor does not belong to scope CURRENT"
     (Just ApiTypes.PAST, Just (JMTypes.UpcomingAfter _ _)) -> throwError $ InvalidRequest "Cursor does not belong to scope PAST"
     _ -> pure ()
+  liveQueryFork <-
+    awaitableFork "getMultimodalBookingList->liveQuery" $
+      if includeCurrent && isNothing mbCursorValue
+        then sortOn (Down . tripSortKey) . nubBy sameJourney <$> QJourney.findLiveTicketsByRiderId personId now ticketListMaxRows
+        else pure []
+  upcomingQueryFork <-
+    awaitableFork "getMultimodalBookingList->upcomingQuery" $
+      case mbCursorValue of
+        Nothing | includeCurrent -> pageUpcoming personId mbFromTime mbToTime now limit Nothing
+        Just (JMTypes.UpcomingAfter afterTime afterId) -> pageUpcoming personId mbFromTime mbToTime now limit (Just (afterTime, afterId))
+        _ -> pure ([], False)
   liveJourneys <-
-    if includeCurrent && isNothing mbCursorValue
-      then sortOn (Down . tripSortKey) . nubBy sameJourney <$> QJourney.findLiveTicketsByRiderId personId now ticketListMaxRows
-      else pure []
+    L.await Nothing liveQueryFork >>= \case
+      Left err -> throwError $ InternalError $ "getMultimodalBookingList live query fork failed: " <> show err
+      Right result -> pure result
   (upcomingJourneys, hasMoreUpcoming) <-
-    case mbCursorValue of
-      Nothing | includeCurrent -> pageUpcoming personId mbFromTime mbToTime now limit Nothing
-      Just (JMTypes.UpcomingAfter afterTime afterId) -> pageUpcoming personId mbFromTime mbToTime now limit (Just (afterTime, afterId))
-      _ -> pure ([], False)
+    L.await Nothing upcomingQueryFork >>= \case
+      Left err -> throwError $ InternalError $ "getMultimodalBookingList upcoming query fork failed: " <> show err
+      Right result -> pure result
   let remaining = limit - length upcomingJourneys
       mbPastAfter = case mbCursorValue of
         Just (JMTypes.PastAfter afterTime afterId) -> Just (afterTime, afterId)
@@ -393,7 +403,7 @@ getMultimodalBookingList (mbPersonId, _) mbCursor mbFromDate mbLimit mbScope mbT
       catMaybes <$> mapConcurrently buildCurrentJourney upcomingJourneys
   pastFork <-
     awaitableFork "getMultimodalBookingList->past" $
-      mapMaybeM buildPastSummary pastJourneys
+      catMaybes <$> mapConcurrently buildPastSummary pastJourneys
   live <-
     L.await Nothing liveFork >>= \case
       Left err -> throwError $ InternalError $ "getMultimodalBookingList live fork failed: " <> show err
