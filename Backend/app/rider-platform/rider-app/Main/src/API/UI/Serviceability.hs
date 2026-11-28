@@ -92,7 +92,31 @@ checkDestinationServiceability ::
   DestinationServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
 checkDestinationServiceability settingAccessor (personId, merchantId) DestinationServiceabilityReq {..} = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-  DServiceability.checkDestinationServiceability settingAccessor (personId, merchantId) location originLocation originCity originState True
+  serviceabilityRes <- DServiceability.checkDestinationServiceability settingAccessor (personId, merchantId) location originLocation originCity originState True
+  mbInterCityResp <- case (originLocation, originCity, serviceabilityRes.currentCity) of
+    (Nothing, _, _) -> pure Nothing
+    (_, Just sourceCity, Just destinationCity)
+      | sourceCity == destinationCity ->
+        pure $ Just BPPInternal.IsIntercityResp {isInterCity = False, isCrossCity = False}
+    (Just pickupLatLong, _, _) -> do
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      eitherResp <-
+        try @_ @SomeException $
+          BPPInternal.getIsInterCity
+            merchant
+            BPPInternal.IsIntercityReq
+              { pickupLatLong,
+                mbDropLatLong = Just location
+              }
+      either
+        (\err -> logInfo ("isInterCity unavailable during destination serviceability: " <> show err) $> Nothing)
+        (pure . Just)
+        eitherResp
+  pure $
+    serviceabilityRes
+      { DServiceability.isInterCity = (.isInterCity) <$> mbInterCityResp,
+        DServiceability.isCrossCity = (.isCrossCity) <$> mbInterCityResp
+      }
 
 checkForIsInterCity ::
   (Id Person.Person, Id Merchant.Merchant) ->
