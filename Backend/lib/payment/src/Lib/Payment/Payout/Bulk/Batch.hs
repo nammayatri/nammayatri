@@ -122,6 +122,7 @@ closeBatchWithNothingToSend batch = do
 
 -- | Write an EXCLUDED request (with its batch id, as there is no order) for a beneficiary with no
 --   usable bank details. Nothing is held, so the amount stays payable once the details are fixed.
+--   The coverage dates are those of the earnings left unpaid.
 recordExclusion ::
   (MonadFlow m, BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- merchantId
@@ -131,9 +132,11 @@ recordExclusion ::
   DPayoutBatch.PayoutBatch ->
   HighPrecMoney ->
   PR.PayoutType ->
+  Maybe UTCTime -> -- coverageFrom
+  Maybe UTCTime -> -- coverageTo
   Text -> -- which detail is missing, shown on the excluded worklist
   m (Id PR.PayoutRequest)
-recordExclusion merchantId merchantOpCityId entityName beneficiaryId batch amount payoutType reason = do
+recordExclusion merchantId merchantOpCityId entityName beneficiaryId batch amount payoutType coverageFrom coverageTo reason = do
   now <- getCurrentTime
   reqId <- generateGUID
   -- The shared create, so the request gets its first history row.
@@ -155,8 +158,8 @@ recordExclusion merchantId merchantOpCityId entityName beneficiaryId batch amoun
         merchantId = merchantId,
         merchantOperatingCityId = merchantOpCityId,
         city = Nothing,
-        coverageFrom = Nothing,
-        coverageTo = Nothing,
+        coverageFrom = coverageFrom,
+        coverageTo = coverageTo,
         customerEmail = Nothing,
         customerName = Nothing,
         customerPhone = Nothing,
