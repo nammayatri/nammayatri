@@ -21,6 +21,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.API.CrowdsourcedBusLocation as CrowdsourcedBusLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearbyDrivers as NearByAPI
 import qualified SharedLogic.External.LocationTrackingService.API.Sos as SosAPI
 import qualified SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute as VehicleTracking
@@ -82,3 +83,12 @@ entityUpsertForSos sosId personId merchantId mbBroadcasterConfig = do
     withShortRetry $
       callAPI url (SosAPI.entityUpsertForSos sosId req) "entityUpsertForSos" SosAPI.entityUpsertAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_ENTITY_UPSERT_API") url)
+
+forwardCrowdsourcedBusLocation :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => CrowdsourcedBusLocationReq -> m ()
+forwardCrowdsourcedBusLocation req = do
+  ltsCfg <- asks (.ltsCfg)
+  let url = localUrl ltsCfg
+  void $
+    withShortRetry $
+      callAPI url (CrowdsourcedBusLocationAPI.forwardCrowdsourcedBusLocation (Just ltsCfg.crowdsourcedApiKey) req) "forwardCrowdsourcedBusLocation" CrowdsourcedBusLocationAPI.crowdsourcedBusLocationAPI
+        >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_CROWDSOURCED_BUS_LOCATION_API") url)

@@ -72,7 +72,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM, iso8601Show)
 import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
@@ -151,6 +151,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -3510,58 +3512,57 @@ postMultimodalUpdateBusLocation ::
   ApiTypes.UpdateBusLocationReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalUpdateBusLocation (mbPersonId, _) mbBusOTP req = do
+  _personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   busOTP <- mbBusOTP & fromMaybeM (InvalidRequest "busOTP query parameter is required")
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  validateBusLocationCoordinates req.lat req.long
   deviceMappings <- QDeviceVehicleMapping.findByVehicleNo busOTP
   deviceMapping <-
     fromMaybeM
       (InvalidRequest "Device not found for provided busOTP")
       (listToMaybe deviceMappings)
 
-  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
+  crowdsourcedTrackingEnabled <- isCrowdsourcedTrackingEnabled deviceMapping.merchantOperatingCityId
+  when crowdsourcedTrackingEnabled $ do
+    let requestTimestampSeconds :: Int64
+        requestTimestampSeconds =
+          floor (req.timestamp :: Double)
 
-  now <- getCurrentTime
+    let crowdsourcedReq =
+          LTSTypes.CrowdsourcedBusLocationReq
+            { gtfsId = deviceMapping.gtfsId,
+              vehicleNo = busOTP,
+              routeCode = Nothing,
+              tripId = Nothing,
+              lat = req.lat,
+              lon = req.long,
+              timestamp = requestTimestampSeconds
+            }
 
-  let serverTimeEpoch :: Int64
-      serverTimeEpoch =
-        floor (utcTimeToPOSIXSeconds now)
-
-  let requestTimestampSeconds :: Int64
-      requestTimestampSeconds =
-        floor (req.timestamp :: Double)
-
-  let kafkaPacket =
-        ApiTypes.KafKaPacket
-          { lat = req.lat,
-            long = req.long,
-            timestamp = requestTimestampSeconds,
-            deviceId = deviceMapping.deviceId,
-            vehicleNumber = busOTP,
-            speed = 0.0,
-            pushedToKafkaAt = serverTimeEpoch,
-            dataState = "L",
-            serverTime = serverTimeEpoch,
-            provider = "amnex",
-            raw = "",
-            client_ip = "0.0.0.0",
-            ign_status = "ON",
-            routeNumber = "101",
-            signalQuality = "Good"
-          }
-
-  let topicName = riderConfig.kafkaTopicName
-
-  logInfo $ "Pushing bus location to Kafka for deviceId: " <> deviceMapping.deviceId <> " on topic: " <> topicName
-  let key = deviceMapping.deviceId
-
-  fork "Pushing bus location to Kafka" $ do
-    produceMessage (topicName, Just (TE.encodeUtf8 key)) kafkaPacket
-      `catch` \(e :: SomeException) ->
-        logError $
-          "Failed to push bus location to Kafka: " <> show e
+    shouldForward <- Redis.setNxExpire (crowdsourcedPingRateLimitKey busOTP) crowdsourcedPingMinIntervalSecs True
+    when shouldForward $
+      fork "Forwarding crowdsourced bus location to LTS" $ do
+        LTSFlow.forwardCrowdsourcedBusLocation crowdsourcedReq
+          `catch` \(e :: SomeException) ->
+            logError $
+              "Failed to forward crowdsourced bus location to LTS: " <> show e
 
   pure Kernel.Types.APISuccess.Success
+  where
+    crowdsourcedPingMinIntervalSecs = 10 :: Int
+
+    crowdsourcedPingRateLimitKey vehicleNo = "crowdsourcedBusLocation:rateLimit:" <> vehicleNo
+
+    -- Off by default: a city must explicitly opt in via RiderConfig before pings get forwarded to LTS.
+    isCrowdsourcedTrackingEnabled Nothing = pure False
+    isCrowdsourcedTrackingEnabled (Just cityId) = do
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
+      pure $ fromMaybe False (mbRiderConfig >>= (.crowdsourcedTrackingEnabled))
+
+    validateBusLocationCoordinates lat long = do
+      when (lat < -90 || lat > 90) $
+        throwError $ InvalidRequest "Invalid latitude: must be between -90 and 90"
+      when (long < -180 || long > 180) $
+        throwError $ InvalidRequest "Invalid longitude: must be between -180 and 180"
 
 postStoreTowerInfo ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
