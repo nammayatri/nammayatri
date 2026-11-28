@@ -13,7 +13,6 @@ import qualified "beckn-spec" Domain.Types.BookingStatus
 import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.MerchantMessage
 import qualified "this" Domain.Types.Person
-import qualified Domain.Types.TranslationKey
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude
 import qualified EulerHS.Types
@@ -29,7 +28,7 @@ data CustomerCommentReq = CustomerCommentReq {body :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CustomerCommentsResp = CustomerCommentsResp {comments :: Kernel.Prelude.Maybe [Domain.Types.TranslationKey.TranslatedText], customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person}
+data CustomerCommentsResp = CustomerCommentsResp {comments :: Kernel.Prelude.Maybe [Kernel.Prelude.Text], customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
