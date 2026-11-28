@@ -20,15 +20,32 @@ PassOrganization:
     passEnum: PassEnum
     depotPersonId: Maybe (Id Person)
     depotId: Maybe Text
+    # Corporate shuttle: the work-email domains (lower-case, e.g. acme.example) whose verified employees belong to this
+    # organisation. Empty for every non-corporate organisation (student / regular pass).
+    emailDomains: "[Text]"
+    # Corporate shuttle: where the company's office is (the drop of every to-office trip). Empty for other organisations.
+    officeLat: Maybe Double
+    officeLon: Maybe Double
 
   constraints:
     id: PrimaryKey
     personId: SecondaryKey
     depotPersonId: SecondaryKey
 
+  # nullable column (no backfill for the existing organisations); NULL reads as no domains
+  beamType:
+    emailDomains: Maybe [Text]
+
+  fromTType:
+    emailDomains: Kernel.Prelude.fromMaybe []|I
+
+  toTType:
+    emailDomains: Kernel.Prelude.Just|I
+
   sqlType:
     name: text
     address: text
+    emailDomains: text[]
 
   queries:
     findById:
@@ -51,6 +68,16 @@ PassOrganization:
     updatePassOrganization:
       kvFunction: updateWithKV
       params: [name, address, updatedAt]
+      where: id
+
+    updateEmailDomains:
+      kvFunction: updateWithKV
+      params: [emailDomains, updatedAt]
+      where: id
+
+    updateOfficeLocation:
+      kvFunction: updateWithKV
+      params: [officeLat, officeLon, updatedAt]
       where: id
 
     updateDepotAssignment:

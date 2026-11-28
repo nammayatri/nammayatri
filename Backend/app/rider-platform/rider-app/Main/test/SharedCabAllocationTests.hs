@@ -20,6 +20,8 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import "rider-app" Domain.Action.UI.SharedCab (skipReason)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as BS
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
+import qualified "beckn-spec" Domain.Types.SharedCabSession as SCS
+import "beckn-spec" Domain.Types.SharedCabSession (DemandAtStop (..))
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Allocation (eachIsolated, mergeLive)
@@ -448,7 +450,7 @@ tests =
           @?= (1, 1),
       testCase "demandAhead rows carry the stop's code and name, in route order, and only for stops where someone waits or searches" $
         map
-          (\r -> (r.stopCode, r.stopName, r.waiting, r.searching))
+          (\(r :: SCS.DemandAtStop) -> (r.stopCode, r.stopName, r.waiting, r.searching))
           (demandAheadRows [("A", "Alpha"), ("B", "Bravo"), ("C", "Charlie")] (Map.fromList [("A", StopDemand 2 1), ("B", StopDemand 0 0), ("C", StopDemand 0 3)]))
           @?= [("A", "Alpha", 2, 1), ("C", "Charlie", 0, 3)],
       testCase "riders searching on a route are those who looked at any of its stops and have no recent booking, each counted once" $

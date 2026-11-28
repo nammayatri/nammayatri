@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.Text as Text
+import qualified Domain.Types.BoardingOtp as DBoardingOtp
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -57,6 +58,7 @@ import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.SharedCabPass as SharedCabPass
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -459,6 +461,19 @@ getMerchantOperatingCityFromBooking tBooking = do
   let moCityId = tBooking.merchantOperatingCityId
   CQMOC.findById moCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show moCityId)
 
+-- | The shuttle boarding OTP, shown only to the booking's owner on their own status call. Read from master, not the
+-- replica the status path starts from: the issue job writes the OTP, and a lagging replica would hide it.
+withOwnerBoardingOtp :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Domain.Types.Person.Person -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSTicketService.FRFSTicketBookingStatusAPIRes -> m FRFSTicketService.FRFSTicketBookingStatusAPIRes
+withOwnerBoardingOtp callerId booking FRFSTicketService.FRFSTicketBookingStatusAPIRes {..}
+  | booking.riderId /= callerId = pure FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = Nothing, ..}
+  | otherwise = do
+    mbCurrent <- QFRFSTicketBooking.findById booking.id
+    -- Fall back to the Redis copy when a whole-record booking write reset the row's OTP to an older read.
+    otp <- case DBoardingOtp.getBoardingOtp <$> (mbCurrent >>= (.boardingOtp)) of
+      Just rowOtp -> pure (Just rowOtp)
+      Nothing -> SharedCabPass.storedBoardingOtp booking.id
+    pure FRFSTicketService.FRFSTicketBookingStatusAPIRes {boardingOtp = otp, ..}
+
 buildFRFSTicketBookingStatusAPIRes ::
   ( EncFlow m r,
     EsqDBFlow m r,
@@ -509,6 +524,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         appliedPassId = mbAppliedPassPayment >>= (.passId),
         appliedPassName = mbAppliedPassPayment >>= (.passName),
         startTime = booking.startTime,
+        boardingOtp = Nothing,
         city = merchantOperatingCity.city,
         updatedAt = booking.updatedAt,
         createdAt = booking.createdAt,

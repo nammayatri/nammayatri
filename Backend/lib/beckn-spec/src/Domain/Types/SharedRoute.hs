@@ -27,6 +27,7 @@ module Domain.Types.SharedRoute where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
+import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import EulerHS.Prelude
 
 -- | How much of the path is fixed. FIXED follows the GTFS shape stop by stop; CORRIDOR keeps the stops but
@@ -84,7 +85,7 @@ data NoShowConsequence = NO_CONSEQUENCE | FORFEIT_TRIP | FORFEIT_FARE | STRIKE
 -- | Where a passenger of one run stands, as the driver's manifest shows it. Encoded on the rider platform's
 -- @frfs_ticket_booking@ and its tickets, no new column:
 --
--- * WAITING: @ride_id@ set, no ticket INPROGRESS or USED, booking CONFIRMED.
+-- * WAITING: on the run (its @trip_id@, @start_time@ in the run's window, see 'RunRef'), no ticket INPROGRESS or USED, booking CONFIRMED.
 -- * BOARDED: a ticket INPROGRESS (the driver boarded them, by OTP, code or plain tap).
 -- * NO_SHOW: @shared_cab_no_shows@ above zero on this run and nothing boarded.
 -- * DROPPED: a ticket USED (the driver dropped them, or the run ended with them aboard).
@@ -92,6 +93,38 @@ data NoShowConsequence = NO_CONSEQUENCE | FORFEIT_TRIP | FORFEIT_FARE | STRIKE
 data SharedPassengerState = WAITING | BOARDED | NO_SHOW | DROPPED | CANCELLED
   deriving stock (Show, Read, Eq, Ord, Generic, Bounded, Enum)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | One shared-route run as both platforms name it: the GTFS trip it operates and its first departure. A run is
+-- identified by (feed config, 'RunRef'), never by the driver platform's ride id: a ride exists only once a driver is
+-- assigned and every re-assignment makes a new one, while the trip and the departure stay put. The driver platform
+-- reads them off the run's booking (@trip_id@, @start_time@); the rider platform finds the run's passengers by them on
+-- @frfs_ticket_booking@ (@trip_id@, @start_time@), so the passenger list exists before any driver and survives every
+-- re-assignment without moving a ticket.
+data RunRef = RunRef
+  { tripId :: Text,
+    departure :: UTCTime
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | The span of ticket @start_time@s that belong to a run: 12 hours either side of its first departure.
+--
+-- A GTFS trip runs at most once per service day, so the trip id alone matches that trip on every day. A ticket's
+-- @start_time@ lies between its issue time (at most 5 hours before departure) and the rider's own departure on the
+-- run (after the run's first departure, within the same trip), so it is always well within 12 hours of the run's
+-- first departure; the same trip on the day before or after is 24 hours away and falls outside. The window is
+-- half-open: @from <= start_time < to@.
+runTicketWindow :: RunRef -> (UTCTime, UTCTime)
+runTicketWindow ref = (addUTCTime (negate runTicketHalfWindow) ref.departure, addUTCTime runTicketHalfWindow ref.departure)
+
+runTicketHalfWindow :: NominalDiffTime
+runTicketHalfWindow = 12 * 60 * 60
+
+-- | A ticket with this trip id and start time belongs to the run (the caller also checks it is on the run's feed).
+ticketOnRun :: RunRef -> Maybe Text -> Maybe UTCTime -> Bool
+ticketOnRun ref mbTripId mbStartTime =
+  let (from, to) = runTicketWindow ref
+   in mbTripId == Just ref.tripId && maybe False (\t -> from <= t && t < to) mbStartTime
 
 -- | Demand-side knobs, on the rider platform per feed (integrated bpp config).
 data SharedDemandKnobs = SharedDemandKnobs

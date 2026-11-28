@@ -18,21 +18,22 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.PassOrganization as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PassOrganization.PassOrganization -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PassOrganization.PassOrganization -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PassOrganization.PassOrganization] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.PassOrganization.PassOrganization] -> m ()
 createMany = traverse_ create
 
-findByDepotPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.PassOrganization.PassOrganization])
+findByDepotPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.PassOrganization.PassOrganization]
 findByDepotPersonId depotPersonId = do findAllWithKV [Se.Is Beam.depotPersonId $ Se.Eq (Kernel.Types.Id.getId <$> depotPersonId)]
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m (Maybe Domain.Types.PassOrganization.PassOrganization))
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m (Maybe Domain.Types.PassOrganization.PassOrganization)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByMerchantOperatingCityIdAndPassEnum ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.PassType.PassEnum -> m [Domain.Types.PassOrganization.PassOrganization])
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  (Domain.Types.PassType.PassEnum -> m [Domain.Types.PassOrganization.PassOrganization])
 findByMerchantOperatingCityIdAndPassEnum merchantOperatingCityId passEnum = do
   findAllWithKV
     [ Se.And
@@ -41,36 +42,54 @@ findByMerchantOperatingCityIdAndPassEnum merchantOperatingCityId passEnum = do
         ]
     ]
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PassOrganization.PassOrganization))
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PassOrganization.PassOrganization)
 findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 updateDepotAssignment ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization] -> m ())
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> ([Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization] -> m ()))
 updateDepotAssignment depotPersonId depotId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.depotPersonId (Kernel.Types.Id.getId <$> depotPersonId), Se.Set Beam.depotId depotId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
+updateEmailDomains :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Kernel.Prelude.Text] -> (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m ())
+updateEmailDomains emailDomains id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.emailDomains (Kernel.Prelude.Just emailDomains), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateOfficeLocation ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m ()))
+updateOfficeLocation officeLat officeLon id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.officeLat officeLat, Se.Set Beam.officeLon officeLon, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePassOrganization ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m ())
+  Kernel.Prelude.Text ->
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m ()))
 updatePassOrganization name address id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.name name, Se.Set Beam.address address, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m (Maybe Domain.Types.PassOrganization.PassOrganization))
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m (Maybe Domain.Types.PassOrganization.PassOrganization)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PassOrganization.PassOrganization -> m ())
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PassOrganization.PassOrganization -> m ()
 updateByPrimaryKey (Domain.Types.PassOrganization.PassOrganization {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.address address,
       Se.Set Beam.depotId depotId,
       Se.Set Beam.depotPersonId (Kernel.Types.Id.getId <$> depotPersonId),
+      Se.Set Beam.emailDomains (Kernel.Prelude.Just emailDomains),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.officeLat officeLat,
+      Se.Set Beam.officeLon officeLon,
       Se.Set Beam.passEnum passEnum,
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.updatedAt _now
@@ -86,10 +105,13 @@ instance FromTType' Beam.PassOrganization Domain.Types.PassOrganization.PassOrga
             createdAt = createdAt,
             depotId = depotId,
             depotPersonId = Kernel.Types.Id.Id <$> depotPersonId,
+            emailDomains = Kernel.Prelude.fromMaybe [] emailDomains,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
+            officeLat = officeLat,
+            officeLon = officeLon,
             passEnum = passEnum,
             personId = Kernel.Types.Id.Id personId,
             updatedAt = updatedAt
@@ -102,10 +124,13 @@ instance ToTType' Beam.PassOrganization Domain.Types.PassOrganization.PassOrgani
         Beam.createdAt = createdAt,
         Beam.depotId = depotId,
         Beam.depotPersonId = Kernel.Types.Id.getId <$> depotPersonId,
+        Beam.emailDomains = Kernel.Prelude.Just emailDomains,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
+        Beam.officeLat = officeLat,
+        Beam.officeLon = officeLon,
         Beam.passEnum = passEnum,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.updatedAt = updatedAt

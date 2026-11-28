@@ -29,7 +29,7 @@ type API =
                     :> ( MandatoryQueryParam "agencyId" Kernel.Prelude.Text
                            :> ( Header "token" Kernel.Prelude.Text
                                   :> Get
-                                       '[JSON]
+                                       ('[JSON])
                                        SharedLogic.SharedCab.SessionView.SharedCabRouteDataResp
                               )
                        )
@@ -43,10 +43,10 @@ type API =
                                     "token"
                                     Kernel.Prelude.Text
                                     :> ( ReqBody
-                                           '[JSON]
+                                           ('[JSON])
                                            API.Types.UI.SharedCabInternal.SharedCabDemandReq
                                            :> Post
-                                                '[JSON]
+                                                ('[JSON])
                                                 SharedLogic.SharedCab.SessionView.SharedCabDemandResp
                                        )
                                 )
@@ -60,10 +60,10 @@ type API =
                                              "token"
                                              Kernel.Prelude.Text
                                              :> ( ReqBody
-                                                    '[JSON]
+                                                    ('[JSON])
                                                     API.Types.UI.SharedCabInternal.SharedCabRouteOperationReq
                                                     :> Post
-                                                         '[JSON]
+                                                         ('[JSON])
                                                          API.Types.UI.SharedCabInternal.SelectRouteResp
                                                 )
                                          )
@@ -75,21 +75,29 @@ type API =
                                         :> ( QueryParam
                                                "rideId"
                                                Kernel.Prelude.Text
-                                               :> ( MandatoryQueryParam
-                                                      "agencyId"
-                                                      Kernel.Prelude.Text
-                                                      :> ( MandatoryQueryParam
-                                                             "driverId"
+                                               :> ( QueryParam
+                                                      "runDeparture"
+                                                      Kernel.Prelude.UTCTime
+                                                      :> ( QueryParam
+                                                             "runTripId"
                                                              Kernel.Prelude.Text
                                                              :> ( MandatoryQueryParam
-                                                                    "vehicleNumber"
+                                                                    "agencyId"
                                                                     Kernel.Prelude.Text
-                                                                    :> ( Header
-                                                                           "token"
+                                                                    :> ( MandatoryQueryParam
+                                                                           "driverId"
                                                                            Kernel.Prelude.Text
-                                                                           :> Get
-                                                                                '[JSON]
-                                                                                SharedLogic.SharedCab.SessionView.SharedCabSession
+                                                                           :> ( MandatoryQueryParam
+                                                                                  "vehicleNumber"
+                                                                                  Kernel.Prelude.Text
+                                                                                  :> ( Header
+                                                                                         "token"
+                                                                                         Kernel.Prelude.Text
+                                                                                         :> Get
+                                                                                              ('[JSON])
+                                                                                              SharedLogic.SharedCab.SessionView.SharedCabSession
+                                                                                     )
+                                                                              )
                                                                        )
                                                                 )
                                                          )
@@ -104,10 +112,10 @@ type API =
                                                                "token"
                                                                Kernel.Prelude.Text
                                                                :> ( ReqBody
-                                                                      '[JSON]
+                                                                      ('[JSON])
                                                                       API.Types.UI.SharedCabInternal.SharedCabSessionOperationReq
                                                                       :> Post
-                                                                           '[JSON]
+                                                                           ('[JSON])
                                                                            SharedLogic.SharedCab.SessionView.SharedCabSession
                                                                   )
                                                            )
@@ -124,10 +132,10 @@ type API =
                                                                                "token"
                                                                                Kernel.Prelude.Text
                                                                                :> ( ReqBody
-                                                                                      '[JSON]
+                                                                                      ('[JSON])
                                                                                       API.Types.UI.SharedCabInternal.SharedCabBookingOperationReq
                                                                                       :> Post
-                                                                                           '[JSON]
+                                                                                           ('[JSON])
                                                                                            SharedLogic.SharedCab.SessionView.SharedCabSession
                                                                                   )
                                                                            )
@@ -151,7 +159,7 @@ type API =
                                                                                                       "token"
                                                                                                       Kernel.Prelude.Text
                                                                                                       :> Get
-                                                                                                           '[JSON]
+                                                                                                           ('[JSON])
                                                                                                            API.Types.UI.SharedCabInternal.RiderCallNumberResp
                                                                                                   )
                                                                                            )
@@ -170,10 +178,10 @@ type API =
                                                                                                "token"
                                                                                                Kernel.Prelude.Text
                                                                                                :> ( ReqBody
-                                                                                                      '[JSON]
+                                                                                                      ('[JSON])
                                                                                                       API.Types.UI.SharedCabInternal.SharedCabMessageReq
                                                                                                       :> Post
-                                                                                                           '[JSON]
+                                                                                                           ('[JSON])
                                                                                                            Kernel.Types.APISuccess.APISuccess
                                                                                                   )
                                                                                            )
@@ -191,26 +199,26 @@ type API =
 handler :: Environment.FlowServer API
 handler = getSharedCabRoutesData :<|> postSharedCabRoutesDemand :<|> postSharedCabRouteOperations :<|> getSharedCabSession :<|> postSharedCabSessionOperations :<|> postSharedCabBookingOperations :<|> getSharedCabBookingCallNumber :<|> postSharedCabBookingMessage
 
-getSharedCabRoutesData :: Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabRouteDataResp)
+getSharedCabRoutesData :: Kernel.Prelude.Text -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabRouteDataResp)
 getSharedCabRoutesData a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabRoutesData a2 a1
 
-postSharedCabRoutesDemand :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabDemandReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabDemandResp)
+postSharedCabRoutesDemand :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (API.Types.UI.SharedCabInternal.SharedCabDemandReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabDemandResp)
 postSharedCabRoutesDemand a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabRoutesDemand a2 a1
 
-postSharedCabRouteOperations :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabRouteOperationReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SelectRouteResp)
+postSharedCabRouteOperations :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (API.Types.UI.SharedCabInternal.SharedCabRouteOperationReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SelectRouteResp)
 postSharedCabRouteOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabRouteOperations a2 a1
 
-getSharedCabSession :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession))))
-getSharedCabSession a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabSession a5 a4 a3 a2 a1
+getSharedCabSession :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession))))))
+getSharedCabSession a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabSession a7 a6 a5 a4 a3 a2 a1
 
-postSharedCabSessionOperations :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabSessionOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
+postSharedCabSessionOperations :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (API.Types.UI.SharedCabInternal.SharedCabSessionOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabSessionOperations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabSessionOperations a2 a1
 
-postSharedCabBookingOperations :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabBookingOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession))
+postSharedCabBookingOperations :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (API.Types.UI.SharedCabInternal.SharedCabBookingOperationReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession))
 postSharedCabBookingOperations a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabBookingOperations a3 a2 a1
 
-getSharedCabBookingCallNumber :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.SharedCabInternal.RiderCallNumberResp)))
+getSharedCabBookingCallNumber :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> (Kernel.Prelude.Text -> (Kernel.Prelude.Text -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.SharedCabInternal.RiderCallNumberResp)))
 getSharedCabBookingCallNumber a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.getSharedCabBookingCallNumber a4 a3 a2 a1
 
-postSharedCabBookingMessage :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (API.Types.UI.SharedCabInternal.SharedCabMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
+postSharedCabBookingMessage :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (API.Types.UI.SharedCabInternal.SharedCabMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
 postSharedCabBookingMessage a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SharedCabInternal.postSharedCabBookingMessage a3 a2 a1

@@ -28,3 +28,7 @@ data SharedCabTrip = SharedCabTrip
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedRunVehicle = SharedRunVehicle {vehicleNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

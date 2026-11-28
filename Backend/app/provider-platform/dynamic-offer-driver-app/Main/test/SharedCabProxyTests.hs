@@ -69,14 +69,14 @@ tests =
       testCase "other actions carry none" $ map actionReason [BoardedWithoutCode, Dropped, BoardedWithOtp "4821", NoShow] @?= [Nothing, Nothing, Nothing, Nothing],
       testCase "only the OTP boarding carries an otp on" $ map actionOtp [BoardedWithOtp "4821", BoardedWithoutCode, NoShow] @?= [Just "4821", Nothing, Nothing],
       testCase "the request to rider-app has the reason under \"reason\"" $
-        forwarded (BAPBookingOperationReq {operation = CANCEL, driverId = "d1", vehicleNumber = "ML05A9999", reason = Just "cab breakdown", otp = Nothing})
-          @?= Just (object ["operation" .= ("CANCEL" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= ("cab breakdown" :: String), "otp" .= Null]),
+        forwarded (BAPBookingOperationReq {operation = CANCEL, driverId = "d1", vehicleNumber = "ML05A9999", reason = Just "cab breakdown", otp = Nothing, runTripId = Nothing, runDeparture = Nothing})
+          @?= Just (object ["operation" .= ("CANCEL" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= ("cab breakdown" :: String), "otp" .= Null, "runTripId" .= Null, "runDeparture" .= Null]),
       testCase "another action sends reason null (rider-app reads it as Nothing)" $
-        forwarded (BAPBookingOperationReq {operation = DROPPED, driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing, otp = Nothing})
-          @?= Just (object ["operation" .= ("DROPPED" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null, "otp" .= Null]),
+        forwarded (BAPBookingOperationReq {operation = DROPPED, driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing, otp = Nothing, runTripId = Nothing, runDeparture = Nothing})
+          @?= Just (object ["operation" .= ("DROPPED" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null, "otp" .= Null, "runTripId" .= Null, "runDeparture" .= Null]),
       testCase "the request to rider-app has the otp under \"otp\"" $
-        forwarded (BAPBookingOperationReq {operation = BOARDED_WITH_OTP, driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing, otp = Just "4821"})
-          @?= Just (object ["operation" .= ("BOARDED_WITH_OTP" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null, "otp" .= ("4821" :: String)]),
+        forwarded (BAPBookingOperationReq {operation = BOARDED_WITH_OTP, driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing, otp = Just "4821", runTripId = Nothing, runDeparture = Nothing})
+          @?= Just (object ["operation" .= ("BOARDED_WITH_OTP" :: String), "driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null, "otp" .= ("4821" :: String), "runTripId" .= Null, "runDeparture" .= Null]),
       -- rider-app's SessionView sends all four; a missing one 500s the driver's session view
       testCase "every rider status rider-app sends decodes" $
         map decode ["\"AT_STOP\"", "\"MINUTES_AWAY\"", "\"ARRIVING\"", "\"BOARDED\""] @?= map Just [AT_STOP, MINUTES_AWAY, ARRIVING, BOARDED],

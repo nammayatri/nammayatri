@@ -259,6 +259,8 @@ types:
     appliedPassId: Maybe (Id Pass)
     appliedPassName: Maybe Text
     startTime: Maybe UTCTime
+    # Shuttle pass: the rider's boarding OTP. Only on the booking owner's own status call, never elsewhere.
+    boardingOtp: Maybe Text
     derive: "Show"
 
   FRFSRefundAttemptAPI:

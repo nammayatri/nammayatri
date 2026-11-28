@@ -33,357 +33,528 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "multimodal" :> "pass" :> "availablePasses" :> QueryParam "language" Kernel.External.Types.Language
-      :> Get
-           '[JSON]
-           [API.Types.UI.Pass.PassInfoAPIEntity]
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> Capture
-           "passId"
-           (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
-      :> "select"
-      :> QueryParam
-           "deviceId"
-           Data.Text.Text
-      :> QueryParam
-           "imeiNumber"
-           Data.Text.Text
-      :> QueryParam
-           "isMockPayment"
-           Kernel.Prelude.Bool
-      :> QueryParam
-           "passPhotoMediaId"
-           Data.Text.Text
-      :> QueryParam
-           "profilePicture"
-           Data.Text.Text
-      :> QueryParam
-           "startDate"
-           Data.Time.Day
-      :> Post
-           '[JSON]
-           API.Types.UI.Pass.PassSelectionAPIEntity
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> Capture
-           "passId"
-           (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
-      :> "calculateFare"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Pass.PassCalculateFareReq
-      :> Post
-           '[JSON]
-           API.Types.UI.Pass.PassCalculateFareResp
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "v2"
-      :> Capture
-           "passId"
-           (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
-      :> "select"
-      :> QueryParam
-           "isMockPayment"
-           Kernel.Prelude.Bool
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Pass.PassSelectReq
-      :> Post
-           '[JSON]
-           API.Types.UI.Pass.PassSelectionAPIEntity
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "list"
-      :> QueryParam
-           "deviceId"
-           Data.Text.Text
-      :> QueryParam
-           "imeiNumber"
-           Data.Text.Text
-      :> QueryParam
-           "language"
-           Kernel.External.Types.Language
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "status"
-           Domain.Types.PurchasedPass.StatusType
-      :> Get
-           '[JSON]
-           [API.Types.UI.Pass.PurchasedPassAPIEntity]
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> Capture
-           "purchasedPassId"
-           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
-      :> "verify"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Pass.PassVerifyReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "switchDeviceId"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Pass.PassSwitchDeviceIdReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "transactions"
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "status"
-           Data.Text.Text
-      :> Get
-           '[JSON]
-           [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "frfsStatistics"
-      :> MandatoryQueryParam
-           "purchasedPassPaymentId"
-           (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment)
-      :> Get
-           '[JSON]
-           API.Types.UI.Pass.FRFSPassTicketStatisticsResp
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "activateToday"
-      :> Capture
-           "passNumber"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "date"
-           Data.Time.Day
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> Capture
-           "purchasedPassId"
-           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
-      :> "uploadProfilePicture"
-      :> QueryParam
-           "imeiNumber"
-           Data.Text.Text
-      :> QueryParam
-           "reupload"
-           Kernel.Prelude.Bool
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           IssueManagement.Common.UI.Issue.IssueMediaUploadReq
-      :> Post
-           '[JSON]
-           IssueManagement.Common.UI.Issue.IssueMediaUploadRes
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "uploadProfilePicture"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Pass.PassUploadProfilePictureReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "photo"
-      :> Capture
-           "mediaId"
-           (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
-      :> Get
-           '[JSON]
-           Data.Text.Text
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "pass"
-      :> "set"
-      :> "prefSrcAndDest"
-      :> Capture
-           "purchasedPassId"
-           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.Pass.SetPassPrefSrcAndDestReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+  ( TokenAuth
+      :> ( "multimodal"
+             :> ( "pass"
+                    :> ( "availablePasses"
+                           :> ( QueryParam "language" Kernel.External.Types.Language
+                                  :> Get
+                                       ('[JSON])
+                                       [API.Types.UI.Pass.PassInfoAPIEntity]
+                              )
+                       )
+                )
+         )
   )
+    :<|> ( ( TokenAuth
+               :> ( "multimodal"
+                      :> ( "pass"
+                             :> ( Capture
+                                    "passId"
+                                    (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
+                                    :> ( "select"
+                                           :> ( QueryParam
+                                                  "deviceId"
+                                                  Data.Text.Text
+                                                  :> ( QueryParam
+                                                         "imeiNumber"
+                                                         Data.Text.Text
+                                                         :> ( QueryParam
+                                                                "isMockPayment"
+                                                                Kernel.Prelude.Bool
+                                                                :> ( QueryParam
+                                                                       "passPhotoMediaId"
+                                                                       Data.Text.Text
+                                                                       :> ( QueryParam
+                                                                              "profilePicture"
+                                                                              Data.Text.Text
+                                                                              :> ( QueryParam
+                                                                                     "startDate"
+                                                                                     Data.Time.Day
+                                                                                     :> Post
+                                                                                          ('[JSON])
+                                                                                          API.Types.UI.Pass.PassSelectionAPIEntity
+                                                                                 )
+                                                                          )
+                                                                   )
+                                                            )
+                                                     )
+                                              )
+                                       )
+                                )
+                         )
+                  )
+           )
+             :<|> ( ( TokenAuth
+                        :> ( "multimodal"
+                               :> ( "pass"
+                                      :> ( Capture
+                                             "passId"
+                                             (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
+                                             :> ( "calculateFare"
+                                                    :> ( ReqBody
+                                                           ('[JSON])
+                                                           API.Types.UI.Pass.PassCalculateFareReq
+                                                           :> Post
+                                                                ('[JSON])
+                                                                API.Types.UI.Pass.PassCalculateFareResp
+                                                       )
+                                                )
+                                         )
+                                  )
+                           )
+                    )
+                      :<|> ( ( TokenAuth
+                                 :> ( "multimodal"
+                                        :> ( "pass"
+                                               :> ( "v2"
+                                                      :> ( Capture
+                                                             "passId"
+                                                             (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
+                                                             :> ( "select"
+                                                                    :> ( QueryParam
+                                                                           "isMockPayment"
+                                                                           Kernel.Prelude.Bool
+                                                                           :> ( ReqBody
+                                                                                  ('[JSON])
+                                                                                  API.Types.UI.Pass.PassSelectReq
+                                                                                  :> Post
+                                                                                       ('[JSON])
+                                                                                       API.Types.UI.Pass.PassSelectionAPIEntity
+                                                                              )
+                                                                       )
+                                                                )
+                                                         )
+                                                  )
+                                           )
+                                    )
+                             )
+                               :<|> ( ( TokenAuth
+                                          :> ( "multimodal"
+                                                 :> ( "pass"
+                                                        :> ( "list"
+                                                               :> ( QueryParam
+                                                                      "deviceId"
+                                                                      Data.Text.Text
+                                                                      :> ( QueryParam
+                                                                             "imeiNumber"
+                                                                             Data.Text.Text
+                                                                             :> ( QueryParam
+                                                                                    "language"
+                                                                                    Kernel.External.Types.Language
+                                                                                    :> ( QueryParam
+                                                                                           "limit"
+                                                                                           Kernel.Prelude.Int
+                                                                                           :> ( QueryParam
+                                                                                                  "offset"
+                                                                                                  Kernel.Prelude.Int
+                                                                                                  :> ( QueryParam
+                                                                                                         "status"
+                                                                                                         Domain.Types.PurchasedPass.StatusType
+                                                                                                         :> Get
+                                                                                                              ('[JSON])
+                                                                                                              [API.Types.UI.Pass.PurchasedPassAPIEntity]
+                                                                                                     )
+                                                                                              )
+                                                                                       )
+                                                                                )
+                                                                         )
+                                                                  )
+                                                           )
+                                                    )
+                                             )
+                                      )
+                                        :<|> ( ( TokenAuth
+                                                   :> ( "multimodal"
+                                                          :> ( "pass"
+                                                                 :> ( Capture
+                                                                        "purchasedPassId"
+                                                                        (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                        :> ( "verify"
+                                                                               :> ( ReqBody
+                                                                                      ('[JSON])
+                                                                                      API.Types.UI.Pass.PassVerifyReq
+                                                                                      :> Post
+                                                                                           ('[JSON])
+                                                                                           Kernel.Types.APISuccess.APISuccess
+                                                                                  )
+                                                                           )
+                                                                    )
+                                                             )
+                                                      )
+                                               )
+                                                 :<|> ( ( TokenAuth
+                                                            :> ( "multimodal"
+                                                                   :> ( "pass"
+                                                                          :> ( "switchDeviceId"
+                                                                                 :> ( ReqBody
+                                                                                        ('[JSON])
+                                                                                        API.Types.UI.Pass.PassSwitchDeviceIdReq
+                                                                                        :> Post
+                                                                                             ('[JSON])
+                                                                                             Kernel.Types.APISuccess.APISuccess
+                                                                                    )
+                                                                             )
+                                                                      )
+                                                               )
+                                                        )
+                                                          :<|> ( ( TokenAuth
+                                                                     :> ( "multimodal"
+                                                                            :> ( "pass"
+                                                                                   :> ( "transactions"
+                                                                                          :> ( QueryParam
+                                                                                                 "limit"
+                                                                                                 Kernel.Prelude.Int
+                                                                                                 :> ( QueryParam
+                                                                                                        "offset"
+                                                                                                        Kernel.Prelude.Int
+                                                                                                        :> ( QueryParam
+                                                                                                               "status"
+                                                                                                               Data.Text.Text
+                                                                                                               :> Get
+                                                                                                                    ('[JSON])
+                                                                                                                    [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
+                                                                                                           )
+                                                                                                    )
+                                                                                             )
+                                                                                      )
+                                                                               )
+                                                                        )
+                                                                 )
+                                                                   :<|> ( ( TokenAuth
+                                                                              :> ( "multimodal"
+                                                                                     :> ( "pass"
+                                                                                            :> ( "frfsStatistics"
+                                                                                                   :> ( MandatoryQueryParam
+                                                                                                          "purchasedPassPaymentId"
+                                                                                                          (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment)
+                                                                                                          :> Get
+                                                                                                               ('[JSON])
+                                                                                                               API.Types.UI.Pass.FRFSPassTicketStatisticsResp
+                                                                                                      )
+                                                                                               )
+                                                                                        )
+                                                                                 )
+                                                                          )
+                                                                            :<|> ( ( TokenAuth
+                                                                                       :> ( "multimodal"
+                                                                                              :> ( "pass"
+                                                                                                     :> ( "activateToday"
+                                                                                                            :> ( Capture
+                                                                                                                   "passNumber"
+                                                                                                                   Kernel.Prelude.Int
+                                                                                                                   :> ( QueryParam
+                                                                                                                          "date"
+                                                                                                                          Data.Time.Day
+                                                                                                                          :> Post
+                                                                                                                               ('[JSON])
+                                                                                                                               Kernel.Types.APISuccess.APISuccess
+                                                                                                                      )
+                                                                                                               )
+                                                                                                        )
+                                                                                                 )
+                                                                                          )
+                                                                                   )
+                                                                                     :<|> ( ( TokenAuth
+                                                                                                :> ( "multimodal"
+                                                                                                       :> ( "pass"
+                                                                                                              :> ( Capture
+                                                                                                                     "purchasedPassId"
+                                                                                                                     (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                     :> ( "uploadProfilePicture"
+                                                                                                                            :> ( QueryParam
+                                                                                                                                   "imeiNumber"
+                                                                                                                                   Data.Text.Text
+                                                                                                                                   :> ( QueryParam
+                                                                                                                                          "reupload"
+                                                                                                                                          Kernel.Prelude.Bool
+                                                                                                                                          :> ( Kernel.ServantMultipart.MultipartForm
+                                                                                                                                                 Kernel.ServantMultipart.Tmp
+                                                                                                                                                 IssueManagement.Common.UI.Issue.IssueMediaUploadReq
+                                                                                                                                                 :> Post
+                                                                                                                                                      ('[JSON])
+                                                                                                                                                      IssueManagement.Common.UI.Issue.IssueMediaUploadRes
+                                                                                                                                             )
+                                                                                                                                      )
+                                                                                                                               )
+                                                                                                                        )
+                                                                                                                 )
+                                                                                                          )
+                                                                                                   )
+                                                                                            )
+                                                                                              :<|> ( ( TokenAuth
+                                                                                                         :> ( "multimodal"
+                                                                                                                :> ( "pass"
+                                                                                                                       :> ( "uploadProfilePicture"
+                                                                                                                              :> ( ReqBody
+                                                                                                                                     ('[JSON])
+                                                                                                                                     API.Types.UI.Pass.PassUploadProfilePictureReq
+                                                                                                                                     :> Post
+                                                                                                                                          ('[JSON])
+                                                                                                                                          Kernel.Types.APISuccess.APISuccess
+                                                                                                                                 )
+                                                                                                                          )
+                                                                                                                   )
+                                                                                                            )
+                                                                                                     )
+                                                                                                       :<|> ( ( TokenAuth
+                                                                                                                  :> ( "multimodal"
+                                                                                                                         :> ( "pass"
+                                                                                                                                :> ( "photo"
+                                                                                                                                       :> ( Capture
+                                                                                                                                              "mediaId"
+                                                                                                                                              (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
+                                                                                                                                              :> Get
+                                                                                                                                                   ('[JSON])
+                                                                                                                                                   Data.Text.Text
+                                                                                                                                          )
+                                                                                                                                   )
+                                                                                                                            )
+                                                                                                                     )
+                                                                                                              )
+                                                                                                                :<|> ( ( TokenAuth
+                                                                                                                           :> ( "multimodal"
+                                                                                                                                  :> ( "pass"
+                                                                                                                                         :> ( Capture
+                                                                                                                                                "purchasedPassId"
+                                                                                                                                                (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                :> ( "skipDays"
+                                                                                                                                                       :> ( ReqBody
+                                                                                                                                                              ('[JSON])
+                                                                                                                                                              API.Types.UI.Pass.PassSkipDaysReq
+                                                                                                                                                              :> Post
+                                                                                                                                                                   ('[JSON])
+                                                                                                                                                                   Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                          )
+                                                                                                                                                   )
+                                                                                                                                            )
+                                                                                                                                     )
+                                                                                                                              )
+                                                                                                                       )
+                                                                                                                         :<|> ( ( TokenAuth
+                                                                                                                                    :> ( "multimodal"
+                                                                                                                                           :> ( "pass"
+                                                                                                                                                  :> ( Capture
+                                                                                                                                                         "purchasedPassId"
+                                                                                                                                                         (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                         :> ( "unskipDays"
+                                                                                                                                                                :> ( ReqBody
+                                                                                                                                                                       ('[JSON])
+                                                                                                                                                                       API.Types.UI.Pass.PassUnskipDaysReq
+                                                                                                                                                                       :> Post
+                                                                                                                                                                            ('[JSON])
+                                                                                                                                                                            Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                   )
+                                                                                                                                                            )
+                                                                                                                                                     )
+                                                                                                                                              )
+                                                                                                                                       )
+                                                                                                                                )
+                                                                                                                                  :<|> ( ( TokenAuth
+                                                                                                                                             :> ( "multimodal"
+                                                                                                                                                    :> ( "pass"
+                                                                                                                                                           :> ( Capture
+                                                                                                                                                                  "purchasedPassId"
+                                                                                                                                                                  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                                  :> ( "reschedule"
+                                                                                                                                                                         :> ( ReqBody
+                                                                                                                                                                                ('[JSON])
+                                                                                                                                                                                API.Types.UI.Pass.PassRescheduleReq
+                                                                                                                                                                                :> Post
+                                                                                                                                                                                     ('[JSON])
+                                                                                                                                                                                     Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                            )
+                                                                                                                                                                     )
+                                                                                                                                                              )
+                                                                                                                                                       )
+                                                                                                                                                )
+                                                                                                                                         )
+                                                                                                                                           :<|> ( ( TokenAuth
+                                                                                                                                                      :> ( "multimodal"
+                                                                                                                                                             :> ( "pass"
+                                                                                                                                                                    :> ( Capture
+                                                                                                                                                                           "purchasedPassId"
+                                                                                                                                                                           (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                                           :> ( "slotAvailability"
+                                                                                                                                                                                  :> ( MandatoryQueryParam
+                                                                                                                                                                                         "day"
+                                                                                                                                                                                         Data.Time.Day
+                                                                                                                                                                                         :> ( MandatoryQueryParam
+                                                                                                                                                                                                "routeId"
+                                                                                                                                                                                                Data.Text.Text
+                                                                                                                                                                                                :> Get
+                                                                                                                                                                                                     ('[JSON])
+                                                                                                                                                                                                     API.Types.UI.Pass.PassSlotAvailabilityResp
+                                                                                                                                                                                            )
+                                                                                                                                                                                     )
+                                                                                                                                                                              )
+                                                                                                                                                                       )
+                                                                                                                                                                )
+                                                                                                                                                         )
+                                                                                                                                                  )
+                                                                                                                                                    :<|> ( TokenAuth
+                                                                                                                                                             :> ( "multimodal"
+                                                                                                                                                                    :> ( "pass"
+                                                                                                                                                                           :> ( "set"
+                                                                                                                                                                                  :> ( "prefSrcAndDest"
+                                                                                                                                                                                         :> ( Capture
+                                                                                                                                                                                                "purchasedPassId"
+                                                                                                                                                                                                (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
+                                                                                                                                                                                                :> ( ReqBody
+                                                                                                                                                                                                       ('[JSON])
+                                                                                                                                                                                                       API.Types.UI.Pass.SetPassPrefSrcAndDestReq
+                                                                                                                                                                                                       :> Post
+                                                                                                                                                                                                            ('[JSON])
+                                                                                                                                                                                                            Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                                                   )
+                                                                                                                                                                                            )
+                                                                                                                                                                                     )
+                                                                                                                                                                              )
+                                                                                                                                                                       )
+                                                                                                                                                                )
+                                                                                                                                                         )
+                                                                                                                                                )
+                                                                                                                                       )
+                                                                                                                              )
+                                                                                                                     )
+                                                                                                            )
+                                                                                                   )
+                                                                                          )
+                                                                                 )
+                                                                        )
+                                                               )
+                                                      )
+                                             )
+                                    )
+                           )
+                  )
+         )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassCalculateFare :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> getMultimodalPassFrfsStatistics :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassUploadProfilePictureV1 :<|> getMultimodalPassPhoto :<|> postMultimodalPassSetPrefSrcAndDest
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassCalculateFare :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> getMultimodalPassFrfsStatistics :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassUploadProfilePictureV1 :<|> getMultimodalPassPhoto :<|> postMultimodalPassSkipDays :<|> postMultimodalPassUnskipDays :<|> postMultimodalPassReschedule :<|> getMultimodalPassSlotAvailability :<|> postMultimodalPassSetPrefSrcAndDest
 
 getMultimodalPassAvailablePasses ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
-    Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity]
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity])
 getMultimodalPassAvailablePasses a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.getMultimodalPassAvailablePasses (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalPassSelect ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Time.Day ->
-    Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.Pass.Pass -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity)))))))
 postMultimodalPassSelect a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 postMultimodalPassCalculateFare ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
-    API.Types.UI.Pass.PassCalculateFareReq ->
-    Environment.FlowHandler API.Types.UI.Pass.PassCalculateFareResp
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.Pass.Pass -> (API.Types.UI.Pass.PassCalculateFareReq -> Environment.FlowHandler API.Types.UI.Pass.PassCalculateFareResp))
 postMultimodalPassCalculateFare a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassCalculateFare (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalPassV2Select ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    API.Types.UI.Pass.PassSelectReq ->
-    Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.Pass.Pass -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (API.Types.UI.Pass.PassSelectReq -> Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity)))
 postMultimodalPassV2Select a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Pass.postMultimodalPassV2Select (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getMultimodalPassList ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType ->
-    Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity]
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Domain.Types.PurchasedPass.StatusType) -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity]))))))
 getMultimodalPassList a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.Pass.getMultimodalPassList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 postMultimodalPassVerify ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
-    API.Types.UI.Pass.PassVerifyReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (API.Types.UI.Pass.PassVerifyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
 postMultimodalPassVerify a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalPassSwitchDeviceId ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    API.Types.UI.Pass.PassSwitchDeviceIdReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (API.Types.UI.Pass.PassSwitchDeviceIdReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMultimodalPassSwitchDeviceId a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.postMultimodalPassSwitchDeviceId (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalPassTransactions ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity])))
 getMultimodalPassTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Pass.getMultimodalPassTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getMultimodalPassFrfsStatistics ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment ->
-    Environment.FlowHandler API.Types.UI.Pass.FRFSPassTicketStatisticsResp
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Environment.FlowHandler API.Types.UI.Pass.FRFSPassTicketStatisticsResp)
 getMultimodalPassFrfsStatistics a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.getMultimodalPassFrfsStatistics (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalPassActivateToday ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Data.Time.Day ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Prelude.Int -> (Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
 postMultimodalPassActivateToday a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassActivateToday (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalPassUploadProfilePicture ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
-    Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (IssueManagement.Common.UI.Issue.IssueMediaUploadReq -> Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes))))
 postMultimodalPassUploadProfilePicture a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalPassUploadProfilePictureV1 ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    API.Types.UI.Pass.PassUploadProfilePictureReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (API.Types.UI.Pass.PassUploadProfilePictureReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMultimodalPassUploadProfilePictureV1 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePictureV1 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalPassPhoto ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile ->
-    Environment.FlowHandler Data.Text.Text
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler Data.Text.Text)
 getMultimodalPassPhoto a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.getMultimodalPassPhoto (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
+postMultimodalPassSkipDays ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (API.Types.UI.Pass.PassSkipDaysReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
+postMultimodalPassSkipDays a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassSkipDays (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postMultimodalPassUnskipDays ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (API.Types.UI.Pass.PassUnskipDaysReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
+postMultimodalPassUnskipDays a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassUnskipDays (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postMultimodalPassReschedule ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (API.Types.UI.Pass.PassRescheduleReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
+postMultimodalPassReschedule a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassReschedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getMultimodalPassSlotAvailability ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (Data.Time.Day -> (Data.Text.Text -> Environment.FlowHandler API.Types.UI.Pass.PassSlotAvailabilityResp)))
+getMultimodalPassSlotAvailability a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Pass.getMultimodalPassSlotAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
 postMultimodalPassSetPrefSrcAndDest ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
-    API.Types.UI.Pass.SetPassPrefSrcAndDestReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> (API.Types.UI.Pass.SetPassPrefSrcAndDestReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))
 postMultimodalPassSetPrefSrcAndDest a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassSetPrefSrcAndDest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

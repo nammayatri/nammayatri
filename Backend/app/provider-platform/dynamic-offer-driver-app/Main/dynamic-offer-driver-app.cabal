@@ -504,6 +504,7 @@ library
       Domain.Action.UI.SearchRoute
       Domain.Action.UI.SharedCab
       Domain.Action.UI.SharedCabInternal
+      Domain.Action.UI.SharedRun
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
@@ -660,6 +661,8 @@ library
       SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals
       SharedLogic.Allocator.Jobs.SharedRun.MaterialiseSharedRuns
+      SharedLogic.Allocator.Jobs.SharedRun.SharedRunCheckIn
+      SharedLogic.Allocator.Jobs.SharedRun.SharedRunFallback
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify
       SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
@@ -864,6 +867,7 @@ library
       SharedLogic.RiderDetails
       SharedLogic.RSFLedger
       SharedLogic.RuleBasedTierUpgrade
+      SharedLogic.ScheduledBooking.OpsNote
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
@@ -875,9 +879,14 @@ library
       SharedLogic.Settlement
       SharedLogic.SharedCab.RiderClient
       SharedLogic.SharedCab.Trip
+      SharedLogic.SharedRun.Acknowledgement
+      SharedLogic.SharedRun.Assign
+      SharedLogic.SharedRun.Coverage
+      SharedLogic.SharedRun.Coverage.Rules
       SharedLogic.SharedRun.Fare
       SharedLogic.SharedRun.Knobs
       SharedLogic.SharedRun.Materialise
+      SharedLogic.SharedRun.Reassign
       SharedLogic.SharedRun.Session
       SharedLogic.SocialLogin
       SharedLogic.SpecialLocationUpsert
@@ -1436,6 +1445,7 @@ library
       API.Action.UI.SearchRoute
       API.Action.UI.SharedCab
       API.Action.UI.SharedCabInternal
+      API.Action.UI.SharedRun
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SpecialLocation
@@ -2730,6 +2740,8 @@ test-suite driver-app-test
   main-is: Main.hs
   other-modules:
       SharedCabProxyTests
+      SharedRunCoverageTests
+      SharedRunTests
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
       test

@@ -64,6 +64,7 @@ dependencies:
   - amazonka-ses
   - base >= 4.7 && < 5
   - base64-bytestring
+  - zip-archive
   - bytestring
   - crypton
   - zlib

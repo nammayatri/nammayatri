@@ -12,12 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | A shared-route run as the shared cab's session. The run is a ride; the rider platform keys its passengers by the
--- ride id and answers the ordinary session read with them, so the driver's shared-cab screens and verbs, the skip-stop
--- rule and the run's fare all read the one shape the shared cab already has.
+-- | A shared-route run as the shared cab's session. The run is a ride, but the rider platform keys its passengers by the
+-- run's 'RunRef' (the GTFS trip and the run booking's first departure), which outlives the ride across re-assignment,
+-- and answers the ordinary session read with them, so the driver's shared-cab screens and verbs, the skip-stop rule and
+-- the run's fare all read the one shape the shared cab already has.
 module SharedLogic.SharedRun.Session
   ( RunSessionFlow,
     activeRunOf,
+    runRefOf,
     runSession,
     stopCodeOf,
     boardingAt,
@@ -27,11 +29,13 @@ where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types as DTrip
+import qualified Domain.Types.Booking as Fields
 import qualified Domain.Types.IntegratedBPPConfig as Fields
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.SharedCabSession
+import Domain.Types.SharedRoute (RunRef (..))
 import qualified Domain.Types.Vehicle as Fields
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -40,6 +44,7 @@ import Kernel.Utils.Common
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as Fields
 import qualified SharedLogic.SharedCab.RiderClient as RiderClient
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -63,14 +68,22 @@ activeRunOf driverId = do
     Just ride | DTrip.isSharedRouteTrip ride.tripCategory -> Just ride
     _ -> Nothing
 
--- | The run's session from the rider platform: the bookings placed on this ride, in the shared cab's session shape.
+-- | How both platforms name the run this ride staffs: the ride's GTFS trip and its booking's first departure.
+runRefOf :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => DRide.Ride -> m RunRef
+runRefOf ride = do
+  tripId <- ride.tripId & fromMaybeM (InternalError $ "run " <> ride.id.getId <> " names no GTFS trip")
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  pure RunRef {tripId, departure = booking.startTime}
+
+-- | The run's session from the rider platform: that day's tickets on the run's trip, in the shared cab's session shape.
 runSession :: RunSessionFlow m r => DRide.Ride -> m SharedCabSession
 runSession ride = do
   vehicle <- QVehicle.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   integratedBppConfigId <- ride.integratedBppConfigId & fromMaybeM (InternalError $ "run " <> ride.id.getId <> " names no feed config")
   integratedBppConfig <- QIBC.findById (Id integratedBppConfigId) >>= fromMaybeM (InternalError $ "feed config " <> integratedBppConfigId <> " of run " <> ride.id.getId <> " not found")
+  ref <- runRefOf ride
   bap <- asks (.appBackendBapInternal)
-  RiderClient.getSharedCabSession bap.apiKey bap.url ride.driverId.getId vehicle.registrationNo integratedBppConfig.agencyKey (Just ride.id.getId)
+  RiderClient.getSharedCabSession bap.apiKey bap.url ride.driverId.getId vehicle.registrationNo integratedBppConfig.agencyKey (Just (ride.id.getId, ref))
     >>= fromMaybeM (InternalError $ "the rider platform has no session for run " <> ride.id.getId)
 
 -- | A run's stop is a Location; its GTFS stop code rides in the address's @extras@ (the only free text field), which is

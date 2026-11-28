@@ -773,6 +773,7 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             appliedPassId = mbAppliedPassPayment >>= (.passId),
             appliedPassName = mbAppliedPassPayment >>= (.passName),
             startTime = booking.startTime,
+            boardingOtp = Nothing,
             bookingId = booking.id,
             city = merchantOperatingCity.city,
             createdAt = booking.createdAt,

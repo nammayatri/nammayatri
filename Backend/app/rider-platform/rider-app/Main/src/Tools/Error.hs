@@ -344,6 +344,7 @@ data PassError
   | PassUnserviceableBetweenRequestedStops Text Text
   | PassUnserviceableOnServiceTier Text
   | PassRecentTicketExists Int
+  | CompanyNotOnboarded Text -- work-email domain with no corporate pass organisation
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''PassError
@@ -370,6 +371,7 @@ instance IsBaseError PassError where
   toMessage (PassUnserviceableBetweenRequestedStops sourceStopCode destinationStopCode) = Just $ "This pass cannot be used between " <> sourceStopCode <> " and " <> destinationStopCode
   toMessage (PassUnserviceableOnServiceTier serviceTier) = Just $ "This pass cannot be used on " <> serviceTier <> " buses"
   toMessage (PassRecentTicketExists windowSeconds) = Just $ "You already booked a ticket with this pass in the last " <> show (max 1 (windowSeconds `div` 60)) <> " minute(s)."
+  toMessage (CompanyNotOnboarded domain) = Just $ "Your company (" <> domain <> ") is not onboarded for the corporate shuttle yet"
 
 instance IsHTTPError PassError where
   toErrorCode = \case
@@ -394,6 +396,7 @@ instance IsHTTPError PassError where
     PassUnserviceableBetweenRequestedStops _ _ -> "PASS_UNSERVICEABLE_BETWEEN_REQUESTED_STOPS"
     PassUnserviceableOnServiceTier _ -> "PASS_UNSERVICEABLE_ON_SERVICE_TIER"
     PassRecentTicketExists _ -> "PASS_RECENT_TICKET_EXISTS"
+    CompanyNotOnboarded _ -> "COMPANY_NOT_ONBOARDED"
   toHttpCode = \case
     PassNotFound _ -> E500
     PassCategoryNotFound _ -> E500
@@ -416,6 +419,7 @@ instance IsHTTPError PassError where
     PassUnserviceableBetweenRequestedStops _ _ -> E400
     PassUnserviceableOnServiceTier _ -> E400
     PassRecentTicketExists _ -> E400
+    CompanyNotOnboarded _ -> E400
 
 instance IsAPIError PassError
 

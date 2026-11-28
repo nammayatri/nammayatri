@@ -23,3 +23,14 @@ ALTER TABLE atlas_app.pass_organization ADD CONSTRAINT pass_organization_unique_
 ALTER TABLE atlas_app.pass_organization ADD COLUMN depot_person_id character varying(36) ;
 ALTER TABLE atlas_app.pass_organization ADD COLUMN depot_id text ;
 CREATE INDEX CONCURRENTLY pass_organization_idx_depot_person_id ON atlas_app.pass_organization USING btree (depot_person_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_organization ADD COLUMN email_domains text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_organization ADD COLUMN office_lon double precision ;
+ALTER TABLE atlas_app.pass_organization ADD COLUMN office_lat double precision ;

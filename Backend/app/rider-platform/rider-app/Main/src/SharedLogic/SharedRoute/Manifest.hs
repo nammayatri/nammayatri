@@ -12,14 +12,19 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | The passengers of one shared-route run and the driver's verbs on them. A run is the driver platform's ride; its
--- passengers are the CONFIRMED ticket bookings placed on it (frfs_ticket_booking.ride_id). Nothing here is a new state:
+-- | The passengers of one shared-route run and the driver's verbs on them. A run is named by its feed and 'RunRef' (the
+-- GTFS trip and its first departure), not by the driver platform's ride, which only exists once a driver is assigned
+-- and changes on every re-assignment; its passengers are the CONFIRMED ticket bookings with that @trip_id@ on that feed
+-- and a @start_time@ inside 'runTicketWindow' ('onRun'). A feed is every integrated_bpp_config row of it (one per
+-- platform type, sharing the agency key), since a ticket may carry any of them. @ride_id@ is not read. Nothing here is a new state:
 -- a board flips the booking's tickets to INPROGRESS, a drop to USED, a no-show counts on the booking, exactly the
--- transitions the shared cab uses, and 'passengerStateOf' reads them back. The driver platform reads and acts on them
+-- transitions the shared cab uses, and 'passengerStateOf' reads them back. A drop that leaves nothing to board ends the journey. The driver platform reads and acts on them
 -- through the shared cab's session and booking-operation endpoints.
 module SharedLogic.SharedRoute.Manifest
   ( RunPassenger (..),
     runPassengers,
+    onRun,
+    isOnRun,
     RunAction (..),
     applyRunAction,
   )
@@ -31,11 +36,16 @@ import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
+import qualified Domain.Types.Journey as DJourney
 import Domain.Types.SharedRoute (SharedDemandKnobs (..), SharedPassengerState)
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import Domain.Types.SharedRoute (RunRef (..), SharedDemandKnobs (..), SharedPassengerState, runTicketWindow, ticketOnRun)
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.FRFSCancelJourney (endJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedRoute.Knobs as Knobs
 import SharedLogic.SharedRoute.Passenger (passengerStateOf)
@@ -52,9 +62,10 @@ data RunPassenger = RunPassenger
   }
 
 -- | Every passenger of the run, by booking, with where they stand; cancelled bookings are not on it.
-runPassengers :: Text -> Environment.Flow [RunPassenger]
-runPassengers rideId = do
-  bookings <- QFRFSTicketBooking.findAllConfirmedByRideId rideId
+runPassengers :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> Environment.Flow [RunPassenger]
+runPassengers feedConfigIds ref = do
+  let (from, to) = runTicketWindow ref
+  bookings <- if null feedConfigIds then pure [] else QFRFSTicketBooking.findAllConfirmedByTripIdInWindow feedConfigIds ref.tripId from to
   tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
   persons <- if null bookings then pure [] else QPersonExtra.findAllByIds (map (.riderId) bookings)
   pure
@@ -77,11 +88,20 @@ data RunAction
     Drop
   deriving (Show, Eq)
 
+-- | The booking is on the run: same feed, same GTFS trip, start time inside the run's ticket window.
+onRun :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> DFTB.FRFSTicketBooking -> Bool
+onRun feedConfigIds ref booking = isOnRun feedConfigIds ref booking.integratedBppConfigId booking.tripId booking.startTime
+
+-- | 'onRun' on the booking's feed config, trip id and start time.
+isOnRun :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> Id DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe UTCTime -> Bool
+isOnRun feedConfigIds ref ticketFeed mbTripId mbStartTime = ticketFeed `elem` feedConfigIds && ticketOnRun ref mbTripId mbStartTime
+
 -- | The booking must be live on this run. A repeated board or drop is a no-op; a no-show after boarding is refused.
 -- @vehicleNumber@ is what the ticket records as the scanning vehicle, as a conductor's scan would.
-applyRunAction :: Text -> DFTB.FRFSTicketBooking -> RunAction -> Text -> Environment.Flow ()
-applyRunAction rideId booking action vehicleNumber = do
-  unless (booking.rideId == Just rideId) $ throwError (InvalidRequest $ "booking " <> booking.id.getId <> " is not on run " <> rideId)
+applyRunAction :: [Id DIBC.IntegratedBPPConfig] -> RunRef -> DFTB.FRFSTicketBooking -> RunAction -> Text -> Environment.Flow ()
+applyRunAction feedConfigIds ref booking action vehicleNumber = do
+  unless (onRun feedConfigIds ref booking) $
+    throwError (InvalidRequest $ "booking " <> booking.id.getId <> " is not on run " <> ref.tripId <> " departing " <> show ref.departure)
   unless (booking.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError (InvalidRequest $ "booking " <> booking.id.getId <> " is not live")
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
   let statuses = map (.status) tickets
@@ -105,9 +125,13 @@ applyRunAction rideId booking action vehicleNumber = do
       | otherwise -> QFRFSTicketBooking.updateSharedCabNoShowsById (booking.sharedCabNoShows + 1) booking.id
     Drop
       | not boarded -> throwError (InvalidRequest $ "booking " <> booking.id.getId <> " has not boarded")
-      | otherwise ->
+      | otherwise -> do
         forM_ (filter ((== DFRFSTicketStatus.INPROGRESS) . (.status)) tickets) $ \ticket ->
           QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicketStatus.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
+        -- the ride is over once no ticket is left to board: end the rider's journey. A failure reaches the driver's call,
+        -- which can repeat the drop: the tickets are USED by then, so the repeat passes the boarded guard and ends it again.
+        unless (DFRFSTicketStatus.ACTIVE `elem` statuses) $
+          endJourneyIfOnlyTransitLeg DJourney.FEEDBACK_PENDING booking.searchId.getId
   where
     board tickets = do
       forM_ (filter ((== DFRFSTicketStatus.ACTIVE) . (.status)) tickets) $ \ticket ->

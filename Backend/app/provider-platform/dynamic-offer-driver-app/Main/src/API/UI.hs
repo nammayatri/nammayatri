@@ -64,6 +64,7 @@ import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.RideEvidence as RideEvidence
 import qualified API.Action.UI.SearchRoute as SearchRoute
 import qualified API.Action.UI.SharedCab as SharedCab
+import qualified API.Action.UI.SharedRun as SharedRun
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
@@ -224,6 +225,7 @@ type API =
            :<|> PublicTransport.API
            :<|> TicketVerify.API
            :<|> SharedCab.API
+           :<|> SharedRun.API
        )
 
 handler :: FlowServer API
@@ -321,3 +323,4 @@ handler =
     :<|> PublicTransport.handler
     :<|> TicketVerify.handler
     :<|> SharedCab.handler
+    :<|> SharedRun.handler

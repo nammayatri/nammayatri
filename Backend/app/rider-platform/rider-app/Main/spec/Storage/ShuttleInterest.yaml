@@ -1,0 +1,100 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PassOrganization: Domain.Types.PassOrganization
+  UTCTime: Data.Time
+  DayOfWeek: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+
+# Corporate shuttle interest form: one row per employee (resubmitting replaces it). Collected before routes and stops are
+# fixed, so ops can plan them from real demand. Only employees whose verified work (business) email belongs to a company
+# (a corporate pass organisation, see SharedLogic.CorporateMembership) can submit.
+ShuttleInterest:
+  tableName: shuttle_interest
+
+  fields:
+    personId: Id Person
+    # the employee's company: the corporate pass organisation that owns their work-email domain
+    passOrganizationId: Id PassOrganization
+    # domain of the verified work email, lower-case (e.g. acme.example), kept for display
+    companyDomain: Text
+    pickupLat: Double
+    pickupLon: Double
+    pickupAddress: Text
+    dropLat: Double
+    dropLon: Double
+    dropAddress: Text
+    # how the employee chose each location: their phone's GPS position or an address they searched for and picked
+    # (the chosen one is kept as it is: the planner never moves it); GPS accuracy in metres when it came from GPS
+    pickupLocationSource: Maybe ShuttleLocationSource
+    pickupAccuracyMeters: Maybe Double
+    dropLocationSource: Maybe ShuttleLocationSource
+    dropAccuracyMeters: Maybe Double
+    tripType: ShuttleTripType
+    # to-office leg: when the employee wants to be picked up (TO_OFFICE / ROUND_TRIP)
+    pickupTime: Maybe TimeOfDay
+    # to-home leg: when the employee wants to leave the office (TO_HOME / ROUND_TRIP)
+    dropTime: Maybe TimeOfDay
+    daysOfWeek: "[DayOfWeek]"
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    ShuttleTripType:
+      enum: "TO_OFFICE, TO_HOME, ROUND_TRIP"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    ShuttleLocationSource:
+      enum: "GPS, MANUAL"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleTripType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ShuttleLocationSource>
+
+  beamType:
+    daysOfWeek: "[Text]"
+
+  toTType:
+    daysOfWeek: map show daysOfWeek|E
+
+  fromTType:
+    daysOfWeek: (read . Data.Text.unpack) <$> daysOfWeek|E
+
+  sqlType:
+    companyDomain: text
+    pickupAddress: text
+    dropAddress: text
+    tripType: text
+    pickupLocationSource: text
+    dropLocationSource: text
+    pickupTime: time
+    dropTime: time
+    daysOfWeek: "text[]"
+
+  constraints:
+    personId: PrimaryKey
+    passOrganizationId: SecondaryKey
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy:
+        field: updatedAt
+        order: desc
+
+    findAllByMerchantOperatingCityIdAndPassOrganizationId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantOperatingCityId, passOrganizationId]
+      orderBy:
+        field: updatedAt
+        order: desc
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE # brings the ToSchema DayOfWeek orphan into scope for the API types

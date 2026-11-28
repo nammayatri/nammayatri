@@ -461,6 +461,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     appliedPassId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),
     appliedPassName :: Data.Maybe.Maybe Data.Text.Text,
     appliedPurchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
+    boardingOtp :: Data.Maybe.Maybe Data.Text.Text,
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     bppOrderId :: Data.Maybe.Maybe Data.Text.Text,
     city :: Kernel.Types.Beckn.Context.City,

@@ -4,6 +4,8 @@ imports:
   UTCTime: Kernel.Prelude
   Merchant: Domain.Types.Merchant
   HighPrecMoney: Kernel.Types.Common
+  City: Kernel.Types.Beckn.Context
+  Day: Data.Time
 
 module: SharedCabInternal
 
@@ -29,6 +31,10 @@ types:
     capacity: Maybe Int
     walkupCount: Int
     startedAt: UTCTime
+
+  # The plate of the vehicle assigned to a materialised shared run, so rider-app can show the rider their bus before boarding.
+  SharedRunVehicle:
+    vehicleNumber: Text
 
 apis:
   - POST:
@@ -81,3 +87,18 @@ apis:
         token: Text
       response:
         type: APISuccess
+  # The run is keyed as the materialiser keys it: the city's config of the feed, the GTFS trip and the service day.
+  - GET:
+      endpoint: /sharedCab/{merchantId}/run/vehicle
+      auth: NoAuth
+      params:
+        merchantId: Id Merchant
+      mandatoryQuery:
+        city: City
+        feedKey: Text
+        tripId: Text
+        serviceDate: Day
+      headers:
+        token: Text
+      response:
+        type: "(Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedRunVehicle)"

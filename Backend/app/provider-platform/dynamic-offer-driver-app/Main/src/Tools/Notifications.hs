@@ -2413,3 +2413,42 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
   case grpcResult of
     Left e -> logWarning $ "GRPC pickup zone no-show notification failed for driver " <> driverId.getId <> ": " <> show e
     Right _ -> pure ()
+
+-- | What the driver's app needs to show an acknowledgement request for a shared-route run they were assigned.
+data SharedRunAckRequestEntityData = SharedRunAckRequestEntityData
+  { rideId :: Text,
+    bookingId :: Text,
+    departure :: UTCTime,
+    routeCode :: Text,
+    firstStopName :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
+-- | Ask the driver assigned to a shared-route run to acknowledge it (SharedLogic.SharedRun.Acknowledgement), at the
+-- run's check-in time. High priority, keyed SHARED_RUN_ACK_REQUEST in merchant_push_notification; the template may use
+-- {#routeCode#}, {#departure#} (city-local time) and {#firstStopName#}.
+notifySharedRunAckRequest ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Seconds ->
+  SharedRunAckRequestEntityData ->
+  m ()
+notifySharedRunAckRequest merchantOpCityId driverId timeDiffFromUtc entityData = do
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driverId
+    driver.deviceToken
+    (fromMaybe ENGLISH driver.language)
+    Nothing
+    (createFCMReq "SHARED_RUN_ACK_REQUEST" entityData.rideId FCM.Person (\req -> req {priority = Just FCM.HIGH}))
+    (Just entityData)
+    [ ("routeCode", entityData.routeCode),
+      ("departure", showLocalTime timeDiffFromUtc entityData.departure),
+      ("firstStopName", entityData.firstStopName)
+    ]
+    Nothing

@@ -78,3 +78,10 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN source_stop_code text ;
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN override_benefit_config_json jsonb ;
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN maximum_overrideable_fare_per_ticket double precision ;
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN destination_stop_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN slot_changes jsonb ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN skip_days jsonb ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN route_id text ;

@@ -8,6 +8,8 @@ imports:
   PassDocumentType: Domain.Types.Pass
   PurchasedPass: Domain.Types.PurchasedPass
   PurchasedPassPayment: Domain.Types.PurchasedPassPayment
+  SkipDay: Domain.Types.PurchasedPassPayment
+  SlotChange: Domain.Types.PurchasedPassPayment
   StatusType: Domain.Types.PurchasedPass
   HighPrecMoney: Kernel.Types.Common
   ServiceTierType: BecknV2.FRFS.Enums
@@ -56,6 +58,9 @@ types:
     destinationStopCode: Maybe Text
     sourceStopName: Maybe Text
     destinationStopName: Maybe Text
+    routeId: Maybe Text
+    skipDays: "[SkipDay]"
+    slotChanges: "[SlotChange]"
     derive: "Show"
 
   PassCalculateFareReq:
@@ -64,6 +69,7 @@ types:
     tripCount: Maybe Int
     validityDays: Maybe Int
     roundTrip: Maybe Bool
+    routeId: Maybe Text
     derive: "Show"
 
   PassCalculateFareResp:
@@ -149,6 +155,7 @@ types:
     tripCount: Maybe Int
     validityDays: Maybe Int
     roundTrip: Maybe Bool
+    routeId: Maybe Text
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
@@ -239,6 +246,32 @@ types:
   SetPassPrefSrcAndDestReq:
     prefSrc: Text
     prefDest: Text
+    derive: "Show"
+
+  # Shuttle subscription: days of the term the rider will not travel. The daily issue job skips them.
+  PassSkipDaysReq:
+    days: "[Day]"
+    reason: Maybe Text
+    derive: "Show"
+
+  PassUnskipDaysReq:
+    days: "[Day]"
+    derive: "Show"
+
+  # Shuttle subscription: ride another slot (e.g. 9:30 instead of 7:30) on one day of the term, if it has a free seat.
+  PassRescheduleReq:
+    day: Day
+    routeId: Text
+    derive: "Show"
+
+  PassSlotAvailabilityResp:
+    routeId: Text
+    day: Day
+    departureTime: Maybe UTCTime
+    capacity: Maybe Int
+    booked: Int
+    availableSeats: Maybe Int
+    canReschedule: Bool
     derive: "Show"
 
   PassUploadProfilePictureReq:
@@ -382,6 +415,47 @@ apis:
         mediaId: Id MediaFile
       response:
         type: Text
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/skipDays
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassSkipDaysReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/unskipDays
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassUnskipDaysReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/reschedule
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassRescheduleReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /multimodal/pass/{purchasedPassId}/slotAvailability
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      mandatoryQuery:
+        day: Day
+        routeId: Text
+      response:
+        type: PassSlotAvailabilityResp
 
   - POST:
       endpoint: /multimodal/pass/set/prefSrcAndDest/{purchasedPassId}
