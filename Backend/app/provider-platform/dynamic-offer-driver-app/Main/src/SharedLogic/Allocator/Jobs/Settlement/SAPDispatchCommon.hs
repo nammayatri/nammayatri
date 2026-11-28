@@ -36,10 +36,26 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
     formatSAPTime,
 
     -- * Declarative JV posting
+    JVHeaderAttrs (..),
+    noHeaderAttrs,
     JVLeg (..),
     JVSpec (..),
     postJV,
     skipJvIfAlreadyPostedSuccess,
+
+    -- * Account mapping keys (must match MerchantServiceConfig SAP_Journal seed)
+    buyerAppReceivableAcct,
+    rideFareRevenueAcct,
+    driverBalanceAcct,
+    payoutClearingAcct,
+    tdsPayableAcct,
+    tdsReceivableAcct,
+    bankAcct,
+    cgstPayableAcct,
+    sgstPayableAcct,
+    igstPayableAcct,
+    deferredRevenueAcct,
+    subscriptionRevenueAcct,
 
     -- * Journal entry transaction writer
     JournalTxnRowFields (..),
@@ -458,6 +474,46 @@ padTwo n
   | otherwise = show n
 
 -- ---------------------------------------------------------------------------
+-- AccountMapping keys (must match MerchantServiceConfig SAP_Journal seed)
+-- ---------------------------------------------------------------------------
+
+buyerAppReceivableAcct :: Text
+buyerAppReceivableAcct = "BUYER_APP_RECEIVABLE A/C"
+
+rideFareRevenueAcct :: Text
+rideFareRevenueAcct = "RIDE_FARE_REVENUE A/C"
+
+driverBalanceAcct :: Text
+driverBalanceAcct = "DRIVER_BALANCE A/C"
+
+payoutClearingAcct :: Text
+payoutClearingAcct = "PAYOUT_CLEARING A/C"
+
+tdsPayableAcct :: Text
+tdsPayableAcct = "TDS_PAYABLE A/C"
+
+tdsReceivableAcct :: Text
+tdsReceivableAcct = "TDS_RECEIVABLE A/C"
+
+bankAcct :: Text
+bankAcct = "BANK A/C"
+
+cgstPayableAcct :: Text
+cgstPayableAcct = "CGST_PAYABLE A/C"
+
+sgstPayableAcct :: Text
+sgstPayableAcct = "SGST_PAYABLE A/C"
+
+igstPayableAcct :: Text
+igstPayableAcct = "IGST_PAYABLE A/C"
+
+deferredRevenueAcct :: Text
+deferredRevenueAcct = "DEFERRED_REVENUE A/C"
+
+subscriptionRevenueAcct :: Text
+subscriptionRevenueAcct = "SUBSCRIPTION_REVENUE A/C"
+
+-- ---------------------------------------------------------------------------
 -- Redis batch-id counter
 -- ---------------------------------------------------------------------------
 
@@ -501,8 +557,10 @@ saveSapJournalEntries ::
   UTCTime ->
   Maybe Text ->
   Currency ->
+  Maybe Text ->
+  Maybe Text ->
   m (Id SJE.SapJournalEntry, Text)
-saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodStart periodEnd mbErrMsg currency = do
+saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodStart periodEnd mbErrMsg currency mbBapId mbBapName = do
   let reqHeaders = req.headers
       respHeaders = maybe [] (.responseHeaders) mbResp
   results <- forM reqHeaders $ \reqHeader -> do
@@ -530,6 +588,8 @@ saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodSt
             periodStartTime = periodStart,
             periodEndTime = periodEnd,
             rawResponse = (.rawXml) <$> mbResp,
+            bapId = mbBapId,
+            bapName = mbBapName,
             merchantId = mId.getId,
             merchantOperatingCityId = mocid.getId
           }
@@ -621,29 +681,48 @@ handleSAPResponse ::
   UTCTime ->
   UTCTime ->
   Currency ->
+  Maybe Text ->
+  Maybe Text ->
   (Id SJE.SapJournalEntry -> Text -> m ()) ->
   m Bool
-handleSAPResponse label req result txnType txnCount mId mocid periodStart periodEnd currency saveTransactionAction =
+handleSAPResponse label req result txnType txnCount mId mocid periodStart periodEnd currency mbBapId mbBapName saveTransactionAction =
   case result of
     Left err -> do
       logError $ "SAP " <> label <> " dispatch failed: " <> err
-      _ <- saveSapJournalEntries req Nothing SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just err) currency
+      _ <- saveSapJournalEntries req Nothing SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just err) currency mbBapId mbBapName
       pure False
     Right resp
       | hasErrorResponse resp -> do
         logError $ "SAP " <> label <> " dispatch returned error response"
-        _ <- saveSapJournalEntries req (Just resp) SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just "SAP returned error msgtyp=E") currency
+        _ <- saveSapJournalEntries req (Just resp) SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just "SAP returned error msgtyp=E") currency mbBapId mbBapName
         pure False
       | otherwise -> do
         forM_ resp.responseHeaders $ \hdr ->
           logInfo $ "SAP " <> label <> " response: batchId=" <> fromMaybe "" hdr.batchId <> " msgtyp=" <> fromMaybe "" hdr.msgtyp
-        (sapEntryId, sapBatchId) <- saveSapJournalEntries req (Just resp) SJE.SUCCESS txnType txnCount mId mocid periodStart periodEnd Nothing currency
+        (sapEntryId, sapBatchId) <- saveSapJournalEntries req (Just resp) SJE.SUCCESS txnType txnCount mId mocid periodStart periodEnd Nothing currency mbBapId mbBapName
         saveTransactionAction sapEntryId sapBatchId
         pure True
 
 -- ---------------------------------------------------------------------------
 -- Declarative JV posting
 -- ---------------------------------------------------------------------------
+
+-- | Optional header-level attributes for a JV (mirrors SAPJournalHeader attr slots).
+data JVHeaderAttrs = JVHeaderAttrs
+  { attrName1 :: Maybe Text,
+    attrValue1 :: Maybe Text,
+    attrName2 :: Maybe Text,
+    attrValue2 :: Maybe Text,
+    attrName3 :: Maybe Text,
+    attrValue3 :: Maybe Text,
+    attrName4 :: Maybe Text,
+    attrValue4 :: Maybe Text,
+    attrName5 :: Maybe Text,
+    attrValue5 :: Maybe Text
+  }
+
+noHeaderAttrs :: JVHeaderAttrs
+noHeaderAttrs = JVHeaderAttrs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- | One GL leg of a journal voucher.
 data JVLeg = JVLeg
@@ -658,6 +737,9 @@ data JVSpec m = JVSpec
     legs :: [JVLeg],
     transactionType :: SJE.TransactionType,
     txnCount :: Int,
+    headerAttrs :: JVHeaderAttrs,
+    bapId :: Maybe Text,
+    bapName :: Maybe Text,
     saveRows :: Id SJE.SapJournalEntry -> Text -> m () -- called on SUCCESS with (sapEntryId, batchId)
   }
 
@@ -669,8 +751,9 @@ skipJvIfAlreadyPostedSuccess ::
   UTCTime ->
   Text ->
   SJE.TransactionType ->
+  Maybe Text ->
   m Bool
-skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType = do
+skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType mbBapId = do
   mbExisting <-
     QSJE.findSuccessForPeriod
       mocid.getId
@@ -678,6 +761,7 @@ skipJvIfAlreadyPostedSuccess mocid fromTime toTime label txnType = do
       toTime
       label
       txnType
+      mbBapId
   case mbExisting of
     Nothing -> pure False
     Just existing -> do
@@ -728,7 +812,7 @@ postJV sapCfg token params currency spec = do
       logInfo $ "No non-zero items for " <> spec.label <> ", skipping"
       pure True
     else do
-      alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime spec.label txnType
+      alreadyPosted <- skipJvIfAlreadyPostedSuccess mocid fromTime toTime spec.label txnType spec.bapId
       if alreadyPosted
         then pure True
         else do
@@ -738,10 +822,28 @@ postJV sapCfg token params currency spec = do
               mkItem bId (show itemNum) leg.accountKey sapCfg.accountMapping leg.direction leg.amount currency
           let filtered = filterZeroItems items
           logInfo $ "Dispatching " <> spec.label <> " to SAP, txnCount=" <> show spec.txnCount
-          req <- buildJournalRequestFromItems sapCfg spec.label fromTime params.timeDiffFromUtc filtered
+          reqBase <- buildJournalRequestFromItems sapCfg spec.label fromTime params.timeDiffFromUtc filtered
+          let req = applyJVHeaderAttrs spec.headerAttrs reqBase
           logInfo $ "SAP journal entry request body = " <> show req
           result <- callSAPWithRetry sapCfg token req spec.label maxRetries
-          handleSAPResponse spec.label req result txnType spec.txnCount mId mocid fromTime toTime currency spec.saveRows
+          handleSAPResponse spec.label req result txnType spec.txnCount mId mocid fromTime toTime currency spec.bapId spec.bapName spec.saveRows
+
+applyJVHeaderAttrs :: JVHeaderAttrs -> SAPJournalRequest -> SAPJournalRequest
+applyJVHeaderAttrs attrs req = req {headers = map setAttrs req.headers}
+  where
+    setAttrs :: SAPJournalHeader -> SAPJournalHeader
+    setAttrs hdr =
+      hdr{attrName1 = attrs.attrName1,
+          attrValue1 = attrs.attrValue1,
+          attrName2 = attrs.attrName2,
+          attrValue2 = attrs.attrValue2,
+          attrName3 = attrs.attrName3,
+          attrValue3 = attrs.attrValue3,
+          attrName4 = attrs.attrName4,
+          attrValue4 = attrs.attrValue4,
+          attrName5 = attrs.attrName5,
+          attrValue5 = attrs.attrValue5
+         }
 
 -- ---------------------------------------------------------------------------
 -- Journal Entry Transaction persistence (individual source transactions)

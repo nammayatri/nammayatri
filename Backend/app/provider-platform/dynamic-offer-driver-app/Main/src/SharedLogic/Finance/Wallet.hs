@@ -85,6 +85,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceAirportEntryFeeChargesTax,
     walletReferenceTDSDeduction,
     walletReferenceTDSDeductionCancellation,
+    walletReferenceTDSDeductionThreshold,
     walletReferenceTopup,
     walletReferencePayout,
     walletReferencePayoutSettlement,
@@ -319,6 +320,9 @@ walletReferenceCustomerCancellationTax taxRegime = case taxRegime of
 
 walletReferenceTDSDeductionCancellation :: Text
 walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
+
+walletReferenceTDSDeductionThreshold :: Text
+walletReferenceTDSDeductionThreshold = "TDSDeductionThreshold"
 
 walletReferenceCommission :: Text
 walletReferenceCommission = "Commission"

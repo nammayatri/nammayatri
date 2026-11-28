@@ -30,11 +30,12 @@ findSuccessForPeriod ::
   UTCTime ->
   Text ->
   Domain.TransactionType ->
+  Maybe Text ->
   m (Maybe Domain.SapJournalEntry)
-findSuccessForPeriod merchantOperatingCityId periodStart periodEnd description txnType = do
+findSuccessForPeriod merchantOperatingCityId periodStart periodEnd description txnType mbBapId = do
   entries <-
     findAllWithOptionsKV
-      [ Se.And
+      [ Se.And $
           [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
             Se.Is Beam.periodStartTime $ Se.Eq periodStart,
             Se.Is Beam.periodEndTime $ Se.Eq periodEnd,
@@ -42,6 +43,7 @@ findSuccessForPeriod merchantOperatingCityId periodStart periodEnd description t
             Se.Is Beam.transactionType $ Se.Eq txnType,
             Se.Is Beam.status $ Se.Eq Domain.SUCCESS
           ]
+            <> [Se.Is Beam.bapId $ Se.Eq mbBapId | isJust mbBapId]
       ]
       (Se.Desc Beam.createdAt)
       (Just 1)
