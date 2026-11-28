@@ -17,6 +17,7 @@ module SharedLogic.SharedCab.Keys
     riderSkippedKey,
     pickedCabKey,
     interestKey,
+    interestRoutesKey,
     riderFixKey,
     cancelReasonKey,
     degradedKey,
@@ -31,6 +32,7 @@ module SharedLogic.SharedCab.Keys
     allocLeaseKey,
     refundRetryCityKey,
     demandKey,
+    demandStopKey,
     allocJobGuardKey,
     allocRunKey,
     expiryJobGuardKey,
@@ -107,6 +109,10 @@ pickedCabKey searchId = "sharedcab:pickedcab:" <> searchId
 interestKey :: Text -> Text
 interestKey routeCode = "sharedcab:interest:" <> routeCode
 
+-- | The routes a person is interested in now, so that opening another stand drops the routes it does not serve.
+interestRoutesKey :: Text -> Text
+interestRoutesKey personId = "sharedcab:interest:routes:" <> personId
+
 -- | The rider's latest position, for the tick's passed-stop judgement.
 riderFixKey :: BookingId -> Text
 riderFixKey bookingId = "sharedcab:riderfix:" <> bookingId.getId
@@ -154,6 +160,10 @@ refundRetryCityKey cityId = "sharedcab:refundretry:city:" <> cityId.getId
 
 demandKey :: Text -> Text -> Int -> Text
 demandKey cityId stopCode bucket = "sharedcab:demand:" <> cityId <> ":" <> stopCode <> ":" <> show bucket
+
+-- | The stop a rider last searched at, so that a search at another stop moves them off it.
+demandStopKey :: Text -> Text -> Text
+demandStopKey cityId riderId = "sharedcab:demand:stop:" <> cityId <> ":" <> riderId
 
 allocJobGuardKey :: CityId -> Text
 allocJobGuardKey cityId = "sharedcab:allocJob:" <> cityId.getId
