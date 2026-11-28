@@ -39,6 +39,7 @@ imports:
   FilePath: EulerHS.Prelude
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  WhiteListOrgListRes: Dashboard.Common.Merchant
   UpsertAllowedDestinationStatesReq: Dashboard.Common.Merchant
   AllowedDestinationStatesResp: Dashboard.Common.Merchant
   SpecialLocationType: Lib.Types.SpecialLocation
@@ -277,6 +278,18 @@ apis:
         type: WhiteListOperatingCityReq
       response:
         type: WhiteListOperatingCityRes
+      migrate:
+        capability: system-config.whitelist.write
+  - GET: # getWhiteListOrgListAPI
+      endpoint: /config/operatingCity/whiteList/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: WhiteListOrgListRes
+      migrate:
+        capability: system-config.whitelist.read
   - POST: # UpsertAllowedDestinationStatesAPI
       endpoint: /config/allowedDestinationStates
       auth: ApiAuthV2

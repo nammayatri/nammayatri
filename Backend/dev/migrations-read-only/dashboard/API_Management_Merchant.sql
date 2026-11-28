@@ -323,3 +323,18 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostMerchantConfigCallingUpdate","migration":"capability","param":"city-config.launch.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.launch.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_CALLING_UPDATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostMerchantConfigOperatingCityWhiteList","migration":"capability","param":"system-config.whitelist.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.whitelist.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetMerchantConfigOperatingCityWhiteListList","migration":"capability","param":"system-config.whitelist.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.whitelist.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST_LIST' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantConfigOperatingCityWhiteList","migration":"capability","param":"system-config.whitelist.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.whitelist.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetMerchantConfigOperatingCityWhiteListList","migration":"capability","param":"system-config.whitelist.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.whitelist.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST_LIST' ) ON CONFLICT DO NOTHING;

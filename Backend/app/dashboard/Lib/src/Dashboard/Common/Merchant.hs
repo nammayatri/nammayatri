@@ -1169,16 +1169,25 @@ instance ToMultipart Tmp UpdateGeometryReq where
 ------------------------ WhiteList Operating City ------------------------
 
 data WhiteListOperatingCityReq = WhiteListOperatingCityReq
-  { bppMerchantOperatingCityId :: Text,
-    bppMerchantId :: Text,
+  { bppMerchantOperatingCityId :: Maybe Text,
+    bppMerchantId :: Maybe Text,
     bppSubscriberDomain :: Context.Domain,
-    bppSubscriberId :: Id.ShortId BecknSub.Subscriber,
-    bapMerchantId :: Text,
-    bapMerchantOperatingCityId :: Text,
-    bapUniqueKeyId :: Text,
-    bapSubscriberId :: Id.ShortId BecknSub.Subscriber,
-    bapSubscriberDomain :: Context.Domain
+    bppSubscriberId :: Maybe (Id.ShortId BecknSub.Subscriber),
+    bapMerchantId :: Maybe Text,
+    bapMerchantOperatingCityId :: Maybe Text,
+    bapUniqueKeyId :: Maybe Text,
+    bapSubscriberId :: Maybe (Id.ShortId BecknSub.Subscriber),
+    source :: Maybe WhiteListSource,
+    action :: Maybe WhiteListAction
   }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WhiteListSource = Internal | External
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WhiteListAction = WhiteList | CreateNew
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -1192,6 +1201,23 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
 
 instance HideSecrets WhiteListOperatingCityReq where
   hideSecrets = identity
+
+data WhiteListOrgListRes = WhiteListOrgListRes
+  { list :: [WhiteListOrgItem]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WhiteListOrgItem = WhiteListOrgItem
+  { id :: Text,
+    subscriberId :: Text,
+    domain :: Context.Domain,
+    merchantId :: Text,
+    merchantOperatingCityId :: Text,
+    createdAt :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ------------------------ Merchant Allowed Destination States ------------------------
 
