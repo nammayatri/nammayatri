@@ -38,7 +38,7 @@ type API =
              :> ( "config"
                     :> ( MandatoryQueryParam "city" Kernel.Types.Beckn.Context.City
                            :> Get
-                                '[JSON]
+                                ('[JSON])
                                 API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
                        )
                 )
@@ -67,7 +67,7 @@ type API =
                                                                               "vehicleType"
                                                                               BecknV2.FRFS.Enums.VehicleCategory
                                                                               :> Get
-                                                                                   '[JSON]
+                                                                                   ('[JSON])
                                                                                    API.Types.UI.FRFSTicketService.AutocompleteRes
                                                                           )
                                                                    )
@@ -98,7 +98,7 @@ type API =
                                                                          "vehicleType"
                                                                          BecknV2.FRFS.Enums.VehicleCategory
                                                                          :> Get
-                                                                              '[JSON]
+                                                                              ('[JSON])
                                                                               [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
                                                                      )
                                                               )
@@ -110,37 +110,25 @@ type API =
                     )
                       :<|> ( ( TokenAuth
                                  :> ( "frfs"
-                                        :> ( "stations"
+                                        :> ( "routesV2"
                                                :> ( QueryParam
-                                                      "city"
-                                                      Kernel.Types.Beckn.Context.City
+                                                      "endStationCode"
+                                                      Data.Text.Text
                                                       :> ( QueryParam
-                                                             "endStationCode"
-                                                             Data.Text.Text
+                                                             "platformType"
+                                                             Domain.Types.IntegratedBPPConfig.PlatformType
                                                              :> ( QueryParam
-                                                                    "location"
-                                                                    Kernel.External.Maps.Types.LatLong
-                                                                    :> ( QueryParam
-                                                                           "minimalData"
-                                                                           Kernel.Prelude.Bool
-                                                                           :> ( QueryParam
-                                                                                  "platformType"
-                                                                                  Domain.Types.IntegratedBPPConfig.PlatformType
-                                                                                  :> ( QueryParam
-                                                                                         "routeCode"
-                                                                                         Data.Text.Text
-                                                                                         :> ( QueryParam
-                                                                                                "startStationCode"
-                                                                                                Data.Text.Text
-                                                                                                :> ( MandatoryQueryParam
-                                                                                                       "vehicleType"
-                                                                                                       BecknV2.FRFS.Enums.VehicleCategory
-                                                                                                       :> Get
-                                                                                                            '[JSON]
-                                                                                                            [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-                                                                                                   )
-                                                                                            )
-                                                                                     )
+                                                                    "startStationCode"
+                                                                    Data.Text.Text
+                                                                    :> ( MandatoryQueryParam
+                                                                           "city"
+                                                                           Kernel.Types.Beckn.Context.City
+                                                                           :> ( MandatoryQueryParam
+                                                                                  "vehicleType"
+                                                                                  BecknV2.FRFS.Enums.VehicleCategory
+                                                                                  :> Get
+                                                                                       ('[JSON])
+                                                                                       [API.Types.UI.FRFSTicketService.FRFSJourneyRouteAPI]
                                                                               )
                                                                        )
                                                                 )
@@ -152,22 +140,36 @@ type API =
                                :<|> ( ( TokenAuth
                                           :> ( "frfs"
                                                  :> ( "stations"
-                                                        :> ( "possibleStops"
+                                                        :> ( QueryParam
+                                                               "city"
+                                                               Kernel.Types.Beckn.Context.City
                                                                :> ( QueryParam
-                                                                      "city"
-                                                                      Kernel.Types.Beckn.Context.City
+                                                                      "endStationCode"
+                                                                      Data.Text.Text
                                                                       :> ( QueryParam
-                                                                             "platformType"
-                                                                             Domain.Types.IntegratedBPPConfig.PlatformType
-                                                                             :> ( MandatoryQueryParam
-                                                                                    "vehicleType"
-                                                                                    BecknV2.FRFS.Enums.VehicleCategory
-                                                                                    :> ( ReqBody
-                                                                                           '[JSON]
-                                                                                           API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq
-                                                                                           :> Post
-                                                                                                '[JSON]
-                                                                                                [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+                                                                             "location"
+                                                                             Kernel.External.Maps.Types.LatLong
+                                                                             :> ( QueryParam
+                                                                                    "minimalData"
+                                                                                    Kernel.Prelude.Bool
+                                                                                    :> ( QueryParam
+                                                                                           "platformType"
+                                                                                           Domain.Types.IntegratedBPPConfig.PlatformType
+                                                                                           :> ( QueryParam
+                                                                                                  "routeCode"
+                                                                                                  Data.Text.Text
+                                                                                                  :> ( QueryParam
+                                                                                                         "startStationCode"
+                                                                                                         Data.Text.Text
+                                                                                                         :> ( MandatoryQueryParam
+                                                                                                                "vehicleType"
+                                                                                                                BecknV2.FRFS.Enums.VehicleCategory
+                                                                                                                :> Get
+                                                                                                                     ('[JSON])
+                                                                                                                     [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+                                                                                                            )
+                                                                                                     )
+                                                                                              )
                                                                                        )
                                                                                 )
                                                                          )
@@ -178,25 +180,23 @@ type API =
                                       )
                                         :<|> ( ( TokenAuth
                                                    :> ( "frfs"
-                                                          :> ( "route"
-                                                                 :> ( Capture
-                                                                        "routeCode"
-                                                                        Data.Text.Text
+                                                          :> ( "stations"
+                                                                 :> ( "possibleStops"
                                                                         :> ( QueryParam
-                                                                               "integratedBppConfigId"
-                                                                               (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
+                                                                               "city"
+                                                                               Kernel.Types.Beckn.Context.City
                                                                                :> ( QueryParam
                                                                                       "platformType"
                                                                                       Domain.Types.IntegratedBPPConfig.PlatformType
                                                                                       :> ( MandatoryQueryParam
-                                                                                             "city"
-                                                                                             Kernel.Types.Beckn.Context.City
-                                                                                             :> ( MandatoryQueryParam
-                                                                                                    "vehicleType"
-                                                                                                    BecknV2.FRFS.Enums.VehicleCategory
-                                                                                                    :> Get
-                                                                                                         '[JSON]
-                                                                                                         API.Types.UI.FRFSTicketService.FRFSRouteAPI
+                                                                                             "vehicleType"
+                                                                                             BecknV2.FRFS.Enums.VehicleCategory
+                                                                                             :> ( ReqBody
+                                                                                                    ('[JSON])
+                                                                                                    API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq
+                                                                                                    :> Post
+                                                                                                         ('[JSON])
+                                                                                                         [API.Types.UI.FRFSTicketService.FRFSStationAPI]
                                                                                                 )
                                                                                          )
                                                                                   )
@@ -207,33 +207,25 @@ type API =
                                                )
                                                  :<|> ( ( TokenAuth
                                                             :> ( "frfs"
-                                                                   :> ( "search"
-                                                                          :> ( QueryParam
-                                                                                 "city"
-                                                                                 Kernel.Types.Beckn.Context.City
+                                                                   :> ( "route"
+                                                                          :> ( Capture
+                                                                                 "routeCode"
+                                                                                 Data.Text.Text
                                                                                  :> ( QueryParam
-                                                                                        "enforceFRFSPass"
-                                                                                        Kernel.Prelude.Bool
+                                                                                        "integratedBppConfigId"
+                                                                                        (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
                                                                                         :> ( QueryParam
-                                                                                               "hasPasses"
-                                                                                               Kernel.Prelude.Bool
-                                                                                               :> ( QueryParam
-                                                                                                      "integratedBppConfigId"
-                                                                                                      (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
-                                                                                                      :> ( QueryParam
-                                                                                                             "newServiceTiers"
-                                                                                                             [BecknV2.FRFS.Enums.ServiceTierType]
-                                                                                                             :> ( MandatoryQueryParam
-                                                                                                                    "vehicleType"
-                                                                                                                    BecknV2.FRFS.Enums.VehicleCategory
-                                                                                                                    :> ( ReqBody
-                                                                                                                           '[JSON]
-                                                                                                                           API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
-                                                                                                                           :> Post
-                                                                                                                                '[JSON]
-                                                                                                                                API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-                                                                                                                       )
-                                                                                                                )
+                                                                                               "platformType"
+                                                                                               Domain.Types.IntegratedBPPConfig.PlatformType
+                                                                                               :> ( MandatoryQueryParam
+                                                                                                      "city"
+                                                                                                      Kernel.Types.Beckn.Context.City
+                                                                                                      :> ( MandatoryQueryParam
+                                                                                                             "vehicleType"
+                                                                                                             BecknV2.FRFS.Enums.VehicleCategory
+                                                                                                             :> Get
+                                                                                                                  ('[JSON])
+                                                                                                                  API.Types.UI.FRFSTicketService.FRFSRouteAPI
                                                                                                          )
                                                                                                   )
                                                                                            )
@@ -244,17 +236,35 @@ type API =
                                                         )
                                                           :<|> ( ( TokenAuth
                                                                      :> ( "frfs"
-                                                                            :> ( "discovery"
-                                                                                   :> ( "search"
+                                                                            :> ( "search"
+                                                                                   :> ( QueryParam
+                                                                                          "city"
+                                                                                          Kernel.Types.Beckn.Context.City
                                                                                           :> ( QueryParam
-                                                                                                 "integratedBppConfigId"
-                                                                                                 (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
-                                                                                                 :> ( ReqBody
-                                                                                                        '[JSON]
-                                                                                                        API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
-                                                                                                        :> Post
-                                                                                                             '[JSON]
-                                                                                                             Kernel.Types.APISuccess.APISuccess
+                                                                                                 "enforceFRFSPass"
+                                                                                                 Kernel.Prelude.Bool
+                                                                                                 :> ( QueryParam
+                                                                                                        "hasPasses"
+                                                                                                        Kernel.Prelude.Bool
+                                                                                                        :> ( QueryParam
+                                                                                                               "integratedBppConfigId"
+                                                                                                               (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
+                                                                                                               :> ( QueryParam
+                                                                                                                      "newServiceTiers"
+                                                                                                                      [BecknV2.FRFS.Enums.ServiceTierType]
+                                                                                                                      :> ( MandatoryQueryParam
+                                                                                                                             "vehicleType"
+                                                                                                                             BecknV2.FRFS.Enums.VehicleCategory
+                                                                                                                             :> ( ReqBody
+                                                                                                                                    ('[JSON])
+                                                                                                                                    API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
+                                                                                                                                    :> Post
+                                                                                                                                         ('[JSON])
+                                                                                                                                         API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+                                                                                                                                )
+                                                                                                                         )
+                                                                                                                  )
+                                                                                                           )
                                                                                                     )
                                                                                              )
                                                                                       )
@@ -263,21 +273,17 @@ type API =
                                                                  )
                                                                    :<|> ( ( TokenAuth
                                                                               :> ( "frfs"
-                                                                                     :> ( "search"
-                                                                                            :> ( Capture
-                                                                                                   "searchId"
-                                                                                                   (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch)
-                                                                                                   :> ( "quote"
-                                                                                                          :> ( QueryParam
-                                                                                                                 "hasPasses"
-                                                                                                                 Kernel.Prelude.Bool
-                                                                                                                 :> ( QueryParam
-                                                                                                                        "tripTime"
-                                                                                                                        Kernel.Prelude.UTCTime
-                                                                                                                        :> Get
-                                                                                                                             '[JSON]
-                                                                                                                             [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
-                                                                                                                    )
+                                                                                     :> ( "discovery"
+                                                                                            :> ( "search"
+                                                                                                   :> ( QueryParam
+                                                                                                          "integratedBppConfigId"
+                                                                                                          (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
+                                                                                                          :> ( ReqBody
+                                                                                                                 ('[JSON])
+                                                                                                                 API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
+                                                                                                                 :> Post
+                                                                                                                      ('[JSON])
+                                                                                                                      Kernel.Types.APISuccess.APISuccess
                                                                                                              )
                                                                                                       )
                                                                                                )
@@ -286,17 +292,21 @@ type API =
                                                                           )
                                                                             :<|> ( ( TokenAuth
                                                                                        :> ( "frfs"
-                                                                                              :> ( "quote"
+                                                                                              :> ( "search"
                                                                                                      :> ( Capture
-                                                                                                            "quoteId"
-                                                                                                            (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
-                                                                                                            :> ( "confirm"
+                                                                                                            "searchId"
+                                                                                                            (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch)
+                                                                                                            :> ( "quote"
                                                                                                                    :> ( QueryParam
-                                                                                                                          "isMockPayment"
+                                                                                                                          "hasPasses"
                                                                                                                           Kernel.Prelude.Bool
-                                                                                                                          :> Post
-                                                                                                                               '[JSON]
-                                                                                                                               API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+                                                                                                                          :> ( QueryParam
+                                                                                                                                 "tripTime"
+                                                                                                                                 Kernel.Prelude.UTCTime
+                                                                                                                                 :> Get
+                                                                                                                                      ('[JSON])
+                                                                                                                                      [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
+                                                                                                                             )
                                                                                                                       )
                                                                                                                )
                                                                                                         )
@@ -306,22 +316,16 @@ type API =
                                                                                      :<|> ( ( TokenAuth
                                                                                                 :> ( "frfs"
                                                                                                        :> ( "quote"
-                                                                                                              :> ( "v2"
-                                                                                                                     :> ( Capture
-                                                                                                                            "quoteId"
-                                                                                                                            (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
-                                                                                                                            :> ( "confirm"
-                                                                                                                                   :> ( QueryParam
-                                                                                                                                          "isMockPayment"
-                                                                                                                                          Kernel.Prelude.Bool
-                                                                                                                                          :> ( ReqBody
-                                                                                                                                                 '[JSON]
-                                                                                                                                                 API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
-                                                                                                                                                 :> Post
-                                                                                                                                                      '[JSON]
-                                                                                                                                                      API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-                                                                                                                                             )
-                                                                                                                                      )
+                                                                                                              :> ( Capture
+                                                                                                                     "quoteId"
+                                                                                                                     (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
+                                                                                                                     :> ( "confirm"
+                                                                                                                            :> ( QueryParam
+                                                                                                                                   "isMockPayment"
+                                                                                                                                   Kernel.Prelude.Bool
+                                                                                                                                   :> Post
+                                                                                                                                        ('[JSON])
+                                                                                                                                        API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
                                                                                                                                )
                                                                                                                         )
                                                                                                                  )
@@ -330,17 +334,23 @@ type API =
                                                                                             )
                                                                                               :<|> ( ( TokenAuth
                                                                                                          :> ( "frfs"
-                                                                                                                :> ( "pass"
-                                                                                                                       :> ( "instantBook"
-                                                                                                                              :> ( QueryParam
-                                                                                                                                     "forceBook"
-                                                                                                                                     Kernel.Prelude.Bool
-                                                                                                                                     :> ( ReqBody
-                                                                                                                                            '[JSON]
-                                                                                                                                            API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq
-                                                                                                                                            :> Post
-                                                                                                                                                 '[JSON]
-                                                                                                                                                 API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp
+                                                                                                                :> ( "quote"
+                                                                                                                       :> ( "v2"
+                                                                                                                              :> ( Capture
+                                                                                                                                     "quoteId"
+                                                                                                                                     (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
+                                                                                                                                     :> ( "confirm"
+                                                                                                                                            :> ( QueryParam
+                                                                                                                                                   "isMockPayment"
+                                                                                                                                                   Kernel.Prelude.Bool
+                                                                                                                                                   :> ( ReqBody
+                                                                                                                                                          ('[JSON])
+                                                                                                                                                          API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
+                                                                                                                                                          :> Post
+                                                                                                                                                               ('[JSON])
+                                                                                                                                                               API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+                                                                                                                                                      )
+                                                                                                                                               )
                                                                                                                                         )
                                                                                                                                  )
                                                                                                                           )
@@ -349,15 +359,17 @@ type API =
                                                                                                      )
                                                                                                        :<|> ( ( TokenAuth
                                                                                                                   :> ( "frfs"
-                                                                                                                         :> ( "quote"
-                                                                                                                                :> ( Capture
-                                                                                                                                       "quoteId"
-                                                                                                                                       (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
-                                                                                                                                       :> ( "payment"
-                                                                                                                                              :> ( "retry"
+                                                                                                                         :> ( "pass"
+                                                                                                                                :> ( "instantBook"
+                                                                                                                                       :> ( QueryParam
+                                                                                                                                              "forceBook"
+                                                                                                                                              Kernel.Prelude.Bool
+                                                                                                                                              :> ( ReqBody
+                                                                                                                                                     ('[JSON])
+                                                                                                                                                     API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq
                                                                                                                                                      :> Post
-                                                                                                                                                          '[JSON]
-                                                                                                                                                          API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+                                                                                                                                                          ('[JSON])
+                                                                                                                                                          API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp
                                                                                                                                                  )
                                                                                                                                           )
                                                                                                                                    )
@@ -366,14 +378,16 @@ type API =
                                                                                                               )
                                                                                                                 :<|> ( ( TokenAuth
                                                                                                                            :> ( "frfs"
-                                                                                                                                  :> ( "booking"
+                                                                                                                                  :> ( "quote"
                                                                                                                                          :> ( Capture
-                                                                                                                                                "bookingId"
-                                                                                                                                                (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                                                                                :> ( "status"
-                                                                                                                                                       :> Get
-                                                                                                                                                            '[JSON]
-                                                                                                                                                            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+                                                                                                                                                "quoteId"
+                                                                                                                                                (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
+                                                                                                                                                :> ( "payment"
+                                                                                                                                                       :> ( "retry"
+                                                                                                                                                              :> Post
+                                                                                                                                                                   ('[JSON])
+                                                                                                                                                                   API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+                                                                                                                                                          )
                                                                                                                                                    )
                                                                                                                                             )
                                                                                                                                      )
@@ -382,25 +396,13 @@ type API =
                                                                                                                          :<|> ( ( TokenAuth
                                                                                                                                     :> ( "frfs"
                                                                                                                                            :> ( "booking"
-                                                                                                                                                  :> ( "list"
-                                                                                                                                                         :> ( QueryParam
-                                                                                                                                                                "limit"
-                                                                                                                                                                Kernel.Prelude.Int
-                                                                                                                                                                :> ( QueryParam
-                                                                                                                                                                       "offset"
-                                                                                                                                                                       Kernel.Prelude.Int
-                                                                                                                                                                       :> ( QueryParam
-                                                                                                                                                                              "overrideEntityId"
-                                                                                                                                                                              Data.Text.Text
-                                                                                                                                                                              :> ( QueryParam
-                                                                                                                                                                                     "vehicleType"
-                                                                                                                                                                                     BecknV2.FRFS.Enums.VehicleCategory
-                                                                                                                                                                                     :> Get
-                                                                                                                                                                                          '[JSON]
-                                                                                                                                                                                          [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
-                                                                                                                                                                                 )
-                                                                                                                                                                          )
-                                                                                                                                                                   )
+                                                                                                                                                  :> ( Capture
+                                                                                                                                                         "bookingId"
+                                                                                                                                                         (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+                                                                                                                                                         :> ( "status"
+                                                                                                                                                                :> Get
+                                                                                                                                                                     ('[JSON])
+                                                                                                                                                                     API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
                                                                                                                                                             )
                                                                                                                                                      )
                                                                                                                                               )
@@ -409,13 +411,25 @@ type API =
                                                                                                                                   :<|> ( ( TokenAuth
                                                                                                                                              :> ( "frfs"
                                                                                                                                                     :> ( "booking"
-                                                                                                                                                           :> ( Capture
-                                                                                                                                                                  "bookingId"
-                                                                                                                                                                  (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                                                                                                  :> ( "canCancel"
-                                                                                                                                                                         :> Post
-                                                                                                                                                                              '[JSON]
-                                                                                                                                                                              Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                           :> ( "list"
+                                                                                                                                                                  :> ( QueryParam
+                                                                                                                                                                         "limit"
+                                                                                                                                                                         Kernel.Prelude.Int
+                                                                                                                                                                         :> ( QueryParam
+                                                                                                                                                                                "offset"
+                                                                                                                                                                                Kernel.Prelude.Int
+                                                                                                                                                                                :> ( QueryParam
+                                                                                                                                                                                       "overrideEntityId"
+                                                                                                                                                                                       Data.Text.Text
+                                                                                                                                                                                       :> ( QueryParam
+                                                                                                                                                                                              "vehicleType"
+                                                                                                                                                                                              BecknV2.FRFS.Enums.VehicleCategory
+                                                                                                                                                                                              :> Get
+                                                                                                                                                                                                   ('[JSON])
+                                                                                                                                                                                                   [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
+                                                                                                                                                                                          )
+                                                                                                                                                                                   )
+                                                                                                                                                                            )
                                                                                                                                                                      )
                                                                                                                                                               )
                                                                                                                                                        )
@@ -428,11 +442,9 @@ type API =
                                                                                                                                                                            "bookingId"
                                                                                                                                                                            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
                                                                                                                                                                            :> ( "canCancel"
-                                                                                                                                                                                  :> ( "status"
-                                                                                                                                                                                         :> Get
-                                                                                                                                                                                              '[JSON]
-                                                                                                                                                                                              API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
-                                                                                                                                                                                     )
+                                                                                                                                                                                  :> Post
+                                                                                                                                                                                       ('[JSON])
+                                                                                                                                                                                       Kernel.Types.APISuccess.APISuccess
                                                                                                                                                                               )
                                                                                                                                                                        )
                                                                                                                                                                 )
@@ -444,10 +456,12 @@ type API =
                                                                                                                                                                              :> ( Capture
                                                                                                                                                                                     "bookingId"
                                                                                                                                                                                     (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                                                                                                                    :> ( "cancel"
-                                                                                                                                                                                           :> Post
-                                                                                                                                                                                                '[JSON]
-                                                                                                                                                                                                Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                                    :> ( "canCancel"
+                                                                                                                                                                                           :> ( "status"
+                                                                                                                                                                                                  :> Get
+                                                                                                                                                                                                       ('[JSON])
+                                                                                                                                                                                                       API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
+                                                                                                                                                                                              )
                                                                                                                                                                                        )
                                                                                                                                                                                 )
                                                                                                                                                                          )
@@ -459,14 +473,10 @@ type API =
                                                                                                                                                                                       :> ( Capture
                                                                                                                                                                                              "bookingId"
                                                                                                                                                                                              (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                                                                                                                             :> ( "reschedule"
-                                                                                                                                                                                                    :> ( ReqBody
-                                                                                                                                                                                                           '[JSON]
-                                                                                                                                                                                                           API.Types.UI.FRFSTicketService.FRFSRescheduleReq
-                                                                                                                                                                                                           :> Post
-                                                                                                                                                                                                                '[JSON]
-                                                                                                                                                                                                                API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-                                                                                                                                                                                                       )
+                                                                                                                                                                                             :> ( "cancel"
+                                                                                                                                                                                                    :> Post
+                                                                                                                                                                                                         ('[JSON])
+                                                                                                                                                                                                         Kernel.Types.APISuccess.APISuccess
                                                                                                                                                                                                 )
                                                                                                                                                                                          )
                                                                                                                                                                                   )
@@ -475,14 +485,16 @@ type API =
                                                                                                                                                                       :<|> ( ( TokenAuth
                                                                                                                                                                                  :> ( "frfs"
                                                                                                                                                                                         :> ( "booking"
-                                                                                                                                                                                               :> ( "cancel"
-                                                                                                                                                                                                      :> ( Capture
-                                                                                                                                                                                                             "bookingId"
-                                                                                                                                                                                                             (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                                                                                                                                             :> ( "status"
-                                                                                                                                                                                                                    :> Get
-                                                                                                                                                                                                                         '[JSON]
-                                                                                                                                                                                                                         API.Types.UI.FRFSTicketService.FRFSCancelStatus
+                                                                                                                                                                                               :> ( Capture
+                                                                                                                                                                                                      "bookingId"
+                                                                                                                                                                                                      (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+                                                                                                                                                                                                      :> ( "reschedule"
+                                                                                                                                                                                                             :> ( ReqBody
+                                                                                                                                                                                                                    ('[JSON])
+                                                                                                                                                                                                                    API.Types.UI.FRFSTicketService.FRFSRescheduleReq
+                                                                                                                                                                                                                    :> Post
+                                                                                                                                                                                                                         ('[JSON])
+                                                                                                                                                                                                                         API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
                                                                                                                                                                                                                 )
                                                                                                                                                                                                          )
                                                                                                                                                                                                   )
@@ -491,25 +503,15 @@ type API =
                                                                                                                                                                              )
                                                                                                                                                                                :<|> ( ( TokenAuth
                                                                                                                                                                                           :> ( "frfs"
-                                                                                                                                                                                                 :> ( "ticket"
-                                                                                                                                                                                                        :> ( "verify"
-                                                                                                                                                                                                               :> ( QueryParam
-                                                                                                                                                                                                                      "platformType"
-                                                                                                                                                                                                                      Domain.Types.IntegratedBPPConfig.PlatformType
-                                                                                                                                                                                                                      :> ( MandatoryQueryParam
-                                                                                                                                                                                                                             "city"
-                                                                                                                                                                                                                             Kernel.Types.Beckn.Context.City
-                                                                                                                                                                                                                             :> ( MandatoryQueryParam
-                                                                                                                                                                                                                                    "vehicleType"
-                                                                                                                                                                                                                                    BecknV2.FRFS.Enums.VehicleCategory
-                                                                                                                                                                                                                                    :> ( ReqBody
-                                                                                                                                                                                                                                           '[JSON]
-                                                                                                                                                                                                                                           API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq
-                                                                                                                                                                                                                                           :> Post
-                                                                                                                                                                                                                                                '[JSON]
-                                                                                                                                                                                                                                                Kernel.Types.APISuccess.APISuccess
-                                                                                                                                                                                                                                       )
-                                                                                                                                                                                                                                )
+                                                                                                                                                                                                 :> ( "booking"
+                                                                                                                                                                                                        :> ( "cancel"
+                                                                                                                                                                                                               :> ( Capture
+                                                                                                                                                                                                                      "bookingId"
+                                                                                                                                                                                                                      (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+                                                                                                                                                                                                                      :> ( "status"
+                                                                                                                                                                                                                             :> Get
+                                                                                                                                                                                                                                  ('[JSON])
+                                                                                                                                                                                                                                  API.Types.UI.FRFSTicketService.FRFSCancelStatus
                                                                                                                                                                                                                          )
                                                                                                                                                                                                                   )
                                                                                                                                                                                                            )
@@ -518,17 +520,25 @@ type API =
                                                                                                                                                                                       )
                                                                                                                                                                                         :<|> ( ( TokenAuth
                                                                                                                                                                                                    :> ( "frfs"
-                                                                                                                                                                                                          :> ( "booking"
-                                                                                                                                                                                                                 :> ( Capture
-                                                                                                                                                                                                                        "bookingId"
-                                                                                                                                                                                                                        (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                                                                                                                                                        :> ( "feedback"
-                                                                                                                                                                                                                               :> ( ReqBody
-                                                                                                                                                                                                                                      '[JSON]
-                                                                                                                                                                                                                                      API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
-                                                                                                                                                                                                                                      :> Post
-                                                                                                                                                                                                                                           '[JSON]
-                                                                                                                                                                                                                                           Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                                                          :> ( "ticket"
+                                                                                                                                                                                                                 :> ( "verify"
+                                                                                                                                                                                                                        :> ( QueryParam
+                                                                                                                                                                                                                               "platformType"
+                                                                                                                                                                                                                               Domain.Types.IntegratedBPPConfig.PlatformType
+                                                                                                                                                                                                                               :> ( MandatoryQueryParam
+                                                                                                                                                                                                                                      "city"
+                                                                                                                                                                                                                                      Kernel.Types.Beckn.Context.City
+                                                                                                                                                                                                                                      :> ( MandatoryQueryParam
+                                                                                                                                                                                                                                             "vehicleType"
+                                                                                                                                                                                                                                             BecknV2.FRFS.Enums.VehicleCategory
+                                                                                                                                                                                                                                             :> ( ReqBody
+                                                                                                                                                                                                                                                    ('[JSON])
+                                                                                                                                                                                                                                                    API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq
+                                                                                                                                                                                                                                                    :> Post
+                                                                                                                                                                                                                                                         ('[JSON])
+                                                                                                                                                                                                                                                         Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                                                                                                )
+                                                                                                                                                                                                                                         )
                                                                                                                                                                                                                                   )
                                                                                                                                                                                                                            )
                                                                                                                                                                                                                     )
@@ -541,10 +551,14 @@ type API =
                                                                                                                                                                                                                           :> ( Capture
                                                                                                                                                                                                                                  "bookingId"
                                                                                                                                                                                                                                  (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
-                                                                                                                                                                                                                                 :> ( "rating"
-                                                                                                                                                                                                                                        :> Get
-                                                                                                                                                                                                                                             '[JSON]
-                                                                                                                                                                                                                                             API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
+                                                                                                                                                                                                                                 :> ( "feedback"
+                                                                                                                                                                                                                                        :> ( ReqBody
+                                                                                                                                                                                                                                               ('[JSON])
+                                                                                                                                                                                                                                               API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
+                                                                                                                                                                                                                                               :> Post
+                                                                                                                                                                                                                                                    ('[JSON])
+                                                                                                                                                                                                                                                    Kernel.Types.APISuccess.APISuccess
+                                                                                                                                                                                                                                           )
                                                                                                                                                                                                                                     )
                                                                                                                                                                                                                              )
                                                                                                                                                                                                                       )
@@ -552,32 +566,14 @@ type API =
                                                                                                                                                                                                         )
                                                                                                                                                                                                           :<|> ( ( TokenAuth
                                                                                                                                                                                                                      :> ( "frfs"
-                                                                                                                                                                                                                            :> ( "trip"
+                                                                                                                                                                                                                            :> ( "booking"
                                                                                                                                                                                                                                    :> ( Capture
-                                                                                                                                                                                                                                          "tripId"
-                                                                                                                                                                                                                                          Data.Text.Text
-                                                                                                                                                                                                                                          :> ( "route"
-                                                                                                                                                                                                                                                 :> ( Capture
-                                                                                                                                                                                                                                                        "routeId"
-                                                                                                                                                                                                                                                        Data.Text.Text
-                                                                                                                                                                                                                                                        :> ( "seats"
-                                                                                                                                                                                                                                                               :> ( QueryParam
-                                                                                                                                                                                                                                                                      "fromStopCode"
-                                                                                                                                                                                                                                                                      Data.Text.Text
-                                                                                                                                                                                                                                                                      :> ( QueryParam
-                                                                                                                                                                                                                                                                             "toStopCode"
-                                                                                                                                                                                                                                                                             Data.Text.Text
-                                                                                                                                                                                                                                                                             :> ( QueryParam
-                                                                                                                                                                                                                                                                                    "vehicleNumber"
-                                                                                                                                                                                                                                                                                    Data.Text.Text
-                                                                                                                                                                                                                                                                                    :> Get
-                                                                                                                                                                                                                                                                                         '[JSON]
-                                                                                                                                                                                                                                                                                         API.Types.UI.FRFSTicketService.SeatLayoutResp
-                                                                                                                                                                                                                                                                                )
-                                                                                                                                                                                                                                                                         )
-                                                                                                                                                                                                                                                                  )
-                                                                                                                                                                                                                                                           )
-                                                                                                                                                                                                                                                    )
+                                                                                                                                                                                                                                          "bookingId"
+                                                                                                                                                                                                                                          (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+                                                                                                                                                                                                                                          :> ( "rating"
+                                                                                                                                                                                                                                                 :> Get
+                                                                                                                                                                                                                                                      ('[JSON])
+                                                                                                                                                                                                                                                      API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
                                                                                                                                                                                                                                              )
                                                                                                                                                                                                                                       )
                                                                                                                                                                                                                                )
@@ -585,17 +581,31 @@ type API =
                                                                                                                                                                                                                  )
                                                                                                                                                                                                                    :<|> ( ( TokenAuth
                                                                                                                                                                                                                               :> ( "frfs"
-                                                                                                                                                                                                                                     :> ( "route"
+                                                                                                                                                                                                                                     :> ( "trip"
                                                                                                                                                                                                                                             :> ( Capture
-                                                                                                                                                                                                                                                   "routeId"
+                                                                                                                                                                                                                                                   "tripId"
                                                                                                                                                                                                                                                    Data.Text.Text
-                                                                                                                                                                                                                                                   :> ( "seatLayout"
-                                                                                                                                                                                                                                                          :> ( QueryParam
-                                                                                                                                                                                                                                                                 "vehicleNumber"
+                                                                                                                                                                                                                                                   :> ( "route"
+                                                                                                                                                                                                                                                          :> ( Capture
+                                                                                                                                                                                                                                                                 "routeId"
                                                                                                                                                                                                                                                                  Data.Text.Text
-                                                                                                                                                                                                                                                                 :> Get
-                                                                                                                                                                                                                                                                      '[JSON]
-                                                                                                                                                                                                                                                                      API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
+                                                                                                                                                                                                                                                                 :> ( "seats"
+                                                                                                                                                                                                                                                                        :> ( QueryParam
+                                                                                                                                                                                                                                                                               "fromStopCode"
+                                                                                                                                                                                                                                                                               Data.Text.Text
+                                                                                                                                                                                                                                                                               :> ( QueryParam
+                                                                                                                                                                                                                                                                                      "toStopCode"
+                                                                                                                                                                                                                                                                                      Data.Text.Text
+                                                                                                                                                                                                                                                                                      :> ( QueryParam
+                                                                                                                                                                                                                                                                                             "vehicleNumber"
+                                                                                                                                                                                                                                                                                             Data.Text.Text
+                                                                                                                                                                                                                                                                                             :> Get
+                                                                                                                                                                                                                                                                                                  ('[JSON])
+                                                                                                                                                                                                                                                                                                  API.Types.UI.FRFSTicketService.SeatLayoutResp
+                                                                                                                                                                                                                                                                                         )
+                                                                                                                                                                                                                                                                                  )
+                                                                                                                                                                                                                                                                           )
+                                                                                                                                                                                                                                                                    )
                                                                                                                                                                                                                                                              )
                                                                                                                                                                                                                                                       )
                                                                                                                                                                                                                                                )
@@ -608,13 +618,13 @@ type API =
                                                                                                                                                                                                                                                      :> ( Capture
                                                                                                                                                                                                                                                             "routeId"
                                                                                                                                                                                                                                                             Data.Text.Text
-                                                                                                                                                                                                                                                            :> ( "serviceability"
-                                                                                                                                                                                                                                                                   :> ( ReqBody
-                                                                                                                                                                                                                                                                          '[JSON]
-                                                                                                                                                                                                                                                                          API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq
-                                                                                                                                                                                                                                                                          :> Post
-                                                                                                                                                                                                                                                                               '[JSON]
-                                                                                                                                                                                                                                                                               API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                                                                                                                                                                                                                                                            :> ( "seatLayout"
+                                                                                                                                                                                                                                                                   :> ( QueryParam
+                                                                                                                                                                                                                                                                          "vehicleNumber"
+                                                                                                                                                                                                                                                                          Data.Text.Text
+                                                                                                                                                                                                                                                                          :> Get
+                                                                                                                                                                                                                                                                               ('[JSON])
+                                                                                                                                                                                                                                                                               API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp
                                                                                                                                                                                                                                                                       )
                                                                                                                                                                                                                                                                )
                                                                                                                                                                                                                                                         )
@@ -623,67 +633,87 @@ type API =
                                                                                                                                                                                                                                    )
                                                                                                                                                                                                                                      :<|> ( ( TokenAuth
                                                                                                                                                                                                                                                 :> ( "frfs"
-                                                                                                                                                                                                                                                       :> ( "activeRoutes"
-                                                                                                                                                                                                                                                              :> ( MandatoryQueryParam
-                                                                                                                                                                                                                                                                     "vehicleType"
-                                                                                                                                                                                                                                                                     BecknV2.FRFS.Enums.VehicleCategory
-                                                                                                                                                                                                                                                                     :> Get
-                                                                                                                                                                                                                                                                          '[JSON]
-                                                                                                                                                                                                                                                                          [API.Types.UI.FRFSTicketService.ActiveRouteRes]
+                                                                                                                                                                                                                                                       :> ( "route"
+                                                                                                                                                                                                                                                              :> ( Capture
+                                                                                                                                                                                                                                                                     "routeId"
+                                                                                                                                                                                                                                                                     Data.Text.Text
+                                                                                                                                                                                                                                                                     :> ( "serviceability"
+                                                                                                                                                                                                                                                                            :> ( ReqBody
+                                                                                                                                                                                                                                                                                   ('[JSON])
+                                                                                                                                                                                                                                                                                   API.Types.UI.FRFSTicketService.FRFSRouteServiceabilityReq
+                                                                                                                                                                                                                                                                                   :> Post
+                                                                                                                                                                                                                                                                                        ('[JSON])
+                                                                                                                                                                                                                                                                                        API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                                                                                                                                                                                                                                                                               )
+                                                                                                                                                                                                                                                                        )
                                                                                                                                                                                                                                                                  )
                                                                                                                                                                                                                                                           )
                                                                                                                                                                                                                                                    )
                                                                                                                                                                                                                                             )
                                                                                                                                                                                                                                               :<|> ( ( TokenAuth
                                                                                                                                                                                                                                                          :> ( "frfs"
-                                                                                                                                                                                                                                                                :> ( "trip"
-                                                                                                                                                                                                                                                                       :> ( Capture
-                                                                                                                                                                                                                                                                              "tripId"
-                                                                                                                                                                                                                                                                              Data.Text.Text
-                                                                                                                                                                                                                                                                              :> ( "route"
-                                                                                                                                                                                                                                                                                     :> ( Capture
-                                                                                                                                                                                                                                                                                            "routeId"
-                                                                                                                                                                                                                                                                                            Data.Text.Text
-                                                                                                                                                                                                                                                                                            :> ( "manifest"
-                                                                                                                                                                                                                                                                                                   :> Get
-                                                                                                                                                                                                                                                                                                        '[JSON]
-                                                                                                                                                                                                                                                                                                        API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp
-                                                                                                                                                                                                                                                                                               )
-                                                                                                                                                                                                                                                                                        )
-                                                                                                                                                                                                                                                                                 )
+                                                                                                                                                                                                                                                                :> ( "activeRoutes"
+                                                                                                                                                                                                                                                                       :> ( MandatoryQueryParam
+                                                                                                                                                                                                                                                                              "vehicleType"
+                                                                                                                                                                                                                                                                              BecknV2.FRFS.Enums.VehicleCategory
+                                                                                                                                                                                                                                                                              :> Get
+                                                                                                                                                                                                                                                                                   ('[JSON])
+                                                                                                                                                                                                                                                                                   [API.Types.UI.FRFSTicketService.ActiveRouteRes]
                                                                                                                                                                                                                                                                           )
                                                                                                                                                                                                                                                                    )
                                                                                                                                                                                                                                                             )
                                                                                                                                                                                                                                                      )
                                                                                                                                                                                                                                                        :<|> ( ( TokenAuth
                                                                                                                                                                                                                                                                   :> ( "frfs"
-                                                                                                                                                                                                                                                                         :> ( "fleetOperator"
-                                                                                                                                                                                                                                                                                :> ( "tripAction"
-                                                                                                                                                                                                                                                                                       :> ( ReqBody
-                                                                                                                                                                                                                                                                                              '[JSON]
-                                                                                                                                                                                                                                                                                              API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
-                                                                                                                                                                                                                                                                                              :> Post
-                                                                                                                                                                                                                                                                                                   '[JSON]
-                                                                                                                                                                                                                                                                                                   API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
+                                                                                                                                                                                                                                                                         :> ( "trip"
+                                                                                                                                                                                                                                                                                :> ( Capture
+                                                                                                                                                                                                                                                                                       "tripId"
+                                                                                                                                                                                                                                                                                       Data.Text.Text
+                                                                                                                                                                                                                                                                                       :> ( "route"
+                                                                                                                                                                                                                                                                                              :> ( Capture
+                                                                                                                                                                                                                                                                                                     "routeId"
+                                                                                                                                                                                                                                                                                                     Data.Text.Text
+                                                                                                                                                                                                                                                                                                     :> ( "manifest"
+                                                                                                                                                                                                                                                                                                            :> Get
+                                                                                                                                                                                                                                                                                                                 ('[JSON])
+                                                                                                                                                                                                                                                                                                                 API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp
+                                                                                                                                                                                                                                                                                                        )
+                                                                                                                                                                                                                                                                                                 )
                                                                                                                                                                                                                                                                                           )
                                                                                                                                                                                                                                                                                    )
                                                                                                                                                                                                                                                                             )
                                                                                                                                                                                                                                                                      )
                                                                                                                                                                                                                                                               )
-                                                                                                                                                                                                                                                                :<|> ( TokenAuth
-                                                                                                                                                                                                                                                                         :> ( "frfs"
-                                                                                                                                                                                                                                                                                :> ( "fleetOperator"
-                                                                                                                                                                                                                                                                                       :> ( "currentOperation"
-                                                                                                                                                                                                                                                                                              :> ( ReqBody
-                                                                                                                                                                                                                                                                                                     '[JSON]
-                                                                                                                                                                                                                                                                                                     API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq
-                                                                                                                                                                                                                                                                                                     :> Post
-                                                                                                                                                                                                                                                                                                          '[JSON]
-                                                                                                                                                                                                                                                                                                          API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
-                                                                                                                                                                                                                                                                                                 )
-                                                                                                                                                                                                                                                                                          )
-                                                                                                                                                                                                                                                                                   )
-                                                                                                                                                                                                                                                                            )
+                                                                                                                                                                                                                                                                :<|> ( ( TokenAuth
+                                                                                                                                                                                                                                                                           :> ( "frfs"
+                                                                                                                                                                                                                                                                                  :> ( "fleetOperator"
+                                                                                                                                                                                                                                                                                         :> ( "tripAction"
+                                                                                                                                                                                                                                                                                                :> ( ReqBody
+                                                                                                                                                                                                                                                                                                       ('[JSON])
+                                                                                                                                                                                                                                                                                                       API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
+                                                                                                                                                                                                                                                                                                       :> Post
+                                                                                                                                                                                                                                                                                                            ('[JSON])
+                                                                                                                                                                                                                                                                                                            API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
+                                                                                                                                                                                                                                                                                                   )
+                                                                                                                                                                                                                                                                                            )
+                                                                                                                                                                                                                                                                                     )
+                                                                                                                                                                                                                                                                              )
+                                                                                                                                                                                                                                                                       )
+                                                                                                                                                                                                                                                                         :<|> ( TokenAuth
+                                                                                                                                                                                                                                                                                  :> ( "frfs"
+                                                                                                                                                                                                                                                                                         :> ( "fleetOperator"
+                                                                                                                                                                                                                                                                                                :> ( "currentOperation"
+                                                                                                                                                                                                                                                                                                       :> ( ReqBody
+                                                                                                                                                                                                                                                                                                              ('[JSON])
+                                                                                                                                                                                                                                                                                                              API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq
+                                                                                                                                                                                                                                                                                                              :> Post
+                                                                                                                                                                                                                                                                                                                   ('[JSON])
+                                                                                                                                                                                                                                                                                                                   API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
+                                                                                                                                                                                                                                                                                                          )
+                                                                                                                                                                                                                                                                                                   )
+                                                                                                                                                                                                                                                                                            )
+                                                                                                                                                                                                                                                                                     )
+                                                                                                                                                                                                                                                                              )
                                                                                                                                                                                                                                                                      )
                                                                                                                                                                                                                                                             )
                                                                                                                                                                                                                                                    )
@@ -715,7 +745,7 @@ type API =
          )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsPassInstantBook :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsBookingRating :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsRoutesV2 :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsPassInstantBook :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> postFrfsBookingReschedule :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsBookingRating :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
 
 getFrfsConfig ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -728,42 +758,49 @@ getFrfsAutocomplete ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> (Kernel.Types.Beckn.Context.City -> (Kernel.External.Maps.Types.LatLong -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler API.Types.UI.FRFSTicketService.AutocompleteRes)))))))
+  (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> (Kernel.Types.Beckn.Context.City -> (Kernel.External.Maps.Types.LatLong -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler API.Types.UI.FRFSTicketService.AutocompleteRes)))))))
 getFrfsAutocomplete a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.FRFSTicketService.getFrfsAutocomplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 getFrfsRoutes ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Types.Beckn.Context.City -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSRouteAPI])))))
+  (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Types.Beckn.Context.City -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSRouteAPI])))))
 getFrfsRoutes a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.FRFSTicketService.getFrfsRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+
+getFrfsRoutesV2 ::
+  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Types.Beckn.Context.City -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSJourneyRouteAPI])))))
+getFrfsRoutesV2 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.FRFSTicketService.getFrfsRoutesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getFrfsStations ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Prelude.Maybe Data.Text.Text -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]))))))))
+  (Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]))))))))
 getFrfsStations a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a9) $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
 
 postFrfsStationsPossibleStops ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> (Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> (BecknV2.FRFS.Enums.VehicleCategory -> (API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]))))
+  (Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> (Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> (BecknV2.FRFS.Enums.VehicleCategory -> (API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]))))
 postFrfsStationsPossibleStops a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.FRFSTicketService.postFrfsStationsPossibleStops (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getFrfsRoute ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Data.Text.Text -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> (Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> (Kernel.Types.Beckn.Context.City -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSRouteAPI)))))
+  (Data.Text.Text -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> (Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> (Kernel.Types.Beckn.Context.City -> (BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSRouteAPI)))))
 getFrfsRoute a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.FRFSTicketService.getFrfsRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 postFrfsSearch ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> (BecknV2.FRFS.Enums.VehicleCategory -> (API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes)))))))
+  (Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> (Kernel.Prelude.Maybe ([BecknV2.FRFS.Enums.ServiceTierType]) -> (BecknV2.FRFS.Enums.VehicleCategory -> (API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes)))))))
 postFrfsSearch a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 postFrfsDiscoverySearch ::
@@ -777,28 +814,28 @@ getFrfsSearchQuote ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes])))
+  (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes])))
 getFrfsSearchQuote a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.FRFSTicketService.getFrfsSearchQuote (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postFrfsQuoteConfirm ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes))
+  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes))
 postFrfsQuoteConfirm a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsQuoteV2Confirm ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)))
+  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)))
 postFrfsQuoteV2Confirm a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postFrfsPassInstantBook ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp))
+  (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp))
 postFrfsPassInstantBook a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.postFrfsPassInstantBook (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsQuotePaymentRetry ::
@@ -819,7 +856,7 @@ getFrfsBookingList ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]))))
+  (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (BecknV2.FRFS.Enums.VehicleCategory) -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]))))
 getFrfsBookingList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.FRFSTicketService.getFrfsBookingList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postFrfsBookingCanCancel ::
@@ -861,7 +898,7 @@ postFrfsTicketVerify ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType -> (Kernel.Types.Beckn.Context.City -> (BecknV2.FRFS.Enums.VehicleCategory -> (API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))))
+  (Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) -> (Kernel.Types.Beckn.Context.City -> (BecknV2.FRFS.Enums.VehicleCategory -> (API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess))))
 postFrfsTicketVerify a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.FRFSTicketService.postFrfsTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postFrfsBookingFeedback ::
@@ -882,14 +919,14 @@ getFrfsTripRouteSeats ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Data.Text.Text -> (Data.Text.Text -> (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Prelude.Maybe Data.Text.Text -> (Kernel.Prelude.Maybe Data.Text.Text -> Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutResp)))))
+  (Data.Text.Text -> (Data.Text.Text -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> (Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutResp)))))
 getFrfsTripRouteSeats a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.FRFSTicketService.getFrfsTripRouteSeats (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getFrfsRouteSeatLayout ::
   ( Kernel.Types.Id.Id Domain.Types.Person.Person,
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  (Data.Text.Text -> (Kernel.Prelude.Maybe Data.Text.Text -> Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp))
+  (Data.Text.Text -> (Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler API.Types.UI.FRFSTicketService.SeatLayoutDetailsResp))
 getFrfsRouteSeatLayout a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSTicketService.getFrfsRouteSeatLayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsRouteServiceability ::

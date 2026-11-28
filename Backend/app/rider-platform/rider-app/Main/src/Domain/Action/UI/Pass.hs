@@ -917,7 +917,8 @@ mkRoutePassConfig pricing =
       maximumPurchaseableTripCount = pricing.maximumPurchaseableTripCount,
       variableTripCount = pricing.variableTripCount == Just True,
       tripCountRecommendations = fromMaybe [] pricing.tripCountRecommendations,
-      allowRoundTripPurchase = pricing.allowRoundTripPurchase == Just True
+      allowRoundTripPurchase = pricing.allowRoundTripPurchase == Just True,
+      roundTripRecommendations = fromMaybe [] pricing.roundTripRecommendations
     }
 
 mkFrfsOverrideConfig :: FRFSPassOverride.OverrideBenefit -> PassAPI.FrfsOverrideConfigAPIEntity

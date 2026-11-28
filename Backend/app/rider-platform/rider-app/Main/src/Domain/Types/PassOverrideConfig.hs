@@ -31,7 +31,8 @@ data PassPricingConfig = PassPricingConfig
     variableTripCount :: Maybe Bool,
     tripCountRecommendations :: Maybe [Int],
     unlimitedPricedTripCount :: Maybe Int,
-    allowRoundTripPurchase :: Maybe Bool
+    allowRoundTripPurchase :: Maybe Bool,
+    roundTripRecommendations :: Maybe [Int]
   }
   deriving (Generic, Show, Eq, ToSchema)
 
