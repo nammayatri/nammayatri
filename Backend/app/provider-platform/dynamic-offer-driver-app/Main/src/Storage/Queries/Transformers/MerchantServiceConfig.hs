@@ -153,6 +153,7 @@ getConfigJSON = \case
   Domain.SettlementServiceConfig settlementCfg -> toJSON settlementCfg
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig cfg -> toJSON cfg
+    GSTEInvoice.DigiGSTEInvoiceConfig cfg -> toJSON cfg
   Domain.AirportReachargeServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -260,6 +261,7 @@ getServiceName = \case
   Domain.SettlementServiceConfig settlementCfg -> Domain.SettlementService settlementCfg.settlementService
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo
+    GSTEInvoice.DigiGSTEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.DigiGST
   Domain.AirportReachargeServiceConfig paymentCfg -> Domain.AirportReachargeService $ getPaymentServiceConfigJson paymentCfg
   Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
     ChallanSearchInterface.SignzyChallanSearch _ -> Domain.ChallanSearchService ChallanSearch.Signzy
@@ -377,6 +379,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
               <> ")"
       Left err -> Left err
   Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.CharteredInfoEInvoiceConfig <$> eitherValue configJSON
+  Domain.GSTEInvoiceService GSTEInvoice.DigiGST -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.DigiGSTEInvoiceConfig <$> eitherValue configJSON
   Domain.AirportReachargeService paymentServiceName -> Domain.AirportReachargeServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.ChallanSearchService ChallanSearch.Signzy -> Domain.ChallanSearchServiceConfig . ChallanSearchInterface.SignzyChallanSearch <$> eitherValue configJSON
   Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> eitherValue configJSON
