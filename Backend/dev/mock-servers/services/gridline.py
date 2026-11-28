@@ -8,9 +8,14 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
 from status_store import extract_path_ids, deep_merge
 
+from ._env import DRIVER_APP_PORT
+
 log = logging.getLogger("gridline")
 
-WEBHOOK_URL = "http://localhost:8016/service/idfy/verification"
+# Callbacks go to this stack's driver app. Under per-workspace port remapping (devbox,
+# resolve-ports) DRIVER_APP_PORT is not 8016; a hard-coded 8016 would deliver the result to
+# another workspace's driver app (or nowhere) and the document would stay pending.
+WEBHOOK_URL = f"http://localhost:{DRIVER_APP_PORT}/service/idfy/verification"
 WEBHOOK_SECRET = "test-secret"
 CALLBACK_DELAY = 0.5
 
@@ -22,14 +27,70 @@ _MOCK_AADHAAR_NUMBER = "123456789012"
 # Verification_Idfy secret. Hardcoded for the local NY Bangalore test env
 # (the async submit body carries only group_id=driverId, not merchant/city).
 # Routed via caddy (8016), which proxies the webhook path to the driver-app.
-CRC_WEBHOOK_URL = "http://localhost:8016/NAMMA_YATRI_PARTNER/Bangalore/service/idfy/verification"
-CRC_WEBHOOK_SECRET = "test-secret"
+CRC_WEBHOOK_URL = f"http://localhost:{DRIVER_APP_PORT}/NAMMA_YATRI_PARTNER/Bangalore/service/idfy/verification"
+
+
+def _post_webhook(url, payload, label, request_id):
+    """POST a verification result to the driver app the way Idfy does (secret in Authorization)."""
+    import urllib.request
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "Authorization": WEBHOOK_SECRET},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            log.info(f"{label} callback sent for {request_id}: {resp.status}")
+    except Exception as e:
+        log.error(f"{label} callback failed for {request_id}: {e}")
+
+
+def _send_dl_callback(request_id, group_id, task_id, dl_number, dob):
+    """DL result, shaped like IdfyResponse (SourceOutput DLVerificationOutput) in shared-kernel.
+
+    The driver app finds the upload by request_id (the one in the ack), reads the expiry with
+    convertTextToUTC (%Y-%m-%d) and needs one class of vehicle the merchant allows
+    (validateDLStatus), so the result lists car, auto, commercial and bike classes.
+    """
+    import time
+    time.sleep(CALLBACK_DELAY)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    payload = {
+        "action": "verify_with_source",
+        "completed_at": now,
+        "created_at": now,
+        "group_id": group_id,
+        "request_id": request_id,
+        "result": {
+            "source_output": {
+                "id_number": dl_number,
+                "dob": dob,
+                "name": "TEST DRIVER",
+                "status": "id_found",
+                "dl_status": "Active",
+                "source": "SARATHI",
+                "date_of_issue": "2015-01-01",
+                "t_validity_to": "2040-12-31",
+                "nt_validity_to": "2040-12-31",
+                "cov_details": [
+                    {"cov": "LMV", "category": "NT", "issue_date": "2015-01-01"},
+                    {"cov": "3WT", "category": "NT", "issue_date": "2015-01-01"},
+                    {"cov": "TRANS", "category": "TR", "issue_date": "2015-01-01"},
+                    {"cov": "MCWG", "category": "NT", "issue_date": "2015-01-01"},
+                ],
+            },
+        },
+        "status": "completed",
+        "task_id": task_id,
+        "type": "ind_driving_license",
+    }
+    _post_webhook(WEBHOOK_URL, payload, "DL", request_id)
 
 
 def _send_crc_callback(request_id, group_id, task_id):
     """Send a Court Record Check webhook callback to BPP after a delay."""
     import time
-    import urllib.request
     time.sleep(CALLBACK_DELAY)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     payload = {
@@ -52,24 +113,12 @@ def _send_crc_callback(request_id, group_id, task_id):
         "task_id": task_id,
         "type": "ind_court_record",
     }
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        CRC_WEBHOOK_URL,
-        data=body,
-        headers={"Content-Type": "application/json", "Authorization": CRC_WEBHOOK_SECRET},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            log.info(f"CRC callback sent for {request_id} (driver {group_id}): {resp.status}")
-    except Exception as e:
-        log.error(f"CRC callback failed for {request_id}: {e}")
+    _post_webhook(CRC_WEBHOOK_URL, payload, "CRC", request_id)
 
 
 def _send_pan_callback(request_id, group_id, task_id, pan_number):
     """Send a PAN verification webhook callback to BPP after a delay."""
     import time
-    import urllib.request
     time.sleep(CALLBACK_DELAY)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     payload = {
@@ -96,24 +145,12 @@ def _send_pan_callback(request_id, group_id, task_id, pan_number):
         "task_id": task_id,
         "type": "ind_pan",
     }
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        WEBHOOK_URL,
-        data=body,
-        headers={"Content-Type": "application/json", "Authorization": WEBHOOK_SECRET},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            log.info(f"PAN callback sent for {request_id}: {resp.status}")
-    except Exception as e:
-        log.error(f"PAN callback failed for {request_id}: {e}")
+    _post_webhook(WEBHOOK_URL, payload, "PAN", request_id)
 
 
 def _send_rc_callback(request_id, group_id, task_id, rc_number):
     """Send an RC verification webhook callback to BPP after a delay."""
     import time
-    import urllib.request
     time.sleep(CALLBACK_DELAY)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     payload = {
@@ -147,18 +184,7 @@ def _send_rc_callback(request_id, group_id, task_id, rc_number):
         "task_id": task_id,
         "type": "ind_rc",
     }
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        WEBHOOK_URL,
-        data=body,
-        headers={"Content-Type": "application/json", "Authorization": WEBHOOK_SECRET},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            log.info(f"RC callback sent for {request_id}: {resp.status}")
-    except Exception as e:
-        log.error(f"RC callback failed for {request_id}: {e}")
+    _post_webhook(WEBHOOK_URL, payload, "RC", request_id)
 
 
 def handle(handler, path, body):
@@ -181,20 +207,32 @@ def handle(handler, path, body):
             base = deep_merge(base, extra)
         handler._json(base)
 
+        parsed_body = {}
+        if body:
+            try:
+                text = body.decode("utf-8") if isinstance(body, bytes) else body
+                parsed_body = json.loads(text)
+            except (json.JSONDecodeError, ValueError):
+                pass
+        if not isinstance(parsed_body, dict):
+            parsed_body = {}
+        group_id = parsed_body.get("group_id", "mock-group")
+        task_id = parsed_body.get("task_id", "mock-task")
+
+        # For DL verification, send a webhook callback after a delay
+        if "ind_driving_license" in path:
+            dl_data = parsed_body.get("data") or {}
+            threading.Thread(
+                target=_send_dl_callback,
+                args=(request_id, group_id, task_id, dl_data.get("id_number", "UNKNOWN"), dl_data.get("date_of_birth")),
+                daemon=True,
+            ).start()
+
         # For PAN verification, send a webhook callback after a delay
         if "ind_pan" in path:
-            parsed_body = {}
-            if body:
-                try:
-                    text = body.decode("utf-8") if isinstance(body, bytes) else body
-                    parsed_body = json.loads(text)
-                except (json.JSONDecodeError, ValueError):
-                    pass
             pan_number = ((parsed_body.get("data") or {}).get("id_number")
                           or (parsed_body.get("data") or {}).get("pan_number")
                           or _MOCK_PAN_NUMBER)
-            group_id = parsed_body.get("group_id", "mock-group")
-            task_id = parsed_body.get("task_id", "mock-task")
             threading.Thread(
                 target=_send_pan_callback,
                 args=(request_id, group_id, task_id, pan_number),
@@ -203,16 +241,7 @@ def handle(handler, path, body):
 
         # For RC verification, send a webhook callback after a delay
         if "ind_rc" in path:
-            parsed_body = {}
-            if body:
-                try:
-                    text = body.decode("utf-8") if isinstance(body, bytes) else body
-                    parsed_body = json.loads(text)
-                except (json.JSONDecodeError, ValueError):
-                    pass
             rc_number = (parsed_body.get("data") or {}).get("rc_number", "UNKNOWN")
-            group_id = parsed_body.get("group_id", "mock-group")
-            task_id = parsed_body.get("task_id", "mock-task")
             threading.Thread(
                 target=_send_rc_callback,
                 args=(request_id, group_id, task_id, rc_number),
@@ -221,15 +250,6 @@ def handle(handler, path, body):
 
         # For Court Record Check, send a CRC webhook callback after a delay
         if "ind_court_record" in path:
-            parsed_body = {}
-            if body:
-                try:
-                    text = body.decode("utf-8") if isinstance(body, bytes) else body
-                    parsed_body = json.loads(text)
-                except (json.JSONDecodeError, ValueError):
-                    pass
-            group_id = parsed_body.get("group_id", "mock-group")
-            task_id = parsed_body.get("task_id", "mock-task")
             threading.Thread(
                 target=_send_crc_callback,
                 args=(request_id, group_id, task_id),
