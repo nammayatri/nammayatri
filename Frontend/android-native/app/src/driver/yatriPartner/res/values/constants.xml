@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="LOCATION_RESOLUTION_REQUEST_CODE">21345</integer>
+    <integer name="SCAN_QR_REQUEST_CODE">181</integer>
+    <integer name="AUTOCOMPLETE_REQUEST_CODE">545</integer>
+</resources>

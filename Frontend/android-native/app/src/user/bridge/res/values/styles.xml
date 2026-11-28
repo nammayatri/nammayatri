@@ -1,0 +1,59 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorAccent</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="MaterialAppTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="buttonBarPositiveButtonStyle">@style/Alert.Button.Positive</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Alert.Button.Neutral</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Alert.Button.Neutral</item>
+        <item name="colorSurface">@color/colorWhite</item>
+        <item name="materialAlertDialogTitlePanelStyle">@style/Material.App.Theme.Title.Panel</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/Material.App.Theme.Title</item>
+        <item name="materialAlertDialogTitleIconStyle">@style/Material.App.Theme.Title.Icon</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/Material.App.Theme.Body</item>
+    </style>
+
+    <style name="Material.App.Theme.Title.Icon" parent="MaterialAlertDialog.MaterialComponents.Title.Icon">
+        <!--        <item name="backgroundColor">@color/colorIconBackground</item>-->
+        <item name="android:layout_gravity">center</item>
+    </style>
+
+    <style name="Material.App.Theme.Title.Panel" parent="MaterialAlertDialog.MaterialComponents.Title.Panel">
+        <item name="android:background">@color/colorIconBackground</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingBottom">14dp</item>
+    </style>
+
+    <style name="Material.App.Theme.Title" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
+        <item name="android:textColor">@color/colorIconBackground</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="Material.App.Theme.Body" parent="MaterialAlertDialog.MaterialComponents.Body.Text">
+        <item name="android:textColor">@color/colorBodyText</item>
+        <item name="android:layout_marginTop">16dp</item>
+    </style>
+
+    <style name="Alert.Button.Positive" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="backgroundTint">@color/white</item>
+        <item name="rippleColor">@color/colorAccent</item>
+        <item name="android:textColor">@color/colorApprovalText</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="Alert.Button.Neutral" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="backgroundTint">@color/white</item>
+        <item name="rippleColor">@color/colorAccent</item>
+        <item name="android:textColor">@color/colorApprovalText</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+</resources>

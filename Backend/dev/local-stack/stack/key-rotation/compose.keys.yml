@@ -1,0 +1,53 @@
+# The key rotation's switch: an overlay on docker-compose.yml, inert until it
+# is named in the stack's .env (COMPOSE_FILE=docker-compose.yml:...:
+# key-rotation/compose.keys.yml) during the window -- README.md beside it.
+#
+#   passetto      the same container, name and port (8021, which the backends'
+#                 dhall reads), on a NEW key database with its own volume, in
+#                 `server` mode: the master password comes from the server's
+#                 secrets folder, never from git.
+#   rider-app,    upstream's secrets file replaced by the copy beside this one,
+#   driver-app    which reads the salt from MOVIN_HASH_SALT (secrets folder).
+#
+# ny-passetto-db, with the old keys, was the rollback until 2026-10-15: since
+# then it is in the `old-keys` profile, so compose no longer makes it, and
+# passetto no longer depends on it (!override replaces the base file's list
+# instead of adding to it). cleanup.sh removes the container.
+services:
+  passetto-db:
+    profiles: [old-keys]
+
+  passetto-keys-db:
+    image: postgres:12.3
+    container_name: ny-passetto-keys-db
+    environment:
+      POSTGRES_DB: passetto
+      POSTGRES_USER: passetto
+      POSTGRES_PASSWORD: passetto
+    volumes:
+      - passetto-keys:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  passetto:
+    command: server
+    depends_on: !override
+      - passetto-keys-db
+    environment:
+      PASSETTO_PG_BACKEND_CONN_STRING: postgresql://passetto:passetto@ny-passetto-keys-db:5432/passetto
+    env_file:
+      - path: /opt/ny/secrets/passetto-master.env # MASTER_PASSWORD=...
+
+  rider-app:
+    env_file:
+      - path: /opt/ny/secrets/hash-salt.env # MOVIN_HASH_SALT=...
+    volumes:
+      - ./key-rotation/rider-app.secrets.dhall:/opt/app/dhall-configs/dev/secrets/rider-app.dhall:ro
+
+  driver-app:
+    env_file:
+      - path: /opt/ny/secrets/hash-salt.env
+    volumes:
+      - ./key-rotation/dynamic-offer-driver-app.secrets.dhall:/opt/app/dhall-configs/dev/secrets/dynamic-offer-driver-app.dhall:ro
+
+volumes:
+  passetto-keys:

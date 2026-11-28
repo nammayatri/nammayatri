@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:weightSum="100"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+           
+<FrameLayout
+    android:layout_width="match_parent"
+    android:layout_height="450dp"
+    android:layout_gravity="center"
+    android:background="#000000"
+>
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="400dp"
+        android:layout_height="400dp"
+        android:layout_marginTop="100px"
+        android:background="#000000"
+    />
+  
+        <ImageView
+            android:layout_width="393dp"
+            android:layout_height="500dp"
+            android:src="@drawable/ny_ic_document_upload_overlay"
+            android:alpha="0.7"
+        />
+
+
+</FrameLayout>
+
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:text="@string/take_a_clear_selfie"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/plus_jakartasans_regular"
+            />
+            
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="40dp"
+            android:layout_marginLeft="113dp"
+         >
+            <Button
+                android:id="@+id/bCapture"
+                android:layout_width="55dp"
+                android:layout_height="55dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/circular_button_background"
+            />
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>

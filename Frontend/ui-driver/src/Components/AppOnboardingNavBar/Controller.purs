@@ -1,0 +1,67 @@
+module Components.AppOnboardingNavBar.Controller where
+
+import MerchantConfig.Types (AppConfig)
+import PrestoDOM(Length(..), Visibility(..), Margin(..))
+import Prelude (class Show, show, (<>))
+import Components.GenericHeader as GenericHeader
+import Font.Style (Style(..))
+import Styles.Colors as Color
+import Font.Style as Style
+import ConfigProvider
+import Language.Strings (getString)
+import Language.Types (STR(..))
+
+instance showAction :: Show Action where
+  show (Logout) = "Logout"
+  show (PrefixImgOnClick) = "PrefixImgOnClick"
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
+
+data Action = Logout 
+            | PrefixImgOnClick 
+            | GenericHeaderAC GenericHeader.Action
+
+type Config = {
+  prefixImageConfig :: ImageConfig,
+  genericHeaderConfig :: GenericHeader.Config,
+  headerTextConfig :: TextConfig,
+  appConfig :: AppConfig,
+  rightButton :: TextConfig
+}
+
+type ImageConfig = {
+  height :: Length,
+  width :: Length,
+  visibility :: Visibility,
+  image :: String
+}
+
+type TextConfig = {
+  text :: String,
+  margin :: Margin,
+  color :: String,
+  fontStyle :: Style
+}
+
+config :: Config
+config = {
+  prefixImageConfig : {
+    height : V 25,
+    width : V 25,
+    visibility : VISIBLE,
+    image : "ny_ic_chevron_left_white"
+  },
+  genericHeaderConfig : GenericHeader.config,
+  rightButton : {
+    text : "",
+    margin : Margin 5 5 0 22 ,
+    color : Color.white900,
+    fontStyle : Style.Heading1
+  },
+  headerTextConfig : {
+    text : "",
+    margin : Margin 5 5 0 22 ,
+    color : Color.white900,
+    fontStyle : Style.Heading1
+  },
+  appConfig : getAppConfig appConfig
+}
