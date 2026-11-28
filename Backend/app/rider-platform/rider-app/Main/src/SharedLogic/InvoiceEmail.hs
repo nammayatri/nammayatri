@@ -85,6 +85,7 @@ findInvoiceForEmail templateKey rideId refundRequestId statuses = case templateK
   DET.REFUND_INVOICE ->
     find (\invoice -> isJust refundRequestId && invoice.entityReferenceId == refundRequestId)
       <$> QInvoiceExtra.findByReferenceIdWithOptions rideId.getId (Just Refund) Nothing statuses Nothing Nothing
+  DET.LEGAL_POLICY_UPDATE -> pure Nothing
   where
     latestOfType invoiceType = listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId.getId (Just invoiceType) Nothing statuses (Just 1) (Just 0)
 
@@ -115,8 +116,10 @@ sendInvoiceEmail ::
   m ()
 sendInvoiceEmail template riderConfig person booking invoice recipient = do
   ride <- listToMaybe booking.rideList & fromMaybeM (InvalidRequest "No ride found for invoice email")
-  let emailConfig = template.config
-      language = fromMaybe ENGLISH person.language
+  emailConfig <- case template.config of
+    DET.InvoiceEmailTemplateConfig cfg -> pure cfg
+    DET.LegalPolicyEmailTemplateConfig _ -> throwError (InternalError $ "Email template " <> template.id.getId <> " has no invoice config")
+  let language = fromMaybe ENGLISH person.language
       mocId = booking.merchantOperatingCityId
   mbPdfTemplate <- CQIT.findByMerchantOpCityIdInvoiceTypeAndLanguage mocId Nothing language Nothing
   (pdfBase64, invoiceNumber) <- renderFinanceInvoicePdf mocId.getId (if isJust mbPdfTemplate then language else ENGLISH) [invoice]
