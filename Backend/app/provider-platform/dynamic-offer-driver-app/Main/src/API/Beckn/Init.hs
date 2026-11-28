@@ -75,9 +75,9 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Init APIV2 Flow" "Reached"
-    (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri, isValueAddNP) <- do
+    (dInitReq, bapId, msgId, city, country, bppId, bppUri, isValueAddNP) <- do
       let context = reqV2.initReqContext
-      callbackUrl <- Utils.getContextBapUri context
+      Utils.validateContextBapUri subscriber context
       bppUri <- Utils.getContextBppUri context
       messageId <- Utils.getMessageId context
       bapId <- Utils.getContextBapId context
@@ -85,7 +85,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       country <- Utils.getContextCountry context
       isValueAddNP <- CQVAN.isValueAddNP bapId
       dInitReq <- ACL.buildInitReqV2 subscriber reqV2 isValueAddNP
-      pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri, isValueAddNP)
+      pure (dInitReq, bapId, messageId, city, country, context.contextBppId, bppUri, isValueAddNP)
 
     -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
     -- against its BapMetadata row, so it can be echoed back later at on_init.
@@ -123,6 +123,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             fork "init received pushing ondc logs" do
               void $ pushLogs "init" (toJSON reqV2) transporterId.getId "MOBILITY"
             ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+            bapUri <- Utils.getBookingBapUri dInitRes.booking
             context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
             void . handle (errHandler dInitRes.booking dInitRes.transporter) $
               Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do

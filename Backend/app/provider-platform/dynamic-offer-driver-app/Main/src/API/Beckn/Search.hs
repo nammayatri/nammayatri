@@ -101,6 +101,7 @@ search ::
 search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $
   withDynamicLogLevel logLevelKey $ do
     bapUri <- Utils.getContextBapUri reqV2.searchReqContext
+    Utils.validateContextBapUri authResult.subscriber reqV2.searchReqContext
     redirectMap <- asks (.bapHostRedirectMap)
     case shouldRedirectBapHost redirectMap bapUri of
       Just (Just url) -> forwardSearchToBpp url transporterId authResult gatewayAuthResult reqV2

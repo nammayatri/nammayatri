@@ -67,9 +67,9 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       logTagInfo "Status APIV2 Flow" $ "Reached:-" <> show reqV2
       dStatusReq <- ACL.buildStatusReqV2 subscriber reqV2
       let context = reqV2.statusReqContext
-      callbackUrl <- Utils.getContextBapUri context
-      logDebug $ "BPP_STATUS_API_DEBUG: Built status request, callback URL: " <> show callbackUrl
       dStatusRes <- DStatus.handler transporterId dStatusReq
+      callbackUrl <- Utils.getBookingBapUri dStatusRes.booking
+      logDebug $ "BPP_STATUS_API_DEBUG: Built status request, callback URL: " <> show callbackUrl
       logDebug $ "BPP_STATUS_API_DEBUG: Status handler completed for booking: " <> dStatusRes.booking.id.getId
       fork "status received pushing ondc logs" do
         void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId "MOBILITY"

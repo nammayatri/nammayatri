@@ -791,7 +791,7 @@ in  { esqDBCfg
     , bulkRcPlaceholderImagePath =
         "driver-onboarding/bulk-upload/rc-placeholder.jpg"
     , masterCloudProxyConfig =
-      { masterUrl = None Text, masterSecret = Some "123" }
+      { masterUrl = None Text, masterSecret = None Text }
     , enableLtsPoolDataForPooling = True
     , rideEventsPublisherCfg
     , ijBehaviorTickPublisherCfg

@@ -29,7 +29,6 @@ import qualified API.Internal.GeometryList as GeometryList
 import qualified API.Internal.GeometryUpdate as GeometryUpdate
 import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
-import qualified API.Internal.MasterCloudForward as MasterCloudForward
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.NotificationWebhook as NotificationWebhook
 import qualified API.Internal.PersonCreate as PersonCreate
@@ -108,7 +107,6 @@ type API =
            :<|> VerifyEmailUpdate.API
            :<|> PersonCreate.API
            :<|> InMemManagement.API
-           :<|> MasterCloudForward.API
            :<|> XyneWebhook.API
            :<|> XyneWebhook.BearerAPI
            :<|> XyneWebhook.IssuesAPI
@@ -122,8 +120,8 @@ type API =
            :<|> VehicleTripOwner.API
        )
 
-handler :: AppEnv -> FlowServer API
-handler env =
+handler :: FlowServer API
+handler =
   DriverReferee.handler
     :<|> FeedbackForm.handler
     :<|> ReportACIssue.handler
@@ -168,7 +166,6 @@ handler env =
     :<|> VerifyEmailUpdate.handler
     :<|> PersonCreate.handler
     :<|> InMemManagement.handler
-    :<|> MasterCloudForward.handler env
     :<|> XyneWebhook.handler
     :<|> XyneWebhook.bearerHandler
     :<|> XyneWebhook.issuesHandler

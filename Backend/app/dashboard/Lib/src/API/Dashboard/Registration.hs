@@ -33,9 +33,6 @@ type API =
            :<|> "logoutAllMerchants"
              :> DashboardAuth 'DASHBOARD_USER
              :> Post '[JSON] DReg.LogoutRes
-           :<|> "enable2Fa"
-             :> ReqBody '[JSON] DReg.Enable2FAReq
-             :> Post '[JSON] DReg.Enable2FARes
            :<|> "initiate2FaSetup"
              :> ReqBody '[JSON] DReg.Initiate2FASetupReq
              :> Post '[JSON] DReg.Initiate2FASetupRes
@@ -72,7 +69,6 @@ handler =
   login
     :<|> logout
     :<|> logoutAllMerchants
-    :<|> enable2fa
     :<|> initiate2FASetup
     :<|> verify2FASetup
     :<|> twoFaStatus
@@ -90,9 +86,6 @@ logout = withDashboardDbFlowHandlerAPI . DReg.logout
 
 logoutAllMerchants :: DashboardLoginFlow r => TokenInfo -> FlowHandlerR r DReg.LogoutRes
 logoutAllMerchants = withDashboardDbFlowHandlerAPI . DReg.logoutAllMerchants
-
-enable2fa :: DashboardLoginFlow r => DReg.Enable2FAReq -> FlowHandlerR r DReg.Enable2FARes
-enable2fa = withDashboardDbFlowHandlerAPI . DReg.enable2fa
 
 initiate2FASetup :: DashboardLoginFlow r => DReg.Initiate2FASetupReq -> FlowHandlerR r DReg.Initiate2FASetupRes
 initiate2FASetup = withDashboardDbFlowHandlerAPI . DReg.initiate2FASetup

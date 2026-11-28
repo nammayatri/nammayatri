@@ -675,7 +675,7 @@ in  { esqDBCfg
     , storagePublicServiceConfig
     , masterCloudProxyConfig =
       { masterUrl = Some "http://localhost:${driverAppInternalPort}"
-      , masterSecret = Some "123"
+      , masterSecret = None Text
       }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"

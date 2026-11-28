@@ -30,7 +30,6 @@ import qualified API.Internal.SyncSearch as InternalSyncSearch
 import qualified API.OnixBppWebhook as OnixBppWebhook
 import qualified API.RSF as RSF
 import qualified API.UI as UI
-import qualified API.UnifiedDashboard as UnifiedDashboard
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import Data.OpenApi
@@ -130,7 +129,6 @@ type MainAPI =
              :> "test"
              :> StripeAccount.AccountStripeWebhookAPI
          )
-    :<|> UnifiedDashboard.API
     :<|> DirectDashboard.API
     :<|> DashboardLogin.API
     -- Dashboard routes that are not part of the login tree and are not
@@ -151,8 +149,8 @@ type MainAPI =
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
 
-mainServer :: AppEnv -> FlowServer MainAPI
-mainServer env =
+mainServer :: FlowServer MainAPI
+mainServer =
   UI.handler
     -- :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> oldIdfyWebhookHandler
@@ -170,7 +168,6 @@ mainServer env =
     :<|> stripeTestPayoutWebhookHandler
     :<|> stripeAccountWebhookHandler
     :<|> stripeTestAccountWebhookHandler
-    :<|> UnifiedDashboard.handler
     :<|> DirectDashboard.handler
     :<|> DashboardLogin.handler
     :<|> ( DashboardInternalAuth.handler
@@ -179,13 +176,13 @@ mainServer env =
              :<|> DashboardExotel.handler
              :<|> DashboardDriverInfo.handler
          )
-    :<|> Internal.handler env
+    :<|> Internal.handler
     :<|> LegalPublishInternal.handler
     :<|> FRFSBookingRatingInternal.handler
 
-driverOfferServer :: AppEnv -> FlowServer DriverOfferAPI
-driverOfferServer env =
-  mainServer env
+driverOfferServer :: FlowServer DriverOfferAPI
+driverOfferServer =
+  mainServer
     :<|> IGM.handler
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> RSF.handler

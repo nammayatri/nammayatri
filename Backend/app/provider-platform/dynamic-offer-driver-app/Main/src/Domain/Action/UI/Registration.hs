@@ -1143,11 +1143,13 @@ driverTempAppCodeCfg =
     { keyPrefix = "driver-offer:temp-app-code:",
       limitKeyPrefix = "driver-offer:temp-app-code-attempts:",
       counterKey = "driver-offer:temp-app-code-counter:",
-      codeStrategy = NumericCounter 10000,
+      codeStrategy = RandomCode 8,
       ttlSeconds = selfServiceTempCodeTtl,
-      consumeOnRead = False,
+      consumeOnRead = True,
       maxAttempts = 3,
-      attemptWindowSeconds = 3600
+      attemptWindowSeconds = 3600,
+      globalFailureLimit = 100,
+      globalFailureWindowSeconds = 60
     }
 
 operatorLinkTempAppCodeCfg :: TempAppCodeCfg

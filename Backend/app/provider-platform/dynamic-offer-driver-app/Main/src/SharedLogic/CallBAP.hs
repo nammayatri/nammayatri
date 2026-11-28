@@ -784,7 +784,7 @@ sendOnConfirmToBAP booking ride driver veh transporter context transporterConfig
   let bppId = context.contextBppId
       txnId = Just transactionId
   bapId <- Utils.getContextBapId context
-  callbackUrl <- Utils.getContextBapUri context
+  callbackUrl <- Utils.getBookingBapUri booking
   bppUri <- Utils.getContextBppUri context
   msgId <- Utils.getMessageId context
   city <- Utils.getContextCity context

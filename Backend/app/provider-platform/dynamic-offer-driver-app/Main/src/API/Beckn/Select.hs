@@ -64,6 +64,7 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SelectV2 API Flow" "Reached"
+    Utils.validateContextBapUri subscriber reqV2.selectReqContext
     dSelectReq' <- ACL.buildSelectReqV2 subscriber reqV2
     merchant <- QMerch.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
     city <- Utils.getContextCity reqV2.selectReqContext
