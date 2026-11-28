@@ -5,7 +5,7 @@ let
   dataName = "combined";
   customPort = "5001";
   # Bounding boxes for routing data extraction
-  indiaBbox = "77.5500,12.9000,77.6500,13.0000"; # Central Bangalore
+  indiaBbox = "77.4500,12.7400,77.8200,13.1500"; # Greater Bangalore (Yelahanka to Attibele, Nagarabhavi to Sarjapura)
   finlandBbox = "24.0,60.0,25.5,60.5"; # Helsinki metro area
 in
 {

@@ -14,6 +14,7 @@ module Domain.Action.Dashboard.AppManagement.PassOrganization
 where
 
 import qualified API.Types.Dashboard.AppManagement.PassOrganization as PassOrganizationAPI
+import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import Data.OpenApi (ToSchema)
 import qualified Data.Time
@@ -31,11 +32,13 @@ import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime)
 import qualified Kernel.Utils.Common as Utils
+import qualified SharedLogic.CorporateMembership as SCorporate
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
@@ -173,17 +176,65 @@ postPassOrganizationUpdate :: (Id.ShortId DMerchant.Merchant -> Context.City -> 
 postPassOrganizationUpdate merchantShortId opCity personId req = do
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
   mbExisting <- QPassOrganization.findByPersonId personId
-  case mbExisting of
-    Just existing -> do
-      unless (existing.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
-      QPassOrganization.updatePassOrganization req.name req.address existing.id
-    Nothing -> do
-      newPassOrganization <- mkPassOrganization req personId merchantShortId opCity
-      QPassOrganization.create newPassOrganization
+  mbEmailDomains <- traverse SCorporate.normaliseEmailDomains req.emailDomains
+  officeLocation <- case (req.officeLat, req.officeLon) of
+    (Just lat, Just lon)
+      | lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 -> pure (Just (lat, lon))
+      | otherwise -> Utils.throwError (InvalidRequest "Invalid office location")
+    (Nothing, Nothing) -> pure Nothing
+    _ -> Utils.throwError (InvalidRequest "Give both officeLat and officeLon, or neither")
+  -- the domain check and the write happen under one lock per city, so two requests cannot both claim the same domain
+  withEmailDomainLock callerMoc.id (Kernel.Prelude.isJust mbEmailDomains) $ do
+    Kernel.Prelude.whenJust mbEmailDomains $ \emailDomains ->
+      validateEmailDomains callerMoc.id (maybe req.passEnum (.passEnum) mbExisting) ((.id) <$> mbExisting) emailDomains
+    case mbExisting of
+      Just existing -> do
+        unless (existing.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
+        QPassOrganization.updatePassOrganization req.name req.address existing.id
+        Kernel.Prelude.whenJust mbEmailDomains $ \emailDomains -> do
+          QPassOrganization.updateEmailDomains emailDomains existing.id
+          rememberDomainWrite callerMoc.id existing.id
+        Kernel.Prelude.whenJust officeLocation $ \(lat, lon) -> QPassOrganization.updateOfficeLocation (Just lat) (Just lon) existing.id
+      Nothing -> do
+        newPassOrganization <- mkPassOrganization req (fromMaybe [] mbEmailDomains) officeLocation personId merchantShortId opCity
+        QPassOrganization.create newPassOrganization
+        when (Kernel.Prelude.isJust mbEmailDomains) $ rememberDomainWrite callerMoc.id newPassOrganization.id
   pure APISuccess.Success
 
-mkPassOrganization :: PassOrganizationAPI.PassOrganizationUpdateReq -> Id.Id DPerson.Person -> Id.ShortId DMerchant.Merchant -> Context.City -> Environment.Flow DPassOrganization.PassOrganization
-mkPassOrganization req personId merchantShortId opCity = do
+-- | Email-domain writes of one city run one at a time: the check that a domain is free and the write that claims it are
+-- done under this lock (other pass-organisation updates, with no domains in the request, do not take it).
+withEmailDomainLock :: Id.Id Fields.MerchantOperatingCity -> Bool -> Environment.Flow a -> Environment.Flow a
+withEmailDomainLock merchantOperatingCityId takeLock action
+  | takeLock = Redis.withWaitAndLockRedis ("CorporateShuttle:EmailDomains:Lock:" <> merchantOperatingCityId.getId) 10 50000 action
+  | otherwise = action
+
+-- | Organisations whose domains were written recently in the city. Writes go through the KV layer and reach Postgres a
+-- little later, so the next check also reads these by id (from KV) and sees a domain claimed moments ago.
+recentDomainWritesKey :: Id.Id Fields.MerchantOperatingCity -> Kernel.Prelude.Text
+recentDomainWritesKey merchantOperatingCityId = "CorporateShuttle:EmailDomains:RecentWrites:" <> merchantOperatingCityId.getId
+
+rememberDomainWrite :: Id.Id Fields.MerchantOperatingCity -> Id.Id DPassOrganization.PassOrganization -> Environment.Flow ()
+rememberDomainWrite merchantOperatingCityId orgId = Redis.sAddExp (recentDomainWritesKey merchantOperatingCityId) [orgId.getId] 3600
+
+-- | Corporate shuttle: work-email domains go only on a regular-pass organisation (the company), and one domain belongs to
+-- one company per city, so a verified email always resolves to exactly one company.
+validateEmailDomains :: Id.Id Fields.MerchantOperatingCity -> DPassType.PassEnum -> Kernel.Prelude.Maybe (Id.Id DPassOrganization.PassOrganization) -> [Kernel.Prelude.Text] -> Environment.Flow ()
+validateEmailDomains merchantOperatingCityId passEnum mbSelfId emailDomains = do
+  unless (null emailDomains || passEnum == DPassType.RegularPass) $
+    Utils.throwError (InvalidRequest "Email domains can only be set on a RegularPass (corporate) organisation")
+  listed <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum merchantOperatingCityId DPassType.RegularPass
+  recent <- Redis.sMembers (recentDomainWritesKey merchantOperatingCityId)
+  -- each company read again by id, so a domain written through KV but not yet in Postgres is seen too
+  fresh <- Kernel.Prelude.catMaybes <$> mapM QPassOrganization.findById (DL.nub (map (.id) listed <> map Id.Id recent))
+  let companies = filter (\c -> c.passEnum == DPassType.RegularPass && c.merchantOperatingCityId == merchantOperatingCityId) fresh
+  forM_ companies $ \company ->
+    unless (Just company.id == mbSelfId) $
+      forM_ (filter (`elem` company.emailDomains) emailDomains) $
+        \domain ->
+          Utils.throwError (InvalidRequest $ "Email domain " <> domain <> " already belongs to " <> company.name)
+
+mkPassOrganization :: PassOrganizationAPI.PassOrganizationUpdateReq -> [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe (Double, Double) -> Id.Id DPerson.Person -> Id.ShortId DMerchant.Merchant -> Context.City -> Environment.Flow DPassOrganization.PassOrganization
+mkPassOrganization req emailDomains officeLocation personId merchantShortId opCity = do
   now <- Utils.getCurrentTime
   newId <- Utils.generateGUID
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest "Merchant not found")
@@ -200,7 +251,10 @@ mkPassOrganization req personId merchantShortId opCity = do
         DPassOrganization.createdAt = now,
         DPassOrganization.updatedAt = now,
         DPassOrganization.depotPersonId = Nothing,
-        DPassOrganization.depotId = Nothing
+        DPassOrganization.depotId = Nothing,
+        DPassOrganization.emailDomains = emailDomains,
+        DPassOrganization.officeLat = fst <$> officeLocation,
+        DPassOrganization.officeLon = snd <$> officeLocation
       }
 
 getPassOrganizationGetOrganizations ::
@@ -227,7 +281,10 @@ mkGetOrganizationResp org =
     { PassOrganizationAPI.id = org.id,
       PassOrganizationAPI.name = org.name,
       PassOrganizationAPI.address = org.address,
-      PassOrganizationAPI.depotId = org.depotId
+      PassOrganizationAPI.depotId = org.depotId,
+      PassOrganizationAPI.emailDomains = org.emailDomains,
+      PassOrganizationAPI.officeLat = org.officeLat,
+      PassOrganizationAPI.officeLon = org.officeLon
     }
 
 getPassOrganizationPassDetailsDocument :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DMF.MediaFile -> Environment.Flow Kernel.Prelude.Text)

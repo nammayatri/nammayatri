@@ -13,17 +13,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PassOrganizationT f = PassOrganizationT
-  { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Data.Time.UTCTime,
-    depotId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    depotPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    name :: B.C f Kernel.Prelude.Text,
-    passEnum :: B.C f Domain.Types.PassType.PassEnum,
-    personId :: B.C f Kernel.Prelude.Text,
-    updatedAt :: B.C f Data.Time.UTCTime
+  { address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Data.Time.UTCTime),
+    depotId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    depotPersonId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    emailDomains :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    name :: (B.C f Kernel.Prelude.Text),
+    officeLat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    officeLon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    passEnum :: (B.C f Domain.Types.PassType.PassEnum),
+    personId :: (B.C f Kernel.Prelude.Text),
+    updatedAt :: (B.C f Data.Time.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +36,6 @@ instance B.Table PassOrganizationT where
 
 type PassOrganization = PassOrganizationT Identity
 
-$(enableKVPG ''PassOrganizationT ['id] [['depotPersonId], ['personId]])
+$(enableKVPG (''PassOrganizationT) [('id)] [[('depotPersonId)], [('personId)]])
 
-$(mkTableInstances ''PassOrganizationT "pass_organization")
+$(mkTableInstances (''PassOrganizationT) "pass_organization")

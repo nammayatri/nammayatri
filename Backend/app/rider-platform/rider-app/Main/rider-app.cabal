@@ -237,6 +237,7 @@ library
       Domain.Action.Dashboard.AppManagement.PassOrganization
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.SeatLayout
+      Domain.Action.Dashboard.AppManagement.ShuttleInterest
       Domain.Action.Dashboard.AppManagement.StopRouteDetails
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
@@ -419,6 +420,7 @@ library
       Domain.Action.UI.Serviceability
       Domain.Action.UI.SharedCab
       Domain.Action.UI.SharedCabInternal
+      Domain.Action.UI.ShuttleInterest
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialZoneQuote
@@ -472,6 +474,7 @@ library
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
       Domain.Types.Extra.RiderPreferences
+      Domain.Types.Extra.ShuttleInterest
       Domain.Types.Extra.TicketBooking
       Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
@@ -595,6 +598,9 @@ library
       SharedLogic.Cancel
       SharedLogic.CancellationFee
       SharedLogic.Confirm
+      SharedLogic.CorporateMembership
+      SharedLogic.CorporateShuttle.RoutePlanner
+      SharedLogic.CorporateShuttle.TransitHubs
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId
       SharedLogic.DriverNumber
@@ -1066,6 +1072,7 @@ library
       API.Action.DashboardAuth.AppManagement.PassOrganization
       API.Action.DashboardAuth.AppManagement.Payment
       API.Action.DashboardAuth.AppManagement.SeatLayout
+      API.Action.DashboardAuth.AppManagement.ShuttleInterest
       API.Action.DashboardAuth.AppManagement.StopRouteDetails
       API.Action.DashboardAuth.AppManagement.TicketDashboard
       API.Action.DashboardAuth.AppManagement.Tickets
@@ -1168,6 +1175,7 @@ library
       API.Action.UI.RiderPreferences
       API.Action.UI.SharedCab
       API.Action.UI.SharedCabInternal
+      API.Action.UI.ShuttleInterest
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SupportBot
@@ -1195,6 +1203,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.SeatLayout
+      API.Types.Dashboard.AppManagement.Endpoints.ShuttleInterest
       API.Types.Dashboard.AppManagement.Endpoints.StopRouteDetails
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
@@ -1208,6 +1217,7 @@ library
       API.Types.Dashboard.AppManagement.PassOrganization
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.SeatLayout
+      API.Types.Dashboard.AppManagement.ShuttleInterest
       API.Types.Dashboard.AppManagement.StopRouteDetails
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
@@ -1337,6 +1347,7 @@ library
       API.Types.UI.RiderPreferences
       API.Types.UI.SharedCab
       API.Types.UI.SharedCabInternal
+      API.Types.UI.ShuttleInterest
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SupportBot
@@ -1510,6 +1521,8 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.ShuttleInterest
+      Domain.Types.ShuttlePublishedTrip
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1690,6 +1703,8 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.ShuttleInterest
+      Storage.Beam.ShuttlePublishedTrip
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1957,6 +1972,8 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.ShuttleInterest
+      Storage.Queries.ShuttlePublishedTrip
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation
@@ -2127,6 +2144,7 @@ library
     , xml-conduit
     , xmlbf
     , yudhishthira
+    , zip-archive
     , zlib
   default-language: Haskell2010
   if flag(Local)
@@ -2272,6 +2290,7 @@ executable rider-app-exe
     , xml-conduit
     , xmlbf
     , yudhishthira
+    , zip-archive
     , zlib
   default-language: Haskell2010
   if flag(Local)
@@ -2446,5 +2465,6 @@ test-suite rider-app-test
     , xml-conduit
     , xmlbf
     , yudhishthira
+    , zip-archive
     , zlib
   default-language: Haskell2010
