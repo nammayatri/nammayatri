@@ -129,6 +129,15 @@ findActiveByUserId userId now =
         ]
     ]
 
+-- | Every row of one campaign (index on cohort_mapping_id). Dashboard members tab:
+-- whole-campaign summary counts and the filtered page come from this one read.
+findAllByCohortMappingId ::
+  (BeamFlow m r) =>
+  Id DCJM.CohortJourneyMapping ->
+  m [DUCM.UserCohortMapping]
+findAllByCohortMappingId cohortMappingId =
+  findAllWithKV [Se.Is Beam.cohortMappingId $ Se.Eq (getId cohortMappingId)]
+
 insertUserCohortMappingIgnoringConflict ::
   (BeamFlow m r) =>
   Id Common.Person ->

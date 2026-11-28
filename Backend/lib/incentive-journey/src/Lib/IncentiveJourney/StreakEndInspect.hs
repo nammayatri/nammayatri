@@ -208,6 +208,7 @@ inspectPeriodized dispatchStreak personId journey cjm milestones periodKey trigg
             StreakEnd.streakEndDispatchSpecAndPayout
               cjm
               streakMeta
+              (Deferred.campaignTimeBounds milestones)
               [(row.periodKey, row.currentMetrics) | row <- allStats]
           -- Exclusive sliceEnd: closed when local calendar day >= sliceEnd.
           sliceClosed = utctDay localNow >= sliceEnd
@@ -294,6 +295,7 @@ inspectClassic dispatchStreak personId journey cjm milestones periodKey trigger 
             StreakEnd.streakEndDispatchSpecAndPayout
               cjm
               streakMeta
+              (Deferred.campaignTimeBounds milestones)
               [(row.periodKey, row.currentMetrics) | row <- scopedStats]
           -- NetOff only: wait until exclusive streak end so last-day earnings settle before
           -- cash is locked. Fixed Cash/Coins classic awards stay ReadyToAward on the last period day.

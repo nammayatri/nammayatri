@@ -17,7 +17,13 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Core
     listCohortJourneyRows,
     AssignmentView (..),
     AssignmentOptInStatus (..),
+    mkAssignmentOptInStatus,
     listAssignmentViews,
+    IncentiveJourneyDashboardError (..),
+    CampaignMembersFilter (..),
+    CampaignMembersSummary (..),
+    CampaignMemberView (..),
+    listCampaignMembers,
     assignUser,
     unassignUser,
     optInUser,
@@ -32,10 +38,11 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (nub, sortOn)
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
-import Data.Time (Day)
+import Data.Time (Day, UTCTime (..))
 import EulerHS.Prelude hiding (id, sortOn)
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Types.Error.BaseError.HTTPError
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney as IJ
@@ -337,6 +344,139 @@ toAssignmentView localTime merchantId merchantOpCityId assignment = do
                 assignedAt = assignment.assignedAt
               }
     _ -> pure Nothing
+
+-- | 404 for an unknown CJM id (members tab). Older CJM endpoints keep InvalidRequest.
+data IncentiveJourneyDashboardError
+  = CohortJourneyMappingNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IncentiveJourneyDashboardError
+
+instance IsBaseError IncentiveJourneyDashboardError where
+  toMessage = \case
+    CohortJourneyMappingNotFound cjmId -> Just $ "Cohort journey mapping not found: " <> cjmId
+
+instance IsHTTPError IncentiveJourneyDashboardError where
+  toErrorCode = \case
+    CohortJourneyMappingNotFound _ -> "COHORT_JOURNEY_MAPPING_NOT_FOUND"
+  toHttpCode = \case
+    CohortJourneyMappingNotFound _ -> E404
+
+instance IsAPIError IncentiveJourneyDashboardError
+
+-- | Members tab filters. All optional; optedInFrom inclusive, optedInTo exclusive.
+-- optedInFrom / optedInTo are city-local wall clock (same as stored UCM.optedInAt).
+data CampaignMembersFilter = CampaignMembersFilter
+  { optInStatus :: Maybe AssignmentOptInStatus,
+    optedInFrom :: Maybe UTCTime,
+    optedInTo :: Maybe UTCTime,
+    enabled :: Maybe Bool,
+    activeNow :: Maybe Bool,
+    userId :: Maybe (ID.Id DIJC.Person),
+    limit :: Maybe Int,
+    offset :: Maybe Int
+  }
+
+-- | Whole-campaign counts (filters and paging do not apply).
+data CampaignMembersSummary = CampaignMembersSummary
+  { total :: Int,
+    optedIn :: Int,
+    invited :: Int,
+    disabled :: Int,
+    expired :: Int,
+    optedInToday :: Int,
+    -- | The campaign's OptIn cadence ('IJ.listOptInPeriod'); Nothing for Assigned.
+    optInPeriod :: Maybe DCJM.OptInPeriod
+  }
+
+data CampaignMemberView = CampaignMemberView
+  { userId :: ID.Id DIJC.Person,
+    optInStatus :: AssignmentOptInStatus,
+    -- | The membership's cadence snapshot (taken at opt-in), else the campaign's; Nothing for Assigned.
+    optInPeriod :: Maybe DCJM.OptInPeriod,
+    optedInAt :: Maybe UTCTime,
+    optedInBy :: Maybe Text,
+    assignedAt :: UTCTime,
+    enabled :: Bool,
+    validTill :: UTCTime,
+    activeNow :: Bool
+  }
+
+-- | Campaign (CJM) members: whole-campaign summary + filtered page ordered by (createdAt, id).
+-- Times: UCM.validTill / optedInAt / CJM.startDate are all city-local wall clock (compared
+-- with getLocalCurrentTime), so "today" = city-local midnight.
+-- optInStatus / activeNow follow the period-active opt-in rule (IJ.isOptInActiveForLocalTime:
+-- Daily = same local day as optedInAt, Weekly = campaign-anchored week). activeNow mirrors
+-- CampaignSync.assignmentOccupiesControlFeaturesSlot (CJM enabled and in window; Assigned, or
+-- period-active OptIn) plus the UCM liveness rule of findActiveByUserId (enabled, validTill >= local now).
+listCampaignMembers ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ID.Id DCJM.CohortJourneyMapping ->
+  CampaignMembersFilter ->
+  m (CampaignMembersSummary, [CampaignMemberView])
+listCampaignMembers handle merchantShortId opCity cjmId flt = do
+  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
+  cjm <- QCJMExtra.findCohortJourneyMappingById cjmId >>= fromMaybeM (CohortJourneyMappingNotFound cjmId.getId)
+  unless (cjm.merchantId == ID.cast merchant.id && cjm.merchantOperatingCityId == ID.cast merchantOpCityId) $
+    throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
+  journey <- QJourney.findById cjm.journeyId >>= fromMaybeM (InvalidRequest "Incentive journey not found")
+  timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
+  localNow <- getLocalCurrentTime timeDiffFromUtc
+  rows <- QUCMExtra.findAllByCohortMappingId cjmId
+  let todayStartLocal = UTCTime (utctDay localNow) 0
+      campaignEnd = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
+      campaignLive = cjm.enabled && localNow >= cjm.startDate && localNow < campaignEnd
+      linkType = fromMaybe DCJM.Assigned cjm.campaignUserLinkType
+      toView ucm =
+        CampaignMemberView
+          { userId = ucm.userId,
+            optInStatus = mkAssignmentOptInStatus localNow cjm (Just ucm),
+            optInPeriod = case linkType of
+              DCJM.Assigned -> Nothing
+              DCJM.OptIn -> ucm.optInPeriod <|> IJ.listOptInPeriod cjm,
+            optedInAt = ucm.optedInAt,
+            optedInBy = ucm.optedInBy,
+            assignedAt = ucm.createdAt,
+            enabled = ucm.enabled,
+            validTill = ucm.validTill,
+            activeNow =
+              campaignLive
+                && ucm.enabled
+                && ucm.validTill >= localNow
+                && (linkType == DCJM.Assigned || IJ.isOptInActiveForLocalTime localNow (Just cjm.startDate) ucm)
+          }
+      views = map toView $ sortOn (\ucm -> (ucm.createdAt, ucm.id.getId)) rows
+      count p = length (filter p views)
+      summary =
+        CampaignMembersSummary
+          { total = length views,
+            optedIn = count (\v -> v.enabled && v.optInStatus == OptedIn),
+            invited = count (\v -> v.enabled && v.optInStatus == Pending),
+            disabled = count (not . (.enabled)),
+            expired = count (\v -> v.enabled && v.validTill < localNow),
+            optedInToday = count (\v -> maybe False (>= todayStartLocal) v.optedInAt),
+            optInPeriod = IJ.listOptInPeriod cjm
+          }
+      matches v =
+        maybe True (== v.optInStatus) flt.optInStatus
+          && maybe True (\from -> maybe False (>= from) v.optedInAt) flt.optedInFrom
+          && maybe True (\to -> maybe False (< to) v.optedInAt) flt.optedInTo
+          && maybe True (== v.enabled) flt.enabled
+          && maybe True (== v.activeNow) flt.activeNow
+          && maybe True (== v.userId) flt.userId
+      limitVal = max 1 . min maxMembersLimit $ fromMaybe defaultMembersLimit flt.limit
+      offsetVal = max 0 $ fromMaybe 0 flt.offset
+      page = take limitVal . drop offsetVal $ filter matches views
+  pure (summary, page)
+
+defaultMembersLimit :: Int
+defaultMembersLimit = 50
+
+maxMembersLimit :: Int
+maxMembersLimit = 500
 
 assignUser ::
   BeamFlow m r =>

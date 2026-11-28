@@ -238,7 +238,9 @@ bumpCampaignMetricForMembership personId membership metric delta localTime = do
             pure True
     _ -> pure False
 
--- | Max Inside/Outside count across period stats rows for this metric (0 if none).
+-- | Max inside-window count across period stats rows for this metric (0 if none).
+-- ij:bm is bumped only inside the window (tb key) or all day (daily key, where every tick is
+-- inside), so seed from the *InsideTimebound key; rows without split keys fall back to the flat key.
 behaviorSeedFromStats ::
   BeamFlow m r =>
   Id IJCommon.Person ->
@@ -251,7 +253,12 @@ behaviorSeedFromStats personId cjmId periodKey metric = do
   let base = metricBaseName metric
       seeds =
         map
-          (\row -> Evaluation.lookupMetricInt row.currentMetrics mempty base)
+          ( \row ->
+              maybe
+                (Evaluation.lookupMetricInt row.currentMetrics mempty base)
+                round
+                (Evaluation.lookupNumber row.currentMetrics (Evaluation.metricInsideKey base))
+          )
           rows
   pure $ maximum (0 : seeds)
 
