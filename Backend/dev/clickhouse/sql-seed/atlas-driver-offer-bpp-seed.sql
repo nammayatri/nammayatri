@@ -46,6 +46,7 @@ CREATE TABLE atlas_driver_offer_bpp.daily_stats (
     `num_rides` Int64,
     `cancellation_charges` Float64,
     `bonus_earnings` Float64,
+    `online_duration` Nullable(Int64),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
 ORDER BY (merchant_local_date, driver_id, id);
@@ -297,13 +298,14 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.daily_stats_queue (
     `num_rides` Int64,
     `cancellation_charges` Float64,
     `bonus_earnings` Float64,
+    `online_duration` Nullable(Int64),
     `updated_at` Nullable(DateTime)
 ) ENGINE = Kafka
 SETTINGS kafka_broker_list='localhost:29092', kafka_topic_list='adob-sessionizer-daily_stats', kafka_group_name='ch-atlas_driver_offer_bpp-daily_stats', kafka_format='JSONEachRow', kafka_num_consumers=1, kafka_skip_broken_messages=100;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.daily_stats_mv
 TO atlas_driver_offer_bpp.daily_stats AS
-SELECT id, driver_id, merchant_local_date, total_earnings, total_distance, num_rides, cancellation_charges, bonus_earnings, updated_at AS version
+SELECT id, driver_id, merchant_local_date, total_earnings, total_distance, num_rides, cancellation_charges, bonus_earnings, online_duration, updated_at AS version
 FROM atlas_driver_offer_bpp.daily_stats_queue;
 
 -- driver_information --------------------------------------------------------

@@ -76,6 +76,37 @@ handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
           logTagInfo "DriverStatus" $ "inProgress lock already held for entityId: " <> entityId <> " (race detected in else). Waiting for it to clear."
           handleCacheMissForDriverFlowStatus entityRole entityId allKeys
 
+-- | DCO + fleet-linked drivers for an operator (one association scan).
+data OperatorAssociatedDrivers = OperatorAssociatedDrivers
+  { dcoDriverIds :: [Id DP.Person],
+    fleetOwnerIds :: [Text],
+    allDriverIds :: [Id DP.Person]
+  }
+
+getOperatorAssociatedDrivers ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Text ->
+  m OperatorAssociatedDrivers
+getOperatorAssociatedDrivers operatorId = do
+  fleetOwnerIds <- CFOA.getFleetOwnerIdsByOperatorId operatorId
+  fleetDriverIds <-
+    if null fleetOwnerIds
+      then pure []
+      else CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds
+  dcoDriverIds <- CDOA.getDriverIdsByOperatorId operatorId
+  pure
+    OperatorAssociatedDrivers
+      { dcoDriverIds,
+        fleetOwnerIds,
+        allDriverIds = dcoDriverIds <> fleetDriverIds
+      }
+
 getFleetDriverIdsAndDriverIdsByOperatorId ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -86,14 +117,8 @@ getFleetDriverIdsAndDriverIdsByOperatorId ::
   ) =>
   Text ->
   m [Id DP.Person]
-getFleetDriverIdsAndDriverIdsByOperatorId operatorId = do
-  fleetOwnerIds <- CFOA.getFleetOwnerIdsByOperatorId operatorId
-  fleetDriverIds <-
-    if null fleetOwnerIds
-      then pure []
-      else CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds
-  driverIds <- CDOA.getDriverIdsByOperatorId operatorId
-  pure (driverIds <> fleetDriverIds)
+getFleetDriverIdsAndDriverIdsByOperatorId operatorId =
+  (.allDriverIds) <$> getOperatorAssociatedDrivers operatorId
 
 getTotalFleetDriverAndDriverCountByOperatorIdInDateRange ::
   ( MonadFlow m,

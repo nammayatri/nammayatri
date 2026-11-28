@@ -2,6 +2,7 @@
 
 module Storage.Clickhouse.DriverInformation where
 
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -134,6 +135,31 @@ getStatusCountsByDriverIds driverIds =
             (\info -> info.driverId `CH.in_` driverIds)
             (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
       )
+
+-- | One driver_information scan → enabled ids + verified/approved status counts.
+getEnabledIdsAndStatusCountsByDriverIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  m ([Id DP.Person], [(Maybe Bool, Maybe Bool, Int)])
+getEnabledIdsAndStatusCountsByDriverIds driverIds =
+  if null driverIds
+    then pure ([], [])
+    else do
+      rows <-
+        CH.findAll $
+          CH.select_ (\info -> CH.notGrouped (info.driverId, info.enabled, info.verified, info.approved)) $
+            CH.filter_
+              (\info -> info.driverId `CH.in_` driverIds)
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+      let enabledIds = [did | (did, True, _, _) <- rows]
+          statusMap =
+            Map.fromListWith
+              (+)
+              [ ((flagFromText verified, flagFromText approved), 1 :: Int)
+                | (_, _, verified, approved) <- rows
+              ]
+          statusCounts = [(v, a, n) | ((v, a), n) <- Map.toList statusMap]
+      pure (enabledIds, statusCounts)
 
 -- | The flag mirrors are Nullable(String) like `on_ride` below, with the same mixed casing, and the
 --   prod views extract a JSON null as "" -- which the Bool decoder rejects, failing the whole read.

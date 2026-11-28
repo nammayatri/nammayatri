@@ -31,7 +31,19 @@ data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes
     acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     totalActiveDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalAssociatedDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    totalEnabledDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    totalEnabledDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    averageLoginHours :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    greaterThanOneRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    greaterThanTenRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    greaterThanFiftyRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    incompleteFirstSubscription :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    documentSubmissionCompletedDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    documentSubmissionCompletedVehicles :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    planActiveDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    lowSubscriptionBalanceDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    inactiveDrivers30 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    inactiveDrivers60 :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    inactiveDrivers90 :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

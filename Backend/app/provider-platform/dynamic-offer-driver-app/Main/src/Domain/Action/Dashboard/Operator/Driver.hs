@@ -803,6 +803,13 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
         acceptationCount >>= \ac ->
           totalRequestCount >>= \trc ->
             if trc > 0 then Just (fromIntegral ac / fromIntegral trc * 100) else Nothing
+  -- Optional KPIs must not take down Redis/PG all-time metrics on CH/PG failure.
+  kpiResult <- withTryCatch "computeOperatorAllTimeKpis" $ Analytics.computeOperatorAllTimeKpis transporterConfig operator.id.getId
+  kpis <- case kpiResult of
+    Right k -> pure k
+    Left err -> do
+      logError $ "computeOperatorAllTimeKpis failed; returning Nothing for optional KPIs: " <> show err
+      pure Analytics.emptyOperatorAllTimeKpis
   pure $
     API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes
       { rating,
@@ -810,7 +817,19 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
         acceptanceRate,
         totalActiveDrivers = mbTotalActiveDrivers,
         totalAssociatedDriver = mbTotalAssociatedDriver,
-        totalEnabledDriver = mbTotalEnabledDrivers
+        totalEnabledDriver = mbTotalEnabledDrivers,
+        averageLoginHours = kpis.averageLoginHours,
+        greaterThanOneRide = kpis.greaterThanOneRide,
+        greaterThanTenRide = kpis.greaterThanTenRide,
+        greaterThanFiftyRide = kpis.greaterThanFiftyRide,
+        incompleteFirstSubscription = kpis.incompleteFirstSubscription,
+        documentSubmissionCompletedDrivers = kpis.documentSubmissionCompletedDrivers,
+        documentSubmissionCompletedVehicles = kpis.documentSubmissionCompletedVehicles,
+        planActiveDrivers = kpis.planActiveDrivers,
+        lowSubscriptionBalanceDrivers = kpis.lowSubscriptionBalanceDrivers,
+        inactiveDrivers30 = kpis.inactiveDrivers30,
+        inactiveDrivers60 = kpis.inactiveDrivers60,
+        inactiveDrivers90 = kpis.inactiveDrivers90
       }
 
 ---------------------------------------------------------------------

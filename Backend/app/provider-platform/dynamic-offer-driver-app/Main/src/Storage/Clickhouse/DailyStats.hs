@@ -19,7 +19,9 @@ data DailyStatsT f = DailyStatsT
     totalDistance :: C f Kernel.Types.Common.Meters,
     numRides :: C f Int,
     cancellationCharges :: C f Kernel.Types.Common.HighPrecMoney,
-    bonusEarnings :: C f Kernel.Types.Common.HighPrecMoney
+    bonusEarnings :: C f Kernel.Types.Common.HighPrecMoney,
+    -- CH stores seconds as Int; helpers return Int (avoids ClickhouseValue Seconds orphan).
+    onlineDuration :: C f (Maybe Int)
   }
   deriving (Generic)
 
@@ -35,7 +37,8 @@ dailyStatsTTable =
       totalDistance = "total_distance",
       numRides = "num_rides",
       cancellationCharges = "cancellation_charges",
-      bonusEarnings = "bonus_earnings"
+      bonusEarnings = "bonus_earnings",
+      onlineDuration = "online_duration"
     }
 
 type DailyStats = DailyStatsT Identity
@@ -103,6 +106,31 @@ aggregatePeriodStatsWithBoundaries driverId' fromDateU toDateU period = do
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
   pure $ mkEarningsBar <$> res
 
+-- | Per-driver total rides in [fromDate, toDate] (one scan; bucket in memory).
+sumNumRidesByDriverBetween ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  m [(Id DP.Person, Int)]
+sumNumRidesByDriverBetween driverIds fromDateU toDateU =
+  if null driverIds
+    then pure []
+    else
+      CH.findAll $
+        CH.select_
+          ( \ds ->
+              CH.groupBy ds.driverId $ \driverId ->
+                (driverId, CH.sum_ ds.numRides)
+          )
+          $ CH.filter_
+            ( \ds ->
+                ds.driverId `CH.in_` driverIds
+                  CH.&&. ds.merchantLocalDate >=. fromDateU
+                  CH.&&. ds.merchantLocalDate <=. toDateU
+            )
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
+
 -- Count drivers whose total rides in [fromDate, toDate] exceeds a threshold
 countDriversWithNumRidesGreaterThanBetween ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -112,19 +140,8 @@ countDriversWithNumRidesGreaterThanBetween ::
   Int ->
   m Int
 countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU threshold = do
-  res <-
-    CH.findAll $
-      CH.select_
-        (\ds -> CH.groupBy ds.driverId $ \_ -> CH.sum_ ds.numRides)
-        $ CH.filter_
-          ( \ds ->
-              ds.driverId `CH.in_` driverIds
-                CH.&&. ds.merchantLocalDate >=. fromDateU
-                CH.&&. ds.merchantLocalDate <=. toDateU
-          )
-          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
-  let totals = [ridesSum | ridesSum <- res, ridesSum > threshold]
-  pure $ length totals
+  totals <- sumNumRidesByDriverBetween driverIds fromDateU toDateU
+  pure $ length [ridesSum | (_, ridesSum) <- totals, ridesSum > threshold]
 
 countDriversWithNumRidesGreaterThan1Between ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -152,3 +169,78 @@ countDriversWithNumRidesGreaterThan50Between ::
   m Int
 countDriversWithNumRidesGreaterThan50Between driverIds fromDateU toDateU =
   countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU 50
+
+-- | Buckets: rides > 0 / > 9 / > 49 (lifetime ≥1 / ≥10 / ≥50).
+countDriversInRideBuckets :: [(Id DP.Person, Int)] -> (Int, Int, Int)
+countDriversInRideBuckets totals =
+  ( length [() | (_, n) <- totals, n > 0],
+    length [() | (_, n) <- totals, n > 9],
+    length [() | (_, n) <- totals, n > 49]
+  )
+
+-- | Total online duration (seconds) across all daily_stats rows for the given drivers.
+sumOnlineDurationSeconds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  m Int
+sumOnlineDurationSeconds driverIds =
+  if null driverIds
+    then pure 0
+    else do
+      res <-
+        CH.findAll $
+          CH.select_ (\ds -> CH.aggregate $ CH.sum_ ds.onlineDuration) $
+            CH.filter_
+              (\ds -> ds.driverId `CH.in_` driverIds)
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
+      pure $ maybe 0 (fromMaybe 0) (listToMaybe res)
+
+-- | Per-driver online duration (seconds) summed over [fromDate, toDate].
+sumOnlineDurationSecondsByDriverBetween ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  m [(Id DP.Person, Int)]
+sumOnlineDurationSecondsByDriverBetween driverIds fromDateU toDateU =
+  if null driverIds
+    then pure []
+    else do
+      res <-
+        CH.findAll $
+          CH.select_
+            ( \ds ->
+                CH.groupBy ds.driverId $ \driverId ->
+                  (driverId, CH.sum_ ds.onlineDuration)
+            )
+            $ CH.filter_
+              ( \ds ->
+                  ds.driverId `CH.in_` driverIds
+                    CH.&&. ds.merchantLocalDate >=. fromDateU
+                    CH.&&. ds.merchantLocalDate <=. toDateU
+              )
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
+      pure $ map (\(driverId, mbSecs) -> (driverId, fromMaybe 0 mbSecs)) res
+
+-- | Per-driver per-day online duration in [fromDate, toDate] (one scan for 30/60/90 inactive).
+findOnlineDurationDaysByDriverBetween ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  m [(Id DP.Person, Day, Int)]
+findOnlineDurationDaysByDriverBetween driverIds fromDateU toDateU =
+  if null driverIds
+    then pure []
+    else do
+      res <-
+        CH.findAll $
+          CH.select_ (\ds -> CH.notGrouped (ds.driverId, ds.merchantLocalDate, ds.onlineDuration)) $
+            CH.filter_
+              ( \ds ->
+                  ds.driverId `CH.in_` driverIds
+                    CH.&&. ds.merchantLocalDate >=. fromDateU
+                    CH.&&. ds.merchantLocalDate <=. toDateU
+              )
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
+      pure $ map (\(driverId, day, mbSecs) -> (driverId, day, fromMaybe 0 mbSecs)) res

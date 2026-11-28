@@ -7,7 +7,7 @@ import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
-import Storage.Clickhouse.DriverInformation (flagCountRow)
+import Storage.Clickhouse.DriverInformation (flagCountRow, flagFromText)
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: C f (Id DRC.VehicleRegistrationCertificate),
@@ -65,3 +65,20 @@ getStatusCountsByFleetOwnerIds fleetOwnerIds =
             (\info -> info.fleetOwnerId `CH.in_` (map Just fleetOwnerIds))
             (CH.all_ @CH.APP_SERVICE_CLICKHOUSE vehicleRegistrationCertificateTTable)
       )
+
+-- | Verified RC ids owned by the given fleet owners (no driver link required).
+findVerifiedIdsByFleetOwnerIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Text] ->
+  m [Id DRC.VehicleRegistrationCertificate]
+findVerifiedIdsByFleetOwnerIds fleetOwnerIds =
+  if null fleetOwnerIds
+    then pure []
+    else do
+      rows <-
+        CH.findAll $
+          CH.select_ (\rc -> CH.notGrouped (rc.id, rc.verified)) $
+            CH.filter_
+              (\rc -> rc.fleetOwnerId `CH.in_` (map Just fleetOwnerIds))
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE vehicleRegistrationCertificateTTable)
+      pure [rcId | (rcId, verified) <- rows, flagFromText verified == Just True]
