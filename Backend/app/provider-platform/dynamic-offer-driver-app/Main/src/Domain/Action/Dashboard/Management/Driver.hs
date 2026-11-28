@@ -631,7 +631,7 @@ blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName sh
   tcForBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let blockTarget = if isFleetOwner then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
   SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block blockTarget $ do
-    void $
+    blockResult <-
       SFlags.markBlockFlags personId $
         SFlags.Block
           SFlags.BlockPayload
@@ -646,14 +646,16 @@ blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName sh
               SFlags.bpMode = Nothing,
               SFlags.bpFlag = ByDashboard
             }
-    case req.blockTimeInHours of
-      Just hrs -> do
-        let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
-        JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) unblockDriverJobTs $
+    -- Unblock job only for an applied timed block, at its end time. A dropped block (already
+    -- blocked at least as long; the check above makes this rare) schedules nothing.
+    case blockResult of
+      QDriverInfo.Applied (Just endTime) -> do
+        now <- getCurrentTime
+        JC.createJobIn @_ @'UnblockDriver (Just merchantId) (Just merchantOpCityId) (diffUTCTime endTime now) $
           UnblockDriverRequestJobData
             { driverId = driverId
             }
-      Nothing -> return ()
+      _ -> return ()
   when (shouldBlockRC && not isFleetOwner) $ setDriverRCsBlockedStatus tcForBlock personId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
 
@@ -752,7 +754,7 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
               QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
             _ -> pure ()
         when (isJust driverInf.softBlockStiers) $ do
-          QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
+          QDriverInfo.clearSoftBlock (cast driverId)
       when (mbUnblockRC == Just True) $ setDriverRCsBlockedStatus tcForUnblock personId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success

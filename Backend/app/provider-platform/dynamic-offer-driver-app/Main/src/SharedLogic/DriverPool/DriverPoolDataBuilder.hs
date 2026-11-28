@@ -93,14 +93,17 @@ rebuildDriverPoolDataIfStale driverId = do
         mbLatest = listToMaybe $ DL.sortOn (Down . (.lastUpdatedAt)) copies
     whenJust mbDriverInfo $ \driverInfo ->
       whenJust mbLatest $ \latest -> do
-        let isStale :: DriverPoolData -> Bool
-            isStale dpd = dpd.enabled /= driverInfo.enabled || dpd.blocked /= driverInfo.blocked || dpd.subscribed /= driverInfo.subscribed
+        -- Soft tiers compared normalised: Nothing and Just [] both mean no soft block (search reads
+        -- fromMaybe []), so old Just [] rows don't log a false "differs" error.
+        let softTiers = fromMaybe []
+            isStale :: DriverPoolData -> Bool
+            isStale dpd = dpd.enabled /= driverInfo.enabled || dpd.blocked /= driverInfo.blocked || dpd.subscribed /= driverInfo.subscribed || softTiers dpd.softBlockStiers /= softTiers driverInfo.softBlockStiers
         when (any isStale copies) $ do
-          logError $ "rebuildDriverPoolDataIfStale: LTS enabled/blocked/subscribed differs from DB, rebuilding for driver " <> driverId.getId
+          logError $ "rebuildDriverPoolDataIfStale: LTS enabled/blocked/subscribed/softBlockStiers differs from DB, rebuilding for driver " <> driverId.getId
           now <- getClockTimeInMs
           Redis.withLTSRedis $ Redis.del key
           void $ Redis.runOnAllPeerLTSRedis $ Redis.del key
-          setDriverPoolDataByCloud deploymentCloudType latest {enabled = driverInfo.enabled, blocked = driverInfo.blocked, subscribed = driverInfo.subscribed, lastUpdatedAt = Just now}
+          setDriverPoolDataByCloud deploymentCloudType latest {enabled = driverInfo.enabled, blocked = driverInfo.blocked, subscribed = driverInfo.subscribed, softBlockStiers = driverInfo.softBlockStiers, lastUpdatedAt = Just now}
 
 -- | Build DriverPoolData from DB tables for drivers that don't have a Redis key yet.
 -- Always fetches: driver_information, vehicle, person, fleet_driver_association
