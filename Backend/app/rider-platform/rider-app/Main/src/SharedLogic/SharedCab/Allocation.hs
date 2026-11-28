@@ -26,7 +26,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFallbackPush, claimFirst, liveBookingsOf)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Reallocate (Closed (..), afterClose, closeAllocation, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), PreferenceLoss (..), PreferenceVerdict (..), RankedCandidate, allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, onlyPreferred, preferenceVerdict, silentCab, skippedWhileFinding, withRoomFor, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Types
@@ -34,7 +34,6 @@ import SharedLogic.SharedCab.Booking (cityLiveWindowSec, liveSince, partyOf, par
 import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
-import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
 import SharedLogic.SharedCab.Lts (RouteRead (..), readRoutePositions, stopPointOf)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.RateLimit (RiderAction (RiderSkip), recordRiderAction)
@@ -111,7 +110,7 @@ closeUnboarded plate outcome = do
 -- | The effects of `closeUnboarded`'s closes, outside every lock.
 afterUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> [ClosedUnboarded] -> m ()
 afterUnboarded plate outcome closed = do
-  forM_ closed $ \(cfg, bookingId, c) -> afterClose cfg bookingId plate outcome (Just c)
+  forM_ closed $ \(_, bookingId, c) -> afterClose bookingId plate outcome (Just c)
   mapM_ triggerSharedCabAllocation (nub [c.closedCity | (_, _, c) <- closed])
 
 triggerSharedCabAllocation ::
@@ -183,7 +182,6 @@ claimFindings cityId cfg now live positionsByRoute = do
   findings <- forM (mapMaybe (\lb -> (lb.booking,) <$> findingOf (partyOf parties) lb) live) $ \(b, fb) -> do
     since <- readFindingSince fb.bookingId fb.findingSince
     pure (b, fb {findingSince = since})
-  pushTimeFallbacks cfg now findings
   forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
     whenJust (lookup routeCode positionsByRoute) $ \routeRead -> do
       snapshot <- RouteSnapshot.routeSnapshot cityId routeCode
@@ -253,9 +251,4 @@ expireTimers cfg now movingOn silentOn live =
               when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
                 writeAlloc (allocKeyTtl cfg) b.id st {timer = clearOnMove st.timer}
             pure Nothing
-      whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
-
-pushTimeFallbacks :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [(DFTB.FRFSTicketBooking, FindingBooking)] -> m ()
-pushTimeFallbacks cfg now findings =
-  forM_ [b | (b, fb) <- findings, fallbackTimeElapsed now fb.findingSince cfg.fallbackAfterSec] $ \b ->
-    whenM (claimFallbackPush cfg b.id) $ Notify.notifyBoardAny b
+      whenJust result $ \(outcome, closedInfo) -> afterClose b.id plate outcome (Just closedInfo)

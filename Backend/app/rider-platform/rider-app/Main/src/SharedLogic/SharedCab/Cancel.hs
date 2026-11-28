@@ -102,7 +102,7 @@ decide by booking = do
   mbAlloc <- readAlloc booking.id
   tunables <- Config.getTunables booking.merchantOperatingCityId
   riderFix <- readRiderFix booking.id
-  let state = cancelState now booking.vehicleNumber
+  let state = cancelState booking.vehicleNumber
       near = besideWaitingCab (mbAlloc >>= allocationDeadline) $ riderNearStop tunables.boardProximityM tunables.ltsMaxAgeSec now booking.fromStationPoint riderFix
   case decideCancel by state booking.sharedCabNoShows tickets near of
     Rejected err -> throwError err
