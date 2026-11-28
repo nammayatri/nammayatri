@@ -102,6 +102,7 @@ where
 import "this" API.Types.ProviderPlatform.Management.Driver (DummyRideRequestRes (..))
 import qualified "this" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified "this" API.Types.ProviderPlatform.Management.Message as Common
+import qualified API.Types.UI.DriverAccountHealth as DAHT
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import API.UI.Issue (driverIssueHandle)
 import AWS.S3 as S3
@@ -125,13 +126,13 @@ import Data.Text.Encoding (decodeUtf8)
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Calendar
 import Data.Time.Calendar.WeekDate
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration
 import Domain.Action.UI.DriverAcceptOffer (AcceptDynamicOfferFlow, acceptDynamicOfferDriverRequest)
+import qualified Domain.Action.UI.DriverAccountHealth as DAH
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
@@ -528,6 +529,8 @@ data DriverInformationRes = DriverInformationRes
     -- active behaviour warnings pinned to the profile (WARN with showOnProfile);
     -- text is pre-localized to the driver's language with placeholders filled
     behaviourWarnings :: Maybe [BTT.ProfileWarningInfo],
+    -- | Overall account health for the profile card and home banner; the detail is in /driver/accountHealth.
+    accountHealthStatus :: Maybe DAHT.AccountHealthStatus,
     -- | Set while the driver runs a session with no driver-side Ride row, so the app can reopen it on launch.
     activeRideType :: Maybe ActiveRideType,
     -- | The feed version the app checks its cached shared-cab routes against.
@@ -1463,25 +1466,13 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
   let driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag
   let mbDriverSafetyTag = Yudhishthira.accessTagKey (LYT.TagName "SafetyCohort") driverTags
       mbDriverSafetyScore = Yudhishthira.accessTagKey (LYT.TagName "SafetyScore") driverTags
-      mbDriverOverchargingTag = Yudhishthira.accessTagKey (LYT.TagName "DriverChargingBehaviour") driverTags
       mbTotalRidesConsideredForFareIssues = Yudhishthira.accessTagKey (LYT.TagName "TotalRidesConsideredForFareIssues") driverTags
       mbRidesWithFareIssues = Yudhishthira.accessTagKey (LYT.TagName "RidesWithFareIssue") driverTags
-      mbOverchargingBlockedTill = Yudhishthira.accessTagKey (LYT.TagName "OverchargingBlockedTill") driverTags
   currentLocalTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let (overchargingBlocked, blockedTill, driverOverchargingTag) =
-        case (mbDriverOverchargingTag, mbOverchargingBlockedTill) of
-          (Just driverOverchargingTag', Just overchargingBlockedTillV) | transporterConfig.enableOverchargingBlocker -> do
-            let bt :: DA.Result Integer = DA.fromJSON overchargingBlockedTillV
-            case bt of
-              DA.Success bt' -> do
-                let bt'' = epochToUTCTime (bt' - fromIntegral transporterConfig.timeDiffFromUtc)
-                let isInBlockedTimeRange = currentLocalTime < bt''
-                let highOC = highOverchargingTag driverOverchargingTag' && isInBlockedTimeRange
-                if highOC
-                  then (highOC, Just bt'', Just driverOverchargingTag')
-                  else (False, Nothing, Nothing)
-              _ -> (False, Nothing, Nothing)
-          _ -> (False, Nothing, Nothing)
+  let mbOverchargingBlock = DAH.overchargingBlock transporterConfig currentLocalTime person.driverTag
+      overchargingBlocked = isJust mbOverchargingBlock
+      blockedTill = fst <$> mbOverchargingBlock
+      driverOverchargingTag = snd <$> mbOverchargingBlock
   let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       mbSubLedger =
@@ -1567,10 +1558,6 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
         operatorBadgeToken = if person.role `elem` [SP.BUS_CONDUCTOR, SP.BUS_DRIVER] then person.operatorBadgeToken else Nothing,
         ..
       }
-  where
-    highOverchargingTag overchargingTag = overchargingTag `elem` ["SuperOverCharging", "HighOverCharging", "MediumOverCharginge"]
-
-    epochToUTCTime epoch = posixSecondsToUTCTime (fromInteger epoch)
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m, Redis.HedisLTSFlowEnv r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
@@ -2028,6 +2015,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
+          -- overchargingTag is set exactly while the overcharging block is on (buildDriverEntityRes),
+          -- so the status agrees with the blocked field above
+          accountHealthStatus = Just $ DAH.accountHealthStatus now (DAH.driverBlockOf driverInfo) (isJust overchargingTag) activeProfileWarnings,
           -- module-qualified: VehicleVariant's SHARED_CAB is also in scope
           activeRideType = if maybe False ((DVST.SHARED_CAB `elem`) . (.selectedServiceTiers)) mbVehicle then Just Domain.Action.UI.Driver.SHARED_CAB else Nothing,
           publicTransportVersion = Nothing,

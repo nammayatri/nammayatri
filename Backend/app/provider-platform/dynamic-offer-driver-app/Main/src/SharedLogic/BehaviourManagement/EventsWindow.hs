@@ -37,6 +37,8 @@ module SharedLogic.BehaviourManagement.EventsWindow
     eventsReadFor,
     reportWindowProblem,
     validateEventsRollout,
+    rowsSettings,
+    eventsWindowSizeOf,
   )
 where
 
