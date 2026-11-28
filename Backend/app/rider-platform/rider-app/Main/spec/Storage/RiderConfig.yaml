@@ -335,6 +335,8 @@ RiderConfig:
     sosTrackingLink: Maybe Text
     maxLiveVehiclesPerRoute: Int
     maxAlternateRouteVehicles: Int
+    routeServiceabilityMaxPublicTransportLegs: Maybe Int
+    dropSchedulesPastSourceStop: Maybe Bool
     includeVehiclesWithNoEta: Maybe Bool
     invoiceEmailEnabled: Maybe Bool
     # Better route point suggestion: detect a point already on the search route that
