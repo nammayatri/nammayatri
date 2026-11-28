@@ -1,0 +1,33 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+NavigationPointConfig:
+  tableName: navigation_point_config
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    enabled: Bool
+    radiusInMeters: Double
+    maxPointsToShow: Int
+    ttlInSeconds: Int
+    requiredFieldMask: Maybe Text
+    bucketGeohashPrecision: Int
+    pointGeohashPrecision: Int
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
+  default:
+    enabled: "false"
+    radiusInMeters: "150.0"
+    maxPointsToShow: "3"
+    ttlInSeconds: "2592000"
+    bucketGeohashPrecision: "7"
+    pointGeohashPrecision: "9"
