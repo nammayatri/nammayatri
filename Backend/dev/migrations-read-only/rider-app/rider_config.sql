@@ -997,3 +997,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rental_stop_updates boolean
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sms_otp_allowed_country_codes text [] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_favourite_driver_on_five_star_rating boolean  default false;
