@@ -939,7 +939,9 @@ data BulkUserCohortMappingUploadJobData = BulkUserCohortMappingUploadJobData
     -- | Stable id returned to dashboard for log/correlation across chunk jobs.
     runId :: Text,
     -- | App-level attempt (Pattern B). Missing/Nothing treated as 1. Not scheduler curr_errors.
-    attemptCount :: Maybe Int
+    attemptCount :: Maybe Int,
+    -- | "Assign" | "Unassign". Nothing / unknown → Assign (legacy jobs).
+    operationType :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

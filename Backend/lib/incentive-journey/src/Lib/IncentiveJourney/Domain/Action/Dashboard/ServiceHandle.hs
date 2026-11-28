@@ -98,6 +98,7 @@ data ServiceHandle m = ServiceHandle
     -- | Provider only: copy the uploaded CSV temp file to the object key before the job is scheduled.
     putBulkAssignCsv :: Maybe (Text -> FilePath -> m ()),
     -- | Provider only: schedule BulkUserCohortMappingUpload job after domain run row is written.
+    -- operationType: "Assign" | "Unassign" (job CSV schema + UCM action).
     scheduleBulkUpload ::
       Maybe
         ( Id Common.Merchant ->
@@ -107,6 +108,7 @@ data ServiceHandle m = ServiceHandle
           Int -> -- batchSize
           Int -> -- rescheduleDelaySeconds
           Text -> -- runId
+          Text -> -- operationType
           m ()
         ),
     -- | Special location id -> display name for UI (provider).

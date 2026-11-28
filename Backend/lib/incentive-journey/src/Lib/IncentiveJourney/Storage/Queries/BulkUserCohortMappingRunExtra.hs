@@ -25,20 +25,38 @@ findByMerchantOperatingCityIdAndMaybeStatus ::
   Maybe DRun.BulkUserCohortMappingRunStatus ->
   m [DRun.BulkUserCohortMappingRun]
 findByMerchantOperatingCityIdAndMaybeStatus limit offset merchantOperatingCityId mbStatus =
+  findByMerchantOperatingCityIdAndMaybeStatusAndOperation limit offset merchantOperatingCityId mbStatus Nothing
+
+-- | List runs for a city. When 'mbOperation' is Just Assign, includes legacy rows
+-- with NULL operationType. When Just Unassign, only Unassign rows.
+findByMerchantOperatingCityIdAndMaybeStatusAndOperation ::
+  (BeamFlow m r) =>
+  Maybe Int ->
+  Maybe Int ->
+  Id Common.MerchantOperatingCity ->
+  Maybe DRun.BulkUserCohortMappingRunStatus ->
+  Maybe DRun.BulkUserCohortMappingOperation ->
+  m [DRun.BulkUserCohortMappingRun]
+findByMerchantOperatingCityIdAndMaybeStatusAndOperation limit offset merchantOperatingCityId mbStatus mbOperation =
   findAllWithOptionsKV
-    ( case mbStatus of
-        Nothing ->
-          [Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)]
-        Just status ->
-          [ Se.And
-              [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId),
-                Se.Is Beam.status $ Se.Eq status
-              ]
-          ]
-    )
+    [Se.And $ cityClause <> statusClause <> operationClause]
     (Se.Desc Beam.createdAt)
     limit
     offset
+  where
+    cityClause = [Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)]
+    statusClause = case mbStatus of
+      Nothing -> []
+      Just status -> [Se.Is Beam.status $ Se.Eq status]
+    operationClause = case mbOperation of
+      Nothing -> []
+      Just DRun.Unassign -> [Se.Is Beam.operationType $ Se.Eq (Just DRun.Unassign)]
+      Just DRun.Assign ->
+        [ Se.Or
+            [ Se.Is Beam.operationType $ Se.Eq (Just DRun.Assign),
+              Se.Is Beam.operationType $ Se.Eq Nothing
+            ]
+        ]
 
 -- | Read-modify-write progress. Safe to call from the worker after each chunk.
 -- 'mbErrorMessage': set on Failed / optional Running (retry) updates; cleared on Succeeded.

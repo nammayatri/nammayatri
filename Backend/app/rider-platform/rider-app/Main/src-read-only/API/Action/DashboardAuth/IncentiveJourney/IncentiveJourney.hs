@@ -26,102 +26,108 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = "incentiveJourney" :> (GetIncentiveJourneyList :<|> (PostIncentiveJourneyCreate :<|> (GetIncentiveJourneyMilestoneList :<|> (PostIncentiveJourneyMilestoneCreate :<|> (GetIncentiveJourneyStatsHistory :<|> (PostIncentiveJourneyStatsWaiveOff :<|> (GetIncentiveJourneyPersonAssignments :<|> (PostIncentiveJourneyCohortCreate :<|> (PostIncentiveJourneyCohortJourneyCreate :<|> (PutIncentiveJourneyCohortJourneyUpdate :<|> (PostIncentiveJourneyCohortJourneyRoll :<|> (GetIncentiveJourneyCohortJourneyList :<|> (PostIncentiveJourneyAssign :<|> (PostIncentiveJourneyOptIn :<|> PostIncentiveJourneyUnassign))))))))))))))
+type API = "incentiveJourney" :> (GetIncentiveJourneyList :<|> (PostIncentiveJourneyCreate :<|> (GetIncentiveJourneyMilestoneList :<|> (PostIncentiveJourneyMilestoneCreate :<|> (PutIncentiveJourneyMilestoneUpdate :<|> (GetIncentiveJourneyStatsHistory :<|> (PostIncentiveJourneyStatsWaiveOff :<|> (GetIncentiveJourneyPersonAssignments :<|> (PostIncentiveJourneyCohortCreate :<|> (PostIncentiveJourneyCohortJourneyCreate :<|> (PutIncentiveJourneyCohortJourneyUpdate :<|> (PostIncentiveJourneyCohortJourneyRoll :<|> (GetIncentiveJourneyCohortJourneyList :<|> (PostIncentiveJourneyAssign :<|> (PostIncentiveJourneyOptIn :<|> PostIncentiveJourneyUnassign)))))))))))))))
 
 type GetIncentiveJourneyList =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_LIST"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyList
 
 type PostIncentiveJourneyCreate =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_CREATE"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyCreate
 
 type GetIncentiveJourneyMilestoneList =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_MILESTONE_LIST"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyMilestoneList
 
 type PostIncentiveJourneyMilestoneCreate =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_MILESTONE_CREATE"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyMilestoneCreate
 
+type PutIncentiveJourneyMilestoneUpdate =
+  DashboardUserAuth
+    'APP_BACKEND_MANAGEMENT
+    "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/PUT_INCENTIVE_JOURNEY_MILESTONE_UPDATE"
+    :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PutIncentiveJourneyMilestoneUpdate
+
 type GetIncentiveJourneyStatsHistory =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_STATS_HISTORY"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyStatsHistory
 
 type PostIncentiveJourneyStatsWaiveOff =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_STATS_WAIVE_OFF"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyStatsWaiveOff
 
 type GetIncentiveJourneyPersonAssignments =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_PERSON_ASSIGNMENTS"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyPersonAssignments
 
 type PostIncentiveJourneyCohortCreate =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_COHORT_CREATE"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyCohortCreate
 
 type PostIncentiveJourneyCohortJourneyCreate =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_COHORT_JOURNEY_CREATE"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyCohortJourneyCreate
 
 type PutIncentiveJourneyCohortJourneyUpdate =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/PUT_INCENTIVE_JOURNEY_COHORT_JOURNEY_UPDATE"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PutIncentiveJourneyCohortJourneyUpdate
 
 type PostIncentiveJourneyCohortJourneyRoll =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_COHORT_JOURNEY_ROLL"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyCohortJourneyRoll
 
 type GetIncentiveJourneyCohortJourneyList =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_COHORT_JOURNEY_LIST"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.GetIncentiveJourneyCohortJourneyList
 
 type PostIncentiveJourneyAssign =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_ASSIGN"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyAssign
 
 type PostIncentiveJourneyOptIn =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_OPT_IN"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyOptIn
 
 type PostIncentiveJourneyUnassign =
   DashboardUserAuth
-    ('APP_BACKEND_MANAGEMENT)
+    'APP_BACKEND_MANAGEMENT
     "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_UNASSIGN"
     :> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.PostIncentiveJourneyUnassign
 
 handler :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getIncentiveJourneyList merchantId city :<|> postIncentiveJourneyCreate merchantId city :<|> getIncentiveJourneyMilestoneList merchantId city :<|> postIncentiveJourneyMilestoneCreate merchantId city :<|> getIncentiveJourneyStatsHistory merchantId city :<|> postIncentiveJourneyStatsWaiveOff merchantId city :<|> getIncentiveJourneyPersonAssignments merchantId city :<|> postIncentiveJourneyCohortCreate merchantId city :<|> postIncentiveJourneyCohortJourneyCreate merchantId city :<|> putIncentiveJourneyCohortJourneyUpdate merchantId city :<|> postIncentiveJourneyCohortJourneyRoll merchantId city :<|> getIncentiveJourneyCohortJourneyList merchantId city :<|> postIncentiveJourneyAssign merchantId city :<|> postIncentiveJourneyOptIn merchantId city :<|> postIncentiveJourneyUnassign merchantId city
+handler merchantId city = getIncentiveJourneyList merchantId city :<|> postIncentiveJourneyCreate merchantId city :<|> getIncentiveJourneyMilestoneList merchantId city :<|> postIncentiveJourneyMilestoneCreate merchantId city :<|> putIncentiveJourneyMilestoneUpdate merchantId city :<|> getIncentiveJourneyStatsHistory merchantId city :<|> postIncentiveJourneyStatsWaiveOff merchantId city :<|> getIncentiveJourneyPersonAssignments merchantId city :<|> postIncentiveJourneyCohortCreate merchantId city :<|> postIncentiveJourneyCohortJourneyCreate merchantId city :<|> putIncentiveJourneyCohortJourneyUpdate merchantId city :<|> postIncentiveJourneyCohortJourneyRoll merchantId city :<|> getIncentiveJourneyCohortJourneyList merchantId city :<|> postIncentiveJourneyAssign merchantId city :<|> postIncentiveJourneyOptIn merchantId city :<|> postIncentiveJourneyUnassign merchantId city
 
-getIncentiveJourneyList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe (API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyType) -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyListRes))))))
+getIncentiveJourneyList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyType -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyListRes))))))
 getIncentiveJourneyList a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
@@ -138,7 +144,7 @@ postIncentiveJourneyCreate a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney.postIncentiveJourneyCreate a4 a3 a1
     )
 
-getIncentiveJourneyMilestoneList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyMilestoneListRes)))))
+getIncentiveJourneyMilestoneList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyMilestoneListRes)))))
 getIncentiveJourneyMilestoneList a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
@@ -155,7 +161,16 @@ postIncentiveJourneyMilestoneCreate a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney.postIncentiveJourneyMilestoneCreate a4 a3 a1
     )
 
-getIncentiveJourneyStatsHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Person -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Data.Time.Day -> (Data.Time.Day -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyStatsHistoryRes))))))))
+putIncentiveJourneyMilestoneUpdate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.UpdateIncentiveJourneyMilestoneReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)))
+putIncentiveJourneyMilestoneUpdate a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/PUT_INCENTIVE_JOURNEY_MILESTONE_UPDATE" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney.putIncentiveJourneyMilestoneUpdate a4 a3 a1
+    )
+
+getIncentiveJourneyStatsHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Person -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Data.Time.Day -> (Data.Time.Day -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyStatsHistoryRes))))))))
 getIncentiveJourneyStatsHistory a9 a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
@@ -216,7 +231,7 @@ postIncentiveJourneyCohortJourneyRoll a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney.postIncentiveJourneyCohortJourneyRoll a4 a3 a1
     )
 
-getIncentiveJourneyCohortJourneyList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyType) -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.CohortJourneyMappingListRes))))))))
+getIncentiveJourneyCohortJourneyList :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> (Kernel.Types.Beckn.Context.City -> (DashboardUser -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.IncentiveJourneyType -> Environment.FlowHandler API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.CohortJourneyMappingListRes))))))))
 getIncentiveJourneyCohortJourneyList a9 a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do

@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.bulk_user_cohort_mapping_run ADD PRIMARY KEY 
 CREATE INDEX CONCURRENTLY bulk_user_cohort_mapping_run_idx_merchant_operating_city_id ON atlas_driver_offer_bpp.bulk_user_cohort_mapping_run USING btree (merchant_operating_city_id);
 CREATE INDEX CONCURRENTLY bulk_user_cohort_mapping_run_idx_merchant_operating_city_id_status ON atlas_driver_offer_bpp.bulk_user_cohort_mapping_run USING btree (merchant_operating_city_id, status);
 CREATE INDEX CONCURRENTLY bulk_user_cohort_mapping_run_idx_merchant_id_merchant_operating_city_id ON atlas_driver_offer_bpp.bulk_user_cohort_mapping_run USING btree (merchant_id, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.bulk_user_cohort_mapping_run ADD COLUMN operation_type text  default NULL;

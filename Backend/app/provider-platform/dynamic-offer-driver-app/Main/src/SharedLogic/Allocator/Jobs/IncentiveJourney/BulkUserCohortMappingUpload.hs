@@ -25,11 +25,14 @@ import Data.Time (defaultTimeLocale, parseTimeM)
 import qualified Data.Vector as V
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun as DBulkRun
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
+import qualified Lib.IncentiveJourney.Domain.Types.Common as Common
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.Queries.BulkUserCohortMappingRunExtra as QBulkRunExtra
@@ -41,6 +44,8 @@ import SharedLogic.Allocator
   ( AllocatorJobType (..),
     BulkUserCohortMappingUploadJobData (..),
   )
+import qualified SharedLogic.FleetDriverSettings as FDS
+import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.SchedulerJob ()
 
@@ -61,7 +66,11 @@ maxAttempts = 5
 maxErrorMessageLen :: Int
 maxErrorMessageLen = 2000
 
-data UserCohortMappingCSVRow = UserCohortMappingCSVRow
+data BulkOperation = OpAssign | OpUnassign
+  deriving (Show, Eq)
+
+-- | Assign CSV: userId,cohortMappingId,validTill,enabled
+data AssignCSVRow = AssignCSVRow
   { userId :: Text,
     cohortMappingId :: Text,
     validTill :: Text,
@@ -69,19 +78,35 @@ data UserCohortMappingCSVRow = UserCohortMappingCSVRow
   }
   deriving (Show, Eq, Generic)
 
-instance FromNamedRecord UserCohortMappingCSVRow where
+instance FromNamedRecord AssignCSVRow where
   parseNamedRecord r =
-    UserCohortMappingCSVRow
+    AssignCSVRow
       <$> r .: "userId"
       <*> r .: "cohortMappingId"
       <*> r .: "validTill"
       <*> r .: "enabled"
 
-runBulkUserCohortMappingUploadJob ::
+-- | Unassign CSV: userId,cohortMappingId only.
+data UnassignCSVRow = UnassignCSVRow
+  { userId :: Text,
+    cohortMappingId :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+instance FromNamedRecord UnassignCSVRow where
+  parseNamedRecord r =
+    UnassignCSVRow
+      <$> r .: "userId"
+      <*> r .: "cohortMappingId"
+
+type BulkUploadJobConstraints m r =
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     MonadFlow m,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
@@ -90,7 +115,10 @@ runBulkUserCohortMappingUploadJob ::
     JobCreatorEnv r,
     HasSchemaName SchedulerJobT,
     HasField "s3Env" r (S3.S3Env m)
-  ) =>
+  )
+
+runBulkUserCohortMappingUploadJob ::
+  (BulkUploadJobConstraints m r) =>
   Job 'BulkUserCohortMappingUpload ->
   m ExecutionResult
 runBulkUserCohortMappingUploadJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId <> " RunId-" <> jobInfo.jobData.runId) $ do
@@ -163,19 +191,7 @@ runBulkUserCohortMappingUploadJob Job {id, jobInfo} = withLogTag ("JobId-" <> id
           pure Complete
 
 processChunk ::
-  ( BeamFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
-    HasField "maxShards" r Int,
-    HasField "schedulerSetName" r Text,
-    HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "blackListedJobs" r [Text],
-    JobCreatorEnv r,
-    HasSchemaName SchedulerJobT,
-    HasField "s3Env" r (S3.S3Env m)
-  ) =>
+  (BulkUploadJobConstraints m r) =>
   Id AnyJob ->
   BulkUserCohortMappingUploadJobData ->
   m ExecutionResult
@@ -185,9 +201,12 @@ processChunk jobId jobData = do
       delaySecs = max 0 jobData.rescheduleDelaySeconds
       runId = Id jobData.runId
       attempt = fromMaybe 1 jobData.attemptCount
+      operation = parseOperation jobData.operationType
 
   logInfo $
-    "BulkUserCohortMappingUpload: s3="
+    "BulkUserCohortMappingUpload: op="
+      <> showOperation operation
+      <> " s3="
       <> jobData.s3FilePath
       <> " offset="
       <> show offset
@@ -197,41 +216,32 @@ processChunk jobId jobData = do
       <> show attempt
 
   csvText <- S3.get (T.unpack jobData.s3FilePath)
-  rows <- parseCsvOrThrow csvText
-  let total = length rows
-      chunk = take batchSize $ drop offset rows
 
-  when (null chunk) $
-    logInfo $ "BulkUserCohortMappingUpload: no rows left at offset=" <> show offset <> " total=" <> show total
+  (total, processedCount, skipped, distinctUserIds) <-
+    case operation of
+      OpAssign -> do
+        rows <- parseCsvOrThrow csvText
+        let total = length rows
+            chunk = take batchSize $ drop offset rows
+        when (null chunk) $
+          logInfo $ "BulkUserCohortMappingUpload: no rows left at offset=" <> show offset <> " total=" <> show total
+        safeUpdateProgress runId DBulkRun.Running offset (Just total) 0 0 (Just jobId.getId) Nothing
+        (processedCount, skipped, distinctUserIds) <- processAssignRows chunk
+        pure (total, processedCount, skipped, distinctUserIds)
+      OpUnassign -> do
+        rows <- parseUnassignCsvOrThrow csvText
+        let total = length rows
+            chunk = take batchSize $ drop offset rows
+        when (null chunk) $
+          logInfo $ "BulkUserCohortMappingUpload: no rows left at offset=" <> show offset <> " total=" <> show total
+        safeUpdateProgress runId DBulkRun.Running offset (Just total) 0 0 (Just jobId.getId) Nothing
+        (processedCount, skipped, distinctUserIds) <- processUnassignRows chunk
+        pure (total, processedCount, skipped, distinctUserIds)
 
-  -- Best-effort: progress table must never fail the upload job.
-  safeUpdateProgress runId DBulkRun.Running offset (Just total) 0 0 (Just jobId.getId) Nothing
-
-  rowResults <- forM chunk $ \row ->
-    case ( parseId "userId" row.userId,
-           parseId "cohortMappingId" row.cohortMappingId,
-           parseValidTill row.validTill,
-           parseBool row.enabled
-         ) of
-      (Just userIdText, Just cohortMappingIdText, Just validTill, Just enabled) -> do
-        insertedUserId <-
-          QUCMExtra.insertUserCohortMappingIgnoringConflict
-            (Id userIdText)
-            (Id cohortMappingIdText :: Id DCJM.CohortJourneyMapping)
-            enabled
-            validTill
-        pure (Just (Id userIdText), insertedUserId)
-      _ -> pure (Nothing, Nothing)
-
-  let parsedUserIds = mapMaybe fst rowResults
-      insertedUserIds = mapMaybe snd rowResults
-      insertedCount = length insertedUserIds
-      skipped = length chunk - insertedCount
-      distinctUserIds = List.nub parsedUserIds
   forM_ distinctUserIds $ \uid ->
     CQAssignment.clearCacheByPersonId IJ.DriverActor uid
 
-  let nextOffset = offset + length chunk
+  let nextOffset = offset + processedCount + skipped
       hasMore = nextOffset < total
   if hasMore
     then do
@@ -248,10 +258,10 @@ processChunk jobId jobData = do
           (Just jobData.merchantOperatingCityId)
           (fromIntegral delaySecs)
           nextJobData
-      safeUpdateProgress runId DBulkRun.Running nextOffset (Just total) insertedCount skipped (Just jobId.getId) Nothing
+      safeUpdateProgress runId DBulkRun.Running nextOffset (Just total) processedCount skipped (Just jobId.getId) Nothing
       logInfo $
-        "BulkUserCohortMappingUpload: chunk done inserted="
-          <> show insertedCount
+        "BulkUserCohortMappingUpload: chunk done processed="
+          <> show processedCount
           <> " skippedRows="
           <> show skipped
           <> " nextOffset="
@@ -260,17 +270,80 @@ processChunk jobId jobData = do
           <> show total
       pure Complete
     else do
-      safeUpdateProgress runId DBulkRun.Succeeded nextOffset (Just total) insertedCount skipped (Just jobId.getId) Nothing
+      safeUpdateProgress runId DBulkRun.Succeeded nextOffset (Just total) processedCount skipped (Just jobId.getId) Nothing
       logInfo $
         "BulkUserCohortMappingUpload: finished totalRows="
           <> show total
           <> " lastOffset="
           <> show nextOffset
-          <> " lastChunkInserted="
-          <> show insertedCount
+          <> " lastChunkProcessed="
+          <> show processedCount
           <> " lastChunkSkipped="
           <> show skipped
       pure Complete
+
+processAssignRows ::
+  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  [AssignCSVRow] ->
+  m (Int, Int, [Id Common.Person])
+processAssignRows chunk = do
+  rowResults <- forM chunk $ \row ->
+    case ( parseId row.userId,
+           parseId row.cohortMappingId,
+           parseValidTill row.validTill,
+           parseBool row.enabled
+         ) of
+      (Just userIdText, Just cohortMappingIdText, Just validTill, Just enabled) -> do
+        insertedUserId <-
+          QUCMExtra.insertUserCohortMappingIgnoringConflict
+            (Id userIdText)
+            (Id cohortMappingIdText :: Id DCJM.CohortJourneyMapping)
+            enabled
+            validTill
+        pure (Just (Id userIdText), insertedUserId)
+      _ -> pure (Nothing, Nothing)
+  let parsedUserIds = mapMaybe fst rowResults
+      insertedUserIds = mapMaybe snd rowResults
+      insertedCount = length insertedUserIds
+      skipped = length chunk - insertedCount
+      distinctUserIds = List.nub parsedUserIds
+  pure (insertedCount, skipped, distinctUserIds)
+
+processUnassignRows ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    MonadFlow m,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  [UnassignCSVRow] ->
+  m (Int, Int, [Id Common.Person])
+processUnassignRows chunk = do
+  -- Same efficiency stance as bulk assign: no per-row person/merchant lookup.
+  -- Per row: disable UCM + clear IJCampaign tag / AA (same side effects as single unassign).
+  rowResults <- forM chunk $ \row ->
+    case (parseId row.userId, parseId row.cohortMappingId) of
+      (Just userIdText, Just cohortMappingIdText) -> do
+        let userId = Id userIdText
+            cjmId = Id cohortMappingIdText :: Id DCJM.CohortJourneyMapping
+        QUCMExtra.disableUserCohortMapping userId cjmId
+        -- Same order as Core.unassignUser: clear assignment cache before fallible
+        -- tag/AA cleanup so a mid-row failure does not leave enabled membership cached.
+        CQAssignment.clearCacheByPersonId IJ.DriverActor userId
+        -- Same as single unassign: AA cleanup only when the CJM tag was present.
+        -- Skips pending invites (no tag) so driver-owned AutoAssign is kept; avoids an
+        -- extra person read. Rare sticky-AA if cleanup fails after tag clear is accepted.
+        matched <- MgCampaignSync.clearMgOptedInOnDriverInfo userId cjmId
+        when matched $ FDS.onCampaignMembershipCleared (cast userId) (cast cjmId)
+        pure (Just userId)
+      _ -> pure Nothing
+  let processedUserIds = catMaybes rowResults
+      processedCount = length processedUserIds
+      skipped = length chunk - processedCount
+      distinctUserIds = List.nub processedUserIds
+  pure (processedCount, skipped, distinctUserIds)
 
 -- | Never lets progress-table failures abort CSV processing / scheduler chaining.
 safeUpdateProgress ::
@@ -321,17 +394,35 @@ clampBatchSize n
   | n > maxBatchSize = maxBatchSize
   | otherwise = n
 
-parseCsvOrThrow :: (MonadThrow m, Log m) => Text -> m [UserCohortMappingCSVRow]
+parseOperation :: Maybe Text -> BulkOperation
+parseOperation = \case
+  Just t | T.toLower (T.strip t) == "unassign" -> OpUnassign
+  _ -> OpAssign
+
+showOperation :: BulkOperation -> Text
+showOperation = \case
+  OpAssign -> "Assign"
+  OpUnassign -> "Unassign"
+
+parseCsvOrThrow :: (MonadThrow m, Log m) => Text -> m [AssignCSVRow]
 parseCsvOrThrow csvText =
-  case decodeByName (LBS.fromStrict $ TE.encodeUtf8 csvText) :: Either String (Header, V.Vector UserCohortMappingCSVRow) of
+  case decodeByName (LBS.fromStrict $ TE.encodeUtf8 csvText) :: Either String (Header, V.Vector AssignCSVRow) of
     Left err -> do
       logError $ "BulkUserCohortMappingUpload: CSV parse error: " <> T.pack err
       throwIO $ userError $ "CSV parse failed: " <> err
     Right (_, v) -> pure (V.toList v)
 
+parseUnassignCsvOrThrow :: (MonadThrow m, Log m) => Text -> m [UnassignCSVRow]
+parseUnassignCsvOrThrow csvText =
+  case decodeByName (LBS.fromStrict $ TE.encodeUtf8 csvText) :: Either String (Header, V.Vector UnassignCSVRow) of
+    Left err -> do
+      logError $ "BulkUserCohortMappingUpload: Unassign CSV parse error: " <> T.pack err
+      throwIO $ userError $ "CSV parse failed: " <> err
+    Right (_, v) -> pure (V.toList v)
+
 -- | Row-level parsers return Maybe so bad cells skip the row without failing the job.
-parseId :: Text -> Text -> Maybe Text
-parseId _fieldName raw =
+parseId :: Text -> Maybe Text
+parseId raw =
   let cleaned = T.strip raw
    in if T.null cleaned then Nothing else Just cleaned
 

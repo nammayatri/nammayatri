@@ -17,28 +17,31 @@ import qualified Lib.IncentiveJourney.Storage.Beam.BulkUserCohortMappingRun as B
 import Lib.IncentiveJourney.Storage.Queries.BulkUserCohortMappingRunExtra as ReExport
 import qualified Sequelize as Se
 
-create :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun -> m ())
+create :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun -> m ()
 create = createWithKV
 
-createMany :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun] -> m ())
+createMany :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => [Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun] -> m ()
 createMany = traverse_ create
 
 findById ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun -> m (Maybe Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun))
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun ->
+  m (Maybe Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun)
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByMerchantOperatingCityId ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.MerchantOperatingCity -> m [Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun])
+  Maybe Int ->
+  (Maybe Int -> (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.Common.MerchantOperatingCity -> m [Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun]))
 findByMerchantOperatingCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.createdAt) limit offset
 
 findByPrimaryKey ::
   (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun -> m (Maybe Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun))
+  Kernel.Types.Id.Id Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun ->
+  m (Maybe Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun)
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun -> m ())
+updateByPrimaryKey :: (Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r) => Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun -> m ()
 updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingRun {..}) = do
   _now <- getCurrentTime
   updateWithKV
@@ -48,6 +51,7 @@ updateByPrimaryKey (Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.B
       Se.Set Beam.fileOffset fileOffset,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.operationType operationType,
       Se.Set Beam.rescheduleDelaySeconds rescheduleDelaySeconds,
       Se.Set Beam.rowsInserted rowsInserted,
       Se.Set Beam.rowsSkipped rowsSkipped,

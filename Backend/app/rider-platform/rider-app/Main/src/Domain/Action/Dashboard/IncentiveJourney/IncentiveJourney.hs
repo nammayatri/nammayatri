@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     postIncentiveJourneyCreate,
     getIncentiveJourneyMilestoneList,
     postIncentiveJourneyMilestoneCreate,
+    putIncentiveJourneyMilestoneUpdate,
     getIncentiveJourneyStatsHistory,
     getIncentiveJourneyPersonAssignments,
     postIncentiveJourneyStatsWaiveOff,
@@ -165,6 +166,14 @@ postIncentiveJourneyMilestoneCreate ::
 postIncentiveJourneyMilestoneCreate merchantShortId opCity =
   LibRider.postIncentiveJourneyMilestoneCreate mkHandle (ShortId merchantShortId.getShortId) opCity
 
+putIncentiveJourneyMilestoneUpdate ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.UpdateIncentiveJourneyMilestoneReq ->
+  Environment.Flow APISuccess
+putIncentiveJourneyMilestoneUpdate merchantShortId =
+  LibRider.putIncentiveJourneyMilestoneUpdate mkHandle (ShortId merchantShortId.getShortId)
+
 getIncentiveJourneyStatsHistory ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
@@ -223,8 +232,8 @@ putIncentiveJourneyCohortJourneyUpdate ::
   Kernel.Types.Beckn.Context.City ->
   Common.UpdateCohortJourneyMappingReq ->
   Environment.Flow APISuccess
-putIncentiveJourneyCohortJourneyUpdate merchantShortId opCity =
-  LibRider.putIncentiveJourneyCohortJourneyUpdate mkHandle (ShortId merchantShortId.getShortId) opCity
+putIncentiveJourneyCohortJourneyUpdate merchantShortId =
+  LibRider.putIncentiveJourneyCohortJourneyUpdate mkHandle (ShortId merchantShortId.getShortId)
 
 getIncentiveJourneyCohortJourneyList ::
   ShortId DM.Merchant ->

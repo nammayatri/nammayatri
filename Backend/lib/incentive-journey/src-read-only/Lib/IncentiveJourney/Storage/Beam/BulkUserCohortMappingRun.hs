@@ -19,6 +19,7 @@ data BulkUserCohortMappingRunT f = BulkUserCohortMappingRunT
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    operationType :: B.C f (Kernel.Prelude.Maybe Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun.BulkUserCohortMappingOperation),
     rescheduleDelaySeconds :: B.C f Kernel.Prelude.Int,
     rowsInserted :: B.C f Kernel.Prelude.Int,
     rowsSkipped :: B.C f Kernel.Prelude.Int,

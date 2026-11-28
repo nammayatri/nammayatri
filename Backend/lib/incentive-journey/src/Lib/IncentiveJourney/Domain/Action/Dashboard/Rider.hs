@@ -3,6 +3,7 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Rider
     postIncentiveJourneyCreate,
     getIncentiveJourneyMilestoneList,
     postIncentiveJourneyMilestoneCreate,
+    putIncentiveJourneyMilestoneUpdate,
     getIncentiveJourneyStatsHistory,
     getIncentiveJourneyPersonAssignments,
     postIncentiveJourneyStatsWaiveOff,
@@ -44,6 +45,7 @@ import qualified Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra as QCDE
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourney as QJourney
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestone as QMilestone
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestoneExtra as QMilestoneExtra
 
 resolveMerchant ::
   BeamFlow m r =>
@@ -160,6 +162,35 @@ postIncentiveJourneyMilestoneCreate handle merchantShortId opCity req = do
   QMilestone.create milestone
   handle.clearMilestoneCacheByJourneyId journeyId
   pure Common.CreateIncentiveJourneyMilestoneRes {milestoneId = ID.cast milestoneId}
+
+-- | Contract: omitted / null 'rewardMetadata' keeps the stored value. Send a full
+-- JSON object to replace (same as provider).
+putIncentiveJourneyMilestoneUpdate ::
+  BeamFlow m r =>
+  ServiceHandle m ->
+  ID.ShortId DIJC.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.UpdateIncentiveJourneyMilestoneReq ->
+  m APISuccess
+putIncentiveJourneyMilestoneUpdate handle merchantShortId opCity req = do
+  (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
+  let milestoneId = ID.cast @Dashboard.Common.IncentiveJourneyMilestone @DIJM.IncentiveJourneyMilestone req.milestoneId
+  milestone <-
+    QMilestone.findById milestoneId
+      >>= fromMaybeM (InvalidRequest "Incentive journey milestone not found")
+  unless
+    ( milestone.merchantId == Just (ID.cast merchant.id)
+        && milestone.merchantOperatingCityId == Just (ID.cast merchantOpCityId)
+    )
+    $ throwError (InvalidRequest "Milestone does not belong to this merchant/city")
+  case req.rewardMetadata of
+    Nothing -> pure Success
+    Just meta -> do
+      let updated = milestone {DIJM.rewardMetadata = Just meta}
+      validateMilestoneReward updated
+      QMilestoneExtra.updateRewardMetadata milestoneId (Just meta)
+      handle.clearMilestoneCacheByJourneyId milestone.journeyId
+      pure Success
 
 getIncentiveJourneyStatsHistory ::
   BeamFlow m r =>

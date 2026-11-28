@@ -251,18 +251,18 @@ getIncentiveJourneyList handle (mbPersonId, merchantId, merchantOpCityId) mbLimi
                   }
           pure API.IncentiveJourneyListRes {journeys = journeys}
 
--- | Driver UI: only the MG ladder from rewardMetadata (omit percent/violation slabs).
-mkMgSlabs :: Maybe Value -> Maybe API.MgSlabs
-mkMgSlabs mbMeta =
+-- | Driver UI: typed NetOff/slab meta. Omit when empty so Coins/SWO-only rows stay light.
+mkUiRewardMetadata :: Maybe Value -> Maybe RM.MilestoneRewardMeta
+mkUiRewardMetadata Nothing = Nothing
+mkUiRewardMetadata mbMeta =
   let meta = RM.parseMilestoneRewardMeta mbMeta
    in if null meta.mgAmountSlabs
+        && null meta.percentSlabs
+        && null meta.violationPercentSlabs
+        && null meta.violationMetrics
+        && not meta.includeEarningsAllDay
         then Nothing
-        else
-          Just
-            API.MgSlabs
-              { slabs = meta.mgAmountSlabs,
-                fromValueUnit = meta.mgAmountSlabsFromValueUnit
-              }
+        else Just meta
 
 toMilestoneItem :: BeamFlow m r => [(Text, Text)] -> [DIJS.IncentiveJourneyStats] -> DIJM.IncentiveJourneyMilestone -> m API.IncentiveJourneyMilestoneItem
 toMilestoneItem specialLocationNames statsRows milestone = do
@@ -278,7 +278,7 @@ toMilestoneItem specialLocationNames statsRows milestone = do
         conditionOperator = milestone.conditionOperator,
         conditionValue = milestone.conditionValue,
         evaluation = milestone.evaluation,
-        mgSlabs = mkMgSlabs milestone.rewardMetadata,
+        rewardMetadata = mkUiRewardMetadata milestone.rewardMetadata,
         areaType = milestone.areaType,
         specialLocationNames = toSpecialLocationNames specialLocationNames milestone.specialLocationIds,
         vehicleCategory = milestone.vehicleCategory,
@@ -327,7 +327,10 @@ getIncentiveJourneyHistory handle (mbPersonId, merchantId, merchantOpCityId) mbD
       dailyPeriodKey = IJ.mkDailyPeriodKey historyDayUtc
       limitVal = fromMaybe 30 mbLimit
       offsetVal = fromMaybe 0 mbOffset
-  assignments <- handle.findAssignmentsByUserId driverId
+  -- Memberships (Assigned + Pending/period-stale OptIn), not eval-gated assignments.
+  -- History treats a campaign as a campaign: missed days synthesize NotStarted even if the
+  -- driver never opted in that day (no stats). Eval/settle still use findAssignmentsByUserId.
+  assignments <- handle.findDashboardAssignmentsByUserId driverId
   -- Include expired/disabled UCMs so Week:/Month: history keys stay findable after opt-out.
   allUcms <- QUCM.findByUserId driverId
   let assignmentJourneyIds = nub $ map ((.journeyId) . (.cohortJourneyMapping)) assignments
@@ -391,7 +394,7 @@ getIncentiveJourneyHistory handle (mbPersonId, merchantId, merchantOpCityId) mbD
                     statsRows
             expandHistoryJourney handle historyDayUtc journeyId mbCohortJourneyMappingId mbJourney journeyStats assignments
         )
-  -- Eligible assignments with no stats for this date still belong in history.
+  -- Eligible memberships with no stats for this date still belong in history (Assigned or OptIn).
   -- Another campaign of the same journey is included when its own rows are absent.
   -- The app shows those untouched milestones as missed. Status stays NotStarted.
   let candidateCjms =
@@ -446,6 +449,7 @@ expandHistoryJourney handle historyDayUtc journeyId mbCohortJourneyMappingId mbJ
           Nothing -> QCJMExtra.findCohortJourneyMappingById cjmId
       Nothing -> pure Nothing
   let journeyName = maybe journeyId.getId (.name) mbJourney
+      journeyDescription = mbJourney >>= (.description)
       journeyType = maybe DIJ.Daily (.journeyType) mbJourney
       controlFeatures = mbCjm >>= (.controlFeatures)
       periodDays = RM.streakMetaPeriodDays (mbCjm >>= (.streakEndRewardMetadata))
@@ -460,7 +464,22 @@ expandHistoryJourney handle historyDayUtc journeyId mbCohortJourneyMappingId mbJ
   forM milestones $ \milestone -> do
     let mbStats = find (\s -> s.milestoneId == milestone.id) journeyStats
         displayRewardValue = resolveDisplayRewardValue milestone
-    pure $ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyName journeyType controlFeatures periodDays mbStartDate milestones milestone defaultPeriodKey displayRewardValue mbStats
+    pure $
+      mkHistoryItem
+        specialLocationNames
+        journeyId
+        mbCohortJourneyMappingId
+        journeyName
+        journeyDescription
+        journeyType
+        controlFeatures
+        periodDays
+        mbStartDate
+        milestones
+        milestone
+        defaultPeriodKey
+        displayRewardValue
+        mbStats
 
 -- | The history date overlaps the cohort mapping window. End is exclusive, same as the list check.
 historyDayOverlapsJourney :: UTCTime -> UTCTime -> DIJ.IncentiveJourney -> DCJM.CohortJourneyMapping -> Bool
@@ -473,6 +492,7 @@ mkHistoryItem ::
   Id DIJ.IncentiveJourney ->
   Maybe (Id DCJM.CohortJourneyMapping) ->
   Text ->
+  Maybe Text ->
   DIJ.IncentiveJourneyType ->
   Maybe Value ->
   Maybe Int ->
@@ -483,7 +503,7 @@ mkHistoryItem ::
   Maybe Int ->
   Maybe DIJS.IncentiveJourneyStats ->
   API.IncentiveJourneyHistoryItem
-mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyName journeyType controlFeatures periodDays mbStartDate journeyMilestones milestone defaultPeriodKey displayRewardValue mbStats =
+mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyName journeyDescription journeyType controlFeatures periodDays mbStartDate journeyMilestones milestone defaultPeriodKey displayRewardValue mbStats =
   let milestoneOrder = IJ.milestoneOrderInJourney milestone journeyMilestones
       periodEndExclusiveFor key =
         case mbStartDate of
@@ -495,12 +515,13 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
             { journeyId = journeyId,
               cohortJourneyMappingId = mbCohortJourneyMappingId,
               journeyName = journeyName,
+              journeyDescription = journeyDescription,
               journeyType = journeyType,
               controlFeatures = controlFeatures,
               periodDays = periodDays,
               currentMetrics = stats.currentMetrics,
               evaluation = milestone.evaluation,
-              mgSlabs = mkMgSlabs milestone.rewardMetadata,
+              rewardMetadata = mkUiRewardMetadata milestone.rewardMetadata,
               milestoneId = milestone.id,
               milestoneName = milestone.name,
               milestoneDescription = milestone.description,
@@ -523,12 +544,13 @@ mkHistoryItem specialLocationNames journeyId mbCohortJourneyMappingId journeyNam
             { journeyId = journeyId,
               cohortJourneyMappingId = mbCohortJourneyMappingId,
               journeyName = journeyName,
+              journeyDescription = journeyDescription,
               journeyType = journeyType,
               controlFeatures = controlFeatures,
               periodDays = periodDays,
               currentMetrics = Nothing,
               evaluation = milestone.evaluation,
-              mgSlabs = mkMgSlabs milestone.rewardMetadata,
+              rewardMetadata = mkUiRewardMetadata milestone.rewardMetadata,
               milestoneId = milestone.id,
               milestoneName = milestone.name,
               milestoneDescription = milestone.description,

@@ -69,6 +69,7 @@ data BulkAssignUserCohortFromS3ListItem = BulkAssignUserCohortFromS3ListItem
     s3FilePath :: Kernel.Prelude.Text,
     scheduledAt :: Kernel.Prelude.UTCTime,
     status :: BulkUserCohortMappingRunStatus,
+    operationType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     offset :: Kernel.Prelude.Int,
     batchSize :: Kernel.Prelude.Int,
     rescheduleDelaySeconds :: Kernel.Prelude.Int,
@@ -562,6 +563,13 @@ data UpdateCohortJourneyMappingReq = UpdateCohortJourneyMappingReq
 instance Kernel.Types.HideSecrets.HideSecrets UpdateCohortJourneyMappingReq where
   hideSecrets = Kernel.Prelude.identity
 
+data UpdateIncentiveJourneyMilestoneReq = UpdateIncentiveJourneyMilestoneReq {milestoneId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourneyMilestone, rewardMetadata :: Kernel.Prelude.Maybe Data.Aeson.Value}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpdateIncentiveJourneyMilestoneReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data WaiveIncentiveJourneyMilestoneReq = WaiveIncentiveJourneyMilestoneReq
   { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
     journeyId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney,
@@ -575,7 +583,7 @@ data WaiveIncentiveJourneyMilestoneReq = WaiveIncentiveJourneyMilestoneReq
 instance Kernel.Types.HideSecrets.HideSecrets WaiveIncentiveJourneyMilestoneReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = "incentiveJourney" :> (GetIncentiveJourneyList :<|> (PostIncentiveJourneyCreate :<|> (GetIncentiveJourneyMilestoneList :<|> (PostIncentiveJourneyMilestoneCreate :<|> (GetIncentiveJourneyStatsHistory :<|> (PostIncentiveJourneyStatsWaiveOff :<|> (PostIncentiveJourneyStreakEndInspect :<|> (GetIncentiveJourneyDriverAssignments :<|> (PostIncentiveJourneyCohortCreate :<|> (GetIncentiveJourneyCohortList :<|> (PostIncentiveJourneyCohortJourneyCreate :<|> (PutIncentiveJourneyCohortJourneyUpdate :<|> (PostIncentiveJourneyCohortJourneyRoll :<|> (GetIncentiveJourneyCohortJourneyList :<|> (PostIncentiveJourneyAssign :<|> (PostIncentiveJourneyOptIn :<|> (PostIncentiveJourneyAutoApplyCohortCreate :<|> (PutIncentiveJourneyAutoApplyCohortUpdate :<|> (GetIncentiveJourneyAutoApplyCohortList :<|> (PostIncentiveJourneyUnassign :<|> (PostIncentiveJourneyAssignBulkFromS3 :<|> GetIncentiveJourneyAssignBulkFromS3List)))))))))))))))))))))
+type API = "incentiveJourney" :> (GetIncentiveJourneyList :<|> (PostIncentiveJourneyCreate :<|> (GetIncentiveJourneyMilestoneList :<|> (PostIncentiveJourneyMilestoneCreate :<|> (PutIncentiveJourneyMilestoneUpdate :<|> (GetIncentiveJourneyStatsHistory :<|> (PostIncentiveJourneyStatsWaiveOff :<|> (PostIncentiveJourneyStreakEndInspect :<|> (GetIncentiveJourneyDriverAssignments :<|> (PostIncentiveJourneyCohortCreate :<|> (GetIncentiveJourneyCohortList :<|> (PostIncentiveJourneyCohortJourneyCreate :<|> (PutIncentiveJourneyCohortJourneyUpdate :<|> (PostIncentiveJourneyCohortJourneyRoll :<|> (GetIncentiveJourneyCohortJourneyList :<|> (PostIncentiveJourneyAssign :<|> (PostIncentiveJourneyOptIn :<|> (PostIncentiveJourneyAutoApplyCohortCreate :<|> (PutIncentiveJourneyAutoApplyCohortUpdate :<|> (GetIncentiveJourneyAutoApplyCohortList :<|> (PostIncentiveJourneyUnassign :<|> (PostIncentiveJourneyAssignBulkFromS3 :<|> (GetIncentiveJourneyAssignBulkFromS3List :<|> (PostIncentiveJourneyUnassignBulkFromS3 :<|> GetIncentiveJourneyUnassignBulkFromS3List))))))))))))))))))))))))
 
 type GetIncentiveJourneyList =
   "list"
@@ -584,12 +592,12 @@ type GetIncentiveJourneyList =
                   :> ( QueryParam
                          "journeyId"
                          (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney)
-                         :> (QueryParam "journeyType" IncentiveJourneyType :> Get ('[JSON]) IncentiveJourneyListRes)
+                         :> (QueryParam "journeyType" IncentiveJourneyType :> Get '[JSON] IncentiveJourneyListRes)
                      )
               )
        )
 
-type PostIncentiveJourneyCreate = "create" :> (ReqBody ('[JSON]) CreateIncentiveJourneyReq :> Post ('[JSON]) CreateIncentiveJourneyRes)
+type PostIncentiveJourneyCreate = "create" :> (ReqBody '[JSON] CreateIncentiveJourneyReq :> Post '[JSON] CreateIncentiveJourneyRes)
 
 type GetIncentiveJourneyMilestoneList =
   "milestone"
@@ -598,12 +606,14 @@ type GetIncentiveJourneyMilestoneList =
                   :> ( QueryParam
                          "limit"
                          Kernel.Prelude.Int
-                         :> (QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) IncentiveJourneyMilestoneListRes)
+                         :> (QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] IncentiveJourneyMilestoneListRes)
                      )
               )
        )
 
-type PostIncentiveJourneyMilestoneCreate = "milestone" :> ("create" :> (ReqBody ('[JSON]) CreateIncentiveJourneyMilestoneReq :> Post ('[JSON]) CreateIncentiveJourneyMilestoneRes))
+type PostIncentiveJourneyMilestoneCreate = "milestone" :> ("create" :> (ReqBody '[JSON] CreateIncentiveJourneyMilestoneReq :> Post '[JSON] CreateIncentiveJourneyMilestoneRes))
+
+type PutIncentiveJourneyMilestoneUpdate = "milestone" :> ("update" :> (ReqBody '[JSON] UpdateIncentiveJourneyMilestoneReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess))
 
 type GetIncentiveJourneyStatsHistory =
   "stats"
@@ -623,7 +633,7 @@ type GetIncentiveJourneyStatsHistory =
                                                      "toDate"
                                                      Data.Time.Day
                                                      :> Get
-                                                          ('[JSON])
+                                                          '[JSON]
                                                           IncentiveJourneyStatsHistoryRes
                                                  )
                                           )
@@ -633,13 +643,13 @@ type GetIncentiveJourneyStatsHistory =
               )
        )
 
-type PostIncentiveJourneyStatsWaiveOff = "stats" :> ("waiveOff" :> (ReqBody ('[JSON]) WaiveIncentiveJourneyMilestoneReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess))
+type PostIncentiveJourneyStatsWaiveOff = "stats" :> ("waiveOff" :> (ReqBody '[JSON] WaiveIncentiveJourneyMilestoneReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess))
 
-type PostIncentiveJourneyStreakEndInspect = "streakEnd" :> ("inspect" :> (ReqBody ('[JSON]) InspectStreakEndRewardReq :> Post ('[JSON]) InspectStreakEndRewardRes))
+type PostIncentiveJourneyStreakEndInspect = "streakEnd" :> ("inspect" :> (ReqBody '[JSON] InspectStreakEndRewardReq :> Post '[JSON] InspectStreakEndRewardRes))
 
-type GetIncentiveJourneyDriverAssignments = "driver" :> (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("assignments" :> Get ('[JSON]) IncentiveJourneyDriverAssignmentListRes))
+type GetIncentiveJourneyDriverAssignments = "driver" :> (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> ("assignments" :> Get '[JSON] IncentiveJourneyDriverAssignmentListRes))
 
-type PostIncentiveJourneyCohortCreate = "cohort" :> ("create" :> (ReqBody ('[JSON]) CreateCohortDetailsReq :> Post ('[JSON]) CreateCohortDetailsRes))
+type PostIncentiveJourneyCohortCreate = "cohort" :> ("create" :> (ReqBody '[JSON] CreateCohortDetailsReq :> Post '[JSON] CreateCohortDetailsRes))
 
 type GetIncentiveJourneyCohortList =
   "cohort"
@@ -649,17 +659,17 @@ type GetIncentiveJourneyCohortList =
                          :> ( QueryParam
                                 "cohortName"
                                 Kernel.Prelude.Text
-                                :> (QueryParam "cohortCategory" Kernel.Prelude.Text :> Get ('[JSON]) CohortDetailsListRes)
+                                :> (QueryParam "cohortCategory" Kernel.Prelude.Text :> Get '[JSON] CohortDetailsListRes)
                             )
                      )
               )
        )
 
-type PostIncentiveJourneyCohortJourneyCreate = "cohortJourney" :> ("create" :> (ReqBody ('[JSON]) CreateCohortJourneyMappingReq :> Post ('[JSON]) CreateCohortJourneyMappingRes))
+type PostIncentiveJourneyCohortJourneyCreate = "cohortJourney" :> ("create" :> (ReqBody '[JSON] CreateCohortJourneyMappingReq :> Post '[JSON] CreateCohortJourneyMappingRes))
 
-type PutIncentiveJourneyCohortJourneyUpdate = "cohortJourney" :> ("update" :> (ReqBody ('[JSON]) UpdateCohortJourneyMappingReq :> Put ('[JSON]) Kernel.Types.APISuccess.APISuccess))
+type PutIncentiveJourneyCohortJourneyUpdate = "cohortJourney" :> ("update" :> (ReqBody '[JSON] UpdateCohortJourneyMappingReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess))
 
-type PostIncentiveJourneyCohortJourneyRoll = "cohortJourney" :> ("roll" :> (ReqBody ('[JSON]) RollCohortJourneyMappingReq :> Post ('[JSON]) RollCohortJourneyMappingRes))
+type PostIncentiveJourneyCohortJourneyRoll = "cohortJourney" :> ("roll" :> (ReqBody '[JSON] RollCohortJourneyMappingReq :> Post '[JSON] RollCohortJourneyMappingRes))
 
 type GetIncentiveJourneyCohortJourneyList =
   "cohortJourney"
@@ -680,7 +690,7 @@ type GetIncentiveJourneyCohortJourneyList =
                                                             "journeyType"
                                                             IncentiveJourneyType
                                                             :> Get
-                                                                 ('[JSON])
+                                                                 '[JSON]
                                                                  CohortJourneyMappingListRes
                                                         )
                                                  )
@@ -691,13 +701,13 @@ type GetIncentiveJourneyCohortJourneyList =
               )
        )
 
-type PostIncentiveJourneyAssign = "assign" :> (ReqBody ('[JSON]) AssignUserToIncentiveJourneyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostIncentiveJourneyAssign = "assign" :> (ReqBody '[JSON] AssignUserToIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostIncentiveJourneyOptIn = "optIn" :> (ReqBody ('[JSON]) OptInIncentiveJourneyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostIncentiveJourneyOptIn = "optIn" :> (ReqBody '[JSON] OptInIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostIncentiveJourneyAutoApplyCohortCreate = "autoApplyCohort" :> ("create" :> (ReqBody ('[JSON]) CreateAutoApplyCohortMappingReq :> Post ('[JSON]) CreateAutoApplyCohortMappingRes))
+type PostIncentiveJourneyAutoApplyCohortCreate = "autoApplyCohort" :> ("create" :> (ReqBody '[JSON] CreateAutoApplyCohortMappingReq :> Post '[JSON] CreateAutoApplyCohortMappingRes))
 
-type PutIncentiveJourneyAutoApplyCohortUpdate = "autoApplyCohort" :> ("update" :> (ReqBody ('[JSON]) UpdateAutoApplyCohortMappingReq :> Put ('[JSON]) Kernel.Types.APISuccess.APISuccess))
+type PutIncentiveJourneyAutoApplyCohortUpdate = "autoApplyCohort" :> ("update" :> (ReqBody '[JSON] UpdateAutoApplyCohortMappingReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess))
 
 type GetIncentiveJourneyAutoApplyCohortList =
   "autoApplyCohort"
@@ -709,7 +719,7 @@ type GetIncentiveJourneyAutoApplyCohortList =
                                 Domain.Types.VehicleCategory.VehicleCategory
                                 :> ( QueryParam "enabled" Kernel.Prelude.Bool
                                        :> Get
-                                            ('[JSON])
+                                            '[JSON]
                                             AutoApplyCohortMappingListRes
                                    )
                             )
@@ -717,7 +727,7 @@ type GetIncentiveJourneyAutoApplyCohortList =
               )
        )
 
-type PostIncentiveJourneyUnassign = "unassign" :> (ReqBody ('[JSON]) UnassignUserFromIncentiveJourneyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostIncentiveJourneyUnassign = "unassign" :> (ReqBody '[JSON] UnassignUserFromIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostIncentiveJourneyAssignBulkFromS3 =
   "assign"
@@ -725,7 +735,7 @@ type PostIncentiveJourneyAssignBulkFromS3 =
            :> ( Kernel.ServantMultipart.MultipartForm
                   Kernel.ServantMultipart.Tmp
                   Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
-                  :> Post ('[JSON]) BulkAssignUserCohortFromS3Res
+                  :> Post '[JSON] BulkAssignUserCohortFromS3Res
               )
        )
 
@@ -738,7 +748,33 @@ type GetIncentiveJourneyAssignBulkFromS3List =
                                 :> ( QueryParam
                                        "status"
                                        BulkUserCohortMappingRunStatus
-                                       :> Get ('[JSON]) BulkAssignUserCohortFromS3ListRes
+                                       :> Get '[JSON] BulkAssignUserCohortFromS3ListRes
+                                   )
+                            )
+                     )
+              )
+       )
+
+type PostIncentiveJourneyUnassignBulkFromS3 =
+  "unassign"
+    :> ( "bulkFromS3"
+           :> ( Kernel.ServantMultipart.MultipartForm
+                  Kernel.ServantMultipart.Tmp
+                  Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
+                  :> Post '[JSON] BulkAssignUserCohortFromS3Res
+              )
+       )
+
+type GetIncentiveJourneyUnassignBulkFromS3List =
+  "unassign"
+    :> ( "bulkFromS3"
+           :> ( "list"
+                  :> ( QueryParam "limit" Kernel.Prelude.Int
+                         :> ( QueryParam "offset" Kernel.Prelude.Int
+                                :> ( QueryParam
+                                       "status"
+                                       BulkUserCohortMappingRunStatus
+                                       :> Get '[JSON] BulkAssignUserCohortFromS3ListRes
                                    )
                             )
                      )
@@ -746,45 +782,52 @@ type GetIncentiveJourneyAssignBulkFromS3List =
        )
 
 data IncentiveJourneyAPIs = IncentiveJourneyAPIs
-  { getIncentiveJourneyList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe (IncentiveJourneyType) -> EulerHS.Types.EulerClient IncentiveJourneyListRes)))),
-    postIncentiveJourneyCreate :: (CreateIncentiveJourneyReq -> EulerHS.Types.EulerClient CreateIncentiveJourneyRes),
-    getIncentiveJourneyMilestoneList :: (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient IncentiveJourneyMilestoneListRes))),
-    postIncentiveJourneyMilestoneCreate :: (CreateIncentiveJourneyMilestoneReq -> EulerHS.Types.EulerClient CreateIncentiveJourneyMilestoneRes),
-    getIncentiveJourneyStatsHistory :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Data.Time.Day -> (Data.Time.Day -> EulerHS.Types.EulerClient IncentiveJourneyStatsHistoryRes)))))),
-    postIncentiveJourneyStatsWaiveOff :: (WaiveIncentiveJourneyMilestoneReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postIncentiveJourneyStreakEndInspect :: (InspectStreakEndRewardReq -> EulerHS.Types.EulerClient InspectStreakEndRewardRes),
-    getIncentiveJourneyDriverAssignments :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient IncentiveJourneyDriverAssignmentListRes),
-    postIncentiveJourneyCohortCreate :: (CreateCohortDetailsReq -> EulerHS.Types.EulerClient CreateCohortDetailsRes),
-    getIncentiveJourneyCohortList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient CohortDetailsListRes)))),
-    postIncentiveJourneyCohortJourneyCreate :: (CreateCohortJourneyMappingReq -> EulerHS.Types.EulerClient CreateCohortJourneyMappingRes),
-    putIncentiveJourneyCohortJourneyUpdate :: (UpdateCohortJourneyMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postIncentiveJourneyCohortJourneyRoll :: (RollCohortJourneyMappingReq -> EulerHS.Types.EulerClient RollCohortJourneyMappingRes),
-    getIncentiveJourneyCohortJourneyList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.CohortDetails) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> (Kernel.Prelude.Maybe (IncentiveJourneyType) -> EulerHS.Types.EulerClient CohortJourneyMappingListRes))))))),
-    postIncentiveJourneyAssign :: (AssignUserToIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postIncentiveJourneyOptIn :: (OptInIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postIncentiveJourneyAutoApplyCohortCreate :: (CreateAutoApplyCohortMappingReq -> EulerHS.Types.EulerClient CreateAutoApplyCohortMappingRes),
-    putIncentiveJourneyAutoApplyCohortUpdate :: (UpdateAutoApplyCohortMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getIncentiveJourneyAutoApplyCohortList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Domain.Types.VehicleCategory.VehicleCategory) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient AutoApplyCohortMappingListRes)))),
-    postIncentiveJourneyUnassign :: (UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+  { getIncentiveJourneyList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe IncentiveJourneyType -> EulerHS.Types.EulerClient IncentiveJourneyListRes))),
+    postIncentiveJourneyCreate :: CreateIncentiveJourneyReq -> EulerHS.Types.EulerClient CreateIncentiveJourneyRes,
+    getIncentiveJourneyMilestoneList :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient IncentiveJourneyMilestoneListRes)),
+    postIncentiveJourneyMilestoneCreate :: CreateIncentiveJourneyMilestoneReq -> EulerHS.Types.EulerClient CreateIncentiveJourneyMilestoneRes,
+    putIncentiveJourneyMilestoneUpdate :: UpdateIncentiveJourneyMilestoneReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getIncentiveJourneyStatsHistory :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Data.Time.Day -> (Data.Time.Day -> EulerHS.Types.EulerClient IncentiveJourneyStatsHistoryRes))))),
+    postIncentiveJourneyStatsWaiveOff :: WaiveIncentiveJourneyMilestoneReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIncentiveJourneyStreakEndInspect :: InspectStreakEndRewardReq -> EulerHS.Types.EulerClient InspectStreakEndRewardRes,
+    getIncentiveJourneyDriverAssignments :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient IncentiveJourneyDriverAssignmentListRes,
+    postIncentiveJourneyCohortCreate :: CreateCohortDetailsReq -> EulerHS.Types.EulerClient CreateCohortDetailsRes,
+    getIncentiveJourneyCohortList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient CohortDetailsListRes))),
+    postIncentiveJourneyCohortJourneyCreate :: CreateCohortJourneyMappingReq -> EulerHS.Types.EulerClient CreateCohortJourneyMappingRes,
+    putIncentiveJourneyCohortJourneyUpdate :: UpdateCohortJourneyMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIncentiveJourneyCohortJourneyRoll :: RollCohortJourneyMappingReq -> EulerHS.Types.EulerClient RollCohortJourneyMappingRes,
+    getIncentiveJourneyCohortJourneyList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.CohortDetails) -> (Kernel.Prelude.Maybe Kernel.Prelude.Text -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> (Kernel.Prelude.Maybe IncentiveJourneyType -> EulerHS.Types.EulerClient CohortJourneyMappingListRes)))))),
+    postIncentiveJourneyAssign :: AssignUserToIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIncentiveJourneyOptIn :: OptInIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIncentiveJourneyAutoApplyCohortCreate :: CreateAutoApplyCohortMappingReq -> EulerHS.Types.EulerClient CreateAutoApplyCohortMappingRes,
+    putIncentiveJourneyAutoApplyCohortUpdate :: UpdateAutoApplyCohortMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getIncentiveJourneyAutoApplyCohortList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient AutoApplyCohortMappingListRes))),
+    postIncentiveJourneyUnassign :: UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIncentiveJourneyAssignBulkFromS3 ::
-      ( ( Data.ByteString.Lazy.ByteString,
-          Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
-        ) ->
-        EulerHS.Types.EulerClient BulkAssignUserCohortFromS3Res
-      ),
-    getIncentiveJourneyAssignBulkFromS3List :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> (Kernel.Prelude.Maybe (BulkUserCohortMappingRunStatus) -> EulerHS.Types.EulerClient BulkAssignUserCohortFromS3ListRes)))
+      ( Data.ByteString.Lazy.ByteString,
+        Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
+      ) ->
+      EulerHS.Types.EulerClient BulkAssignUserCohortFromS3Res,
+    getIncentiveJourneyAssignBulkFromS3List :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe BulkUserCohortMappingRunStatus -> EulerHS.Types.EulerClient BulkAssignUserCohortFromS3ListRes)),
+    postIncentiveJourneyUnassignBulkFromS3 ::
+      ( Data.ByteString.Lazy.ByteString,
+        Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
+      ) ->
+      EulerHS.Types.EulerClient BulkAssignUserCohortFromS3Res,
+    getIncentiveJourneyUnassignBulkFromS3List :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe Kernel.Prelude.Int -> (Kernel.Prelude.Maybe BulkUserCohortMappingRunStatus -> EulerHS.Types.EulerClient BulkAssignUserCohortFromS3ListRes))
   }
 
 mkIncentiveJourneyAPIs :: Client EulerHS.Types.EulerClient API -> IncentiveJourneyAPIs
 mkIncentiveJourneyAPIs incentiveJourneyClient = (IncentiveJourneyAPIs {..})
   where
-    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> postIncentiveJourneyStreakEndInspect :<|> getIncentiveJourneyDriverAssignments :<|> postIncentiveJourneyCohortCreate :<|> getIncentiveJourneyCohortList :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> postIncentiveJourneyCohortJourneyRoll :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> postIncentiveJourneyOptIn :<|> postIncentiveJourneyAutoApplyCohortCreate :<|> putIncentiveJourneyAutoApplyCohortUpdate :<|> getIncentiveJourneyAutoApplyCohortList :<|> postIncentiveJourneyUnassign :<|> postIncentiveJourneyAssignBulkFromS3 :<|> getIncentiveJourneyAssignBulkFromS3List = incentiveJourneyClient
+    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> putIncentiveJourneyMilestoneUpdate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> postIncentiveJourneyStreakEndInspect :<|> getIncentiveJourneyDriverAssignments :<|> postIncentiveJourneyCohortCreate :<|> getIncentiveJourneyCohortList :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> postIncentiveJourneyCohortJourneyRoll :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> postIncentiveJourneyOptIn :<|> postIncentiveJourneyAutoApplyCohortCreate :<|> putIncentiveJourneyAutoApplyCohortUpdate :<|> getIncentiveJourneyAutoApplyCohortList :<|> postIncentiveJourneyUnassign :<|> postIncentiveJourneyAssignBulkFromS3 :<|> getIncentiveJourneyAssignBulkFromS3List :<|> postIncentiveJourneyUnassignBulkFromS3 :<|> getIncentiveJourneyUnassignBulkFromS3List = incentiveJourneyClient
 
 data IncentiveJourneyUserActionType
   = GET_INCENTIVE_JOURNEY_LIST
   | POST_INCENTIVE_JOURNEY_CREATE
   | GET_INCENTIVE_JOURNEY_MILESTONE_LIST
   | POST_INCENTIVE_JOURNEY_MILESTONE_CREATE
+  | PUT_INCENTIVE_JOURNEY_MILESTONE_UPDATE
   | GET_INCENTIVE_JOURNEY_STATS_HISTORY
   | POST_INCENTIVE_JOURNEY_STATS_WAIVE_OFF
   | POST_INCENTIVE_JOURNEY_STREAK_END_INSPECT
@@ -803,17 +846,19 @@ data IncentiveJourneyUserActionType
   | POST_INCENTIVE_JOURNEY_UNASSIGN
   | POST_INCENTIVE_JOURNEY_ASSIGN_BULK_FROM_S3
   | GET_INCENTIVE_JOURNEY_ASSIGN_BULK_FROM_S3_LIST
+  | POST_INCENTIVE_JOURNEY_UNASSIGN_BULK_FROM_S3
+  | GET_INCENTIVE_JOURNEY_UNASSIGN_BULK_FROM_S3_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum (''BulkUserCohortMappingRunStatus))
+$(mkHttpInstancesForEnum ''BulkUserCohortMappingRunStatus)
 
-$(mkHttpInstancesForEnum (''CampaignUserLinkType))
+$(mkHttpInstancesForEnum ''CampaignUserLinkType)
 
-$(mkHttpInstancesForEnum (''IncentiveJourneyType))
+$(mkHttpInstancesForEnum ''IncentiveJourneyType)
 
-$(mkHttpInstancesForEnum (''OptInPeriod))
+$(mkHttpInstancesForEnum ''OptInPeriod)
 
-$(mkHttpInstancesForEnum (''OptInStatus))
+$(mkHttpInstancesForEnum ''OptInStatus)
 
-$(Data.Singletons.TH.genSingletons [(''IncentiveJourneyUserActionType)])
+$(Data.Singletons.TH.genSingletons [''IncentiveJourneyUserActionType])

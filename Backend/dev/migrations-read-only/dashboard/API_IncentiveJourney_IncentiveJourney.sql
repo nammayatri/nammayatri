@@ -120,3 +120,18 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostIncentiveJourneyStreakEndInspect","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'PROVIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_STREAK_END_INSPECT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PutIncentiveJourneyMilestoneUpdate","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/PUT_INCENTIVE_JOURNEY_MILESTONE_UPDATE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostIncentiveJourneyUnassignBulkFromS3","migration":"capability","param":"system-config.coins.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'PROVIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_UNASSIGN_BULK_FROM_S3' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetIncentiveJourneyUnassignBulkFromS3List","migration":"capability","param":"system-config.coins.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.read', 'DASHBOARD', 'PROVIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/GET_INCENTIVE_JOURNEY_UNASSIGN_BULK_FROM_S3_LIST' ) ON CONFLICT DO NOTHING;

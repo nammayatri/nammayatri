@@ -14,9 +14,11 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets (HideSecrets (..))
 
--- | Multipart body for POST /assign/bulkFromS3.
+-- | Multipart body for POST /assign/bulkFromS3 and POST /unassign/bulkFromS3.
 -- `file` is the CSV spilled to a temp file by servant-multipart (Tmp).
 -- `s3FilePath` is the object key inside the configured bucket.
+-- Assign CSV: userId,cohortMappingId,validTill,enabled
+-- Unassign CSV: userId,cohortMappingId
 data BulkAssignUserCohortFromS3Req = BulkAssignUserCohortFromS3Req
   { file :: FilePath,
     s3FilePath :: Text,

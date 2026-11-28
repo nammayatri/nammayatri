@@ -102,7 +102,7 @@ Bulk audit (provider): BulkUserCohortMappingRun
 | vehicleCategory, serviceTierType | Maybe | ride must match if set |
 | rewardType | `MilestoneRewardType` | |
 | rewardValue, rewardExpirationAt | Maybe Int | Coins/Cash/MG fallback; SWO: % and daysValidFor |
-| rewardMetadata | Maybe JSON | SWO `{serviceName, waiveOffMode}`; NetOff slabs (`mgAmountSlabs`, optional `mgAmountSlabsFromValueUnit` `Minutes`\|`Hours`, `percentSlabs`, …). Non-empty `mgAmountSlabs` preferred over static `rewardValue`. Calc always in online **minutes** (`Hours` → `fromValue*60` at resolve). |
+| rewardMetadata | Maybe JSON | SWO `{serviceName, waiveOffMode}`; NetOff slabs (`mgAmountSlabs`, optional `mgAmountSlabsFromValueUnit` `Minutes`\|`Hours`, `percentSlabs`, …). Non-empty `mgAmountSlabs` preferred over static `rewardValue`. Calc always in online **minutes** (`Hours` → `fromValue*60` at resolve). **Dashboard `PUT /milestone/update`**: omit/null keeps stored metadata; send a full JSON object to replace (avoids silent NetOff slab wipe → 100% settle). Condition/rewardType unchanged; already-settled stats are not recomputed. |
 | timeBounds | Maybe TimeBound | ride peak filter **or** online-minutes / in-out metric slice |
 
 **Enums**
@@ -256,7 +256,7 @@ No other Beam tables are defined in this library. Side effects touch **external*
 | Subscription waive | Plan / subscription waive APIs | From SWO metadata |
 | Special locations | Special-location master | UI name resolve; ride pickup/drop ids from booking area |
 | S3 | `AWS.S3` | Bulk CSV store + job download |
-| Allocator scheduler | `BulkUserCohortMappingUpload` job | Chunked UCM insert |
+| Allocator scheduler | `BulkUserCohortMappingUpload` job | Chunked UCM assign / unassign |
 | Kafka ride events | `kafka-consumers` RideEnded | Driver eval trigger |
 | Person / vehicle | Driver Person + Vehicle | Assignment resolution (city, category) |
 | TransporterConfig / RiderConfig | City config | `timeDiffFromUtc` |
@@ -300,7 +300,8 @@ Dashboard waiveOff ────────────────────�
 4. `POST /cohortJourney/create` — CJM (`startDate`, `streakRange`, optional streak-end)  
 5. Assign:
    - `POST /assign` — single UCM  
-   - `POST /assign/bulkFromS3` — CSV (provider)  
+   - `POST /assign/bulkFromS3` — CSV assign (provider)
+   - `POST /unassign/bulkFromS3` — CSV unassign (provider)  
    - `POST /autoApplyCohort/create` — city/vehicle (provider)  
 6. Ops: list / assignments / stats history / `POST /stats/waiveOff` / `PUT /cohortJourney/update`
 
@@ -542,6 +543,8 @@ Waive of mid-streak milestones still counts toward satisfaction once all periods
 | GET | `/autoApplyCohort/list` |
 | POST | `/assign/bulkFromS3` |
 | GET | `/assign/bulkFromS3/list` |
+| POST | `/unassign/bulkFromS3` |
+| GET | `/unassign/bulkFromS3/list` |
 
 Auth: ApiAuthV2. Capability: `system-config.coins.read` / `.write`.
 
@@ -568,12 +571,12 @@ GET .../incentive/journey/history?date&limit&offset
 ```
 
 - **List:** **active-window** enabled CJMs for the person’s memberships (includes **Pending OptIn** invites); per milestone `currentValue`/`status` for current `periodKey` (missing stats → `NotStarted`). Additive fields: `campaignUserLinkType`, `optInStatus`, `optInPeriod` (from CJM), `optedInAt`, `validTill` (for POST `/optIn`). List lazy-clears period-stale Daily/Weekly OptIn → `Pending` again. Eval/settle require **period-active** OptIn. Active before inactive ordering helpers in `Display.hs`.  
-- **History:** stats / synthesized rows for the requested date’s period keys. Includes **`periodEndExclusive`** (city-local exclusive end). Monthly ends use **campaign `startDate` clip steps** (same as settlement) — not `anchor + 1 month` (wrong for 29–31 starts after the first period). Dashboard **`/stats/history/{driverId|personId}`** exposes the same field for Control Center.  
+- **History:** stats / synthesized rows for the requested date’s period keys. Uses **memberships** (Assigned + Pending OptIn), not period-active-only assignments — missed days with no stats synthesize **`NotStarted`** for OptIn the same as Assigned. Includes **`periodEndExclusive`** (city-local exclusive end). Monthly ends use **campaign `startDate` clip steps** (same as settlement). Dashboard **`/stats/history/{driverId|personId}`** exposes the same field for Control Center.  
 - Special-location ids resolved to names when `findSpecialLocationNameById` is wired.
 - **Target for UI (no stats column):** both list and history return milestone `evaluation` (`Maybe Value`, same JSON style as `currentMetrics`).
   - Simple milestones: `evaluation = null`, use `conditionValue` as today.
   - JSONLogic: `evaluation = { "logic": … }`; progress vars in `currentMetrics`. App compares bag vars to the logic tree (or shows `name`/`description` as human copy).
-  - **MG ladder only:** `mgSlabs` (`Maybe { slabs: [{fromValue, amount}], fromValueUnit: Minutes|Hours }`) — extracted from `rewardMetadata.mgAmountSlabs` when non-empty. Full `rewardMetadata` (percent/violation slabs) is **not** sent on driver list/history.
+  - **Typed NetOff meta:** `rewardMetadata` (`Maybe MilestoneRewardMeta`) — `mgAmountSlabs`, `mgAmountSlabsFromValueUnit`, `percentSlabs`, `violationPercentSlabs`, `violationMetrics`, `includeEarningsAllDay`. Omitted when empty / SWO-only JSON (keeps Coins rows light). SWO still uses `subscriptionWaiveOff`.
 
 Example list/history milestone fragment (JSONLogic):
 
@@ -601,20 +604,26 @@ Dashboard + UI share `ServiceHandle` (cache clears, journey/milestone loaders, w
 
 ---
 
-## 12. Bulk assign from S3 (provider)
+## 12. Bulk assign / unassign from S3 (provider)
 
-**Multipart** `BulkAssignUserCohortFromS3Req`: `file` (CSV tmp), `s3FilePath` (object key only), `scheduledAt` (required UTC ≥ now), optional `batchSize` (default 500, max 2000), `rescheduleDelaySeconds` (default 2).
+**Multipart** `BulkAssignUserCohortFromS3Req` (shared): `file` (CSV tmp), `s3FilePath` (object key only), `scheduledAt` (required UTC ≥ now), optional `batchSize` (default 500, max 2000), `rescheduleDelaySeconds` (default 2).
 
-**CSV headers:** `userId,cohortMappingId,validTill,enabled`  
+| API | CSV headers | Per-row action |
+|-----|-------------|----------------|
+| `POST /assign/bulkFromS3` | `userId,cohortMappingId,validTill,enabled` | `insertUserCohortMappingIgnoringConflict` |
+| `POST /unassign/bulkFromS3` | `userId,cohortMappingId` | `disableUserCohortMapping` + clear IJCampaign tag / AA (same as single unassign) |
+
 (`cohortMappingId` = `cohort_journey_mapping.id`)
 
-**Flow**
+**Flow** (same job type `BulkUserCohortMappingUpload`; `operationType` on run row + job data = `Assign` \| `Unassign`)
 
-1. `putBulkAssignCsv` → S3; insert `bulk_user_cohort_mapping_run` (`Scheduled`); `scheduleBulkUpload` → Allocator `BulkUserCohortMappingUpload` at `scheduledAt` with `attemptCount=1`.  
-2. Job: `S3.get` full CSV; parse; process `[offset, offset+batchSize)`; `insertUserCohortMappingIgnoringConflict`; clear assignment cache for parsed users; progress update.  
+1. `putBulkAssignCsv` → S3; insert `bulk_user_cohort_mapping_run` (`Scheduled`, `operationType`); `scheduleBulkUpload` → Allocator job at `scheduledAt` with `attemptCount=1`.  
+2. Job: `S3.get` full CSV; parse by op; process `[offset, offset+batchSize)`; clear assignment cache once per distinct `userId` in the chunk; progress update.  
+   - Assign: no person lookup; insert ignoring conflict.  
+   - Unassign: no person/merchant validation per row (same as assign); disable UCM + `clearMgOptedInOnDriverInfo` (+ AA reconcile when tag matched).  
 3. More rows → `createJobIn` next chunk (`attemptCount` reset to 1); else `Succeeded`.  
 4. Failures: app-level try/catch, max 5 attempts; CSV parse / S3 NoSuchKey non-retryable → `Failed` + `errorMessage`. Keep job **off** RedisBased `jobRetryOnExceptionMap`.  
-5. List API reads run table only (not Redis job keys).
+5. List APIs filter by `operationType` (`Assign` list includes legacy NULL rows).
 
 S3 get uses AWS CLI (`aws s3api get-object`); stderr must be captured for diagnosis.
 

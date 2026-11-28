@@ -59,6 +59,16 @@ apis:
       migrate:
         capability: system-config.coins.write
 
+  - PUT:
+      endpoint: /milestone/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateIncentiveJourneyMilestoneReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.coins.write
+
   - GET:
       endpoint: /stats/history/{personId}
       auth: ApiAuthV2
@@ -264,6 +274,12 @@ types:
 
   CreateIncentiveJourneyMilestoneRes:
     - milestoneId: Id IncentiveJourneyMilestone
+
+  # null/omit → keep stored metadata. Just object → full replace.
+  UpdateIncentiveJourneyMilestoneReq:
+    - milestoneId: Id IncentiveJourneyMilestone
+    - rewardMetadata: Maybe Value
+    - derive: "'HideSecrets"
 
   IncentiveJourneyMilestoneListItem:
     - milestoneId: Id IncentiveJourneyMilestone

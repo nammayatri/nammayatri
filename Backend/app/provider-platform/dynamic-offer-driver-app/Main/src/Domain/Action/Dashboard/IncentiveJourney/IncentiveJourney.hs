@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     postIncentiveJourneyCreate,
     getIncentiveJourneyMilestoneList,
     postIncentiveJourneyMilestoneCreate,
+    putIncentiveJourneyMilestoneUpdate,
     getIncentiveJourneyStatsHistory,
     getIncentiveJourneyDriverAssignments,
     postIncentiveJourneyStatsWaiveOff,
@@ -18,6 +19,8 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     postIncentiveJourneyUnassign,
     postIncentiveJourneyAssignBulkFromS3,
     getIncentiveJourneyAssignBulkFromS3List,
+    postIncentiveJourneyUnassignBulkFromS3,
+    getIncentiveJourneyUnassignBulkFromS3List,
     postIncentiveJourneyAutoApplyCohortCreate,
     putIncentiveJourneyAutoApplyCohortUpdate,
     getIncentiveJourneyAutoApplyCohortList,
@@ -175,7 +178,7 @@ mkHandle =
         when (BS.null bytes) $ throwError (InvalidRequest "csv file must not be empty")
         S3.putRaw (T.unpack s3Path) bytes "text/csv",
       scheduleBulkUpload =
-        Just $ \merchantId merchantOpCityId s3Path scheduledAt batchSize delaySecs runIdText -> do
+        Just $ \merchantId merchantOpCityId s3Path scheduledAt batchSize delaySecs runIdText operationType -> do
           let jobData =
                 BulkUserCohortMappingUploadJobData
                   { merchantId = cast merchantId,
@@ -185,7 +188,8 @@ mkHandle =
                     batchSize = batchSize,
                     rescheduleDelaySeconds = delaySecs,
                     runId = runIdText,
-                    attemptCount = Just 1
+                    attemptCount = Just 1,
+                    operationType = Just operationType
                   }
           createJobByTime @_ @'BulkUserCohortMappingUpload (Just (cast merchantId)) (Just (cast merchantOpCityId)) scheduledAt jobData,
       findSpecialLocationNameById = Nothing,
@@ -234,6 +238,14 @@ postIncentiveJourneyMilestoneCreate ::
   Environment.Flow Common.CreateIncentiveJourneyMilestoneRes
 postIncentiveJourneyMilestoneCreate merchantShortId opCity =
   LibProvider.postIncentiveJourneyMilestoneCreate mkHandle (ShortId merchantShortId.getShortId) opCity
+
+putIncentiveJourneyMilestoneUpdate ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.UpdateIncentiveJourneyMilestoneReq ->
+  Environment.Flow APISuccess
+putIncentiveJourneyMilestoneUpdate merchantShortId =
+  LibProvider.putIncentiveJourneyMilestoneUpdate mkHandle (ShortId merchantShortId.getShortId)
 
 getIncentiveJourneyStatsHistory ::
   ShortId DM.Merchant ->
@@ -373,13 +385,31 @@ getIncentiveJourneyAssignBulkFromS3List ::
 getIncentiveJourneyAssignBulkFromS3List merchantShortId opCity =
   LibProvider.getIncentiveJourneyAssignBulkFromS3List mkHandle (ShortId merchantShortId.getShortId) opCity
 
+postIncentiveJourneyUnassignBulkFromS3 ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  DBulkAssign.BulkAssignUserCohortFromS3Req ->
+  Environment.Flow Common.BulkAssignUserCohortFromS3Res
+postIncentiveJourneyUnassignBulkFromS3 merchantShortId opCity =
+  LibProvider.postIncentiveJourneyUnassignBulkFromS3 mkHandle (ShortId merchantShortId.getShortId) opCity
+
+getIncentiveJourneyUnassignBulkFromS3List ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Common.BulkUserCohortMappingRunStatus ->
+  Environment.Flow Common.BulkAssignUserCohortFromS3ListRes
+getIncentiveJourneyUnassignBulkFromS3List merchantShortId opCity =
+  LibProvider.getIncentiveJourneyUnassignBulkFromS3List mkHandle (ShortId merchantShortId.getShortId) opCity
+
 postIncentiveJourneyAutoApplyCohortCreate ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Common.CreateAutoApplyCohortMappingReq ->
   Environment.Flow Common.CreateAutoApplyCohortMappingRes
-postIncentiveJourneyAutoApplyCohortCreate merchantShortId opCity =
-  LibProvider.postIncentiveJourneyAutoApplyCohortCreate mkHandle (ShortId merchantShortId.getShortId) opCity
+postIncentiveJourneyAutoApplyCohortCreate merchantShortId =
+  LibProvider.postIncentiveJourneyAutoApplyCohortCreate mkHandle (ShortId merchantShortId.getShortId)
 
 putIncentiveJourneyAutoApplyCohortUpdate ::
   ShortId DM.Merchant ->
